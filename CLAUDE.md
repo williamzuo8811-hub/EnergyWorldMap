@@ -114,11 +114,18 @@ Year filtering is an interval `[state.minYear, state.maxYear]` driven by a dual-
 pulse that year's new projects and show a big year ticker; any manual year interaction calls `pausePlay`).
 Category/region toggles are centralized in `toggleCat`/`toggleRegion` (+ `syncCatUI`) and shared by
 the left filter chips, the on-map category legend (`#cat-legend`), and the right-panel stat bars /
-region cells (click-to-filter, two-way). Filter state round-trips through the URL hash via
+region cells (click-to-filter, two-way). The left **所属大区** panel is a region→country tree
+(`REGION_COUNTRIES`/`COUNTRY_COUNT` derived from `PROJECTS`): each region row is expandable to list its
+countries (sorted by project count); `toggleCountry` filters the map to one or more countries
+(`state.countries`) and `flyToCountries` flies/fit-bounds to them. Geo filtering is **one dimension, two
+granularities** — in `passBase` a non-empty `state.countries` **supersedes** `state.regions` (so a
+country pick never yields the empty `region ∩ country` intersection), and `toggleRegion` clears
+`state.countries`. The country drill-down panel (`showCountry`) also has a 📍 地图筛选 button that sets
+`state.countries` to that country. Filter state round-trips through the URL hash via
 `stateToHash`/`applyHash` (only non-default fields encoded) — the 🔗 share button copies the link and
 `applyHash`+`applyUIFromState` restore it on load; `applyUIFromState` is the single place that syncs
 every toggle's visual from `state` (also used by reset). The hash also carries `lang`, `lines`, the heat
-facet (`hcat`), the comparison set (`cmp`), and a one-shot `project=<id>` **deep link** (the detail card's
+facet (`hcat`), the comparison set (`cmp`), the selected countries (`cty`), and a one-shot `project=<id>` **deep link** (the detail card's
 🔗 button copies it; on load the project's detail opens and the map flies to it). ⤓ export dumps
 `filtered()` to a BOM-prefixed CSV; 📸 snapshot (`buildSnapshotSVG`) renders the current view's KPIs / top
 categories / top projects as an infographic and exports **PNG** (rasterized via SVG→canvas; falls back to
