@@ -21,10 +21,10 @@
         </div>
       </div>
       <div class="kpis">
-        <div class="kpi"><div class="num accent" id="kpi-proj">0</div><div class="lab">项目总数</div></div>
-        <div class="kpi"><div class="num" id="kpi-country">0</div><div class="lab">覆盖国家/地区</div></div>
-        <div class="kpi"><div class="num good" id="kpi-inv">0</div><div class="lab">总投资(美元)</div></div>
-        <div class="kpi"><div class="num warn" id="kpi-recent">0</div><div class="lab">🆕 近一年动态</div></div>
+        <div class="kpi"><div class="num accent" id="kpi-proj">0</div><div class="lab" data-i18n="Projects">项目总数</div></div>
+        <div class="kpi"><div class="num" id="kpi-country">0</div><div class="lab" data-i18n="Countries">覆盖国家/地区</div></div>
+        <div class="kpi"><div class="num good" id="kpi-inv">0</div><div class="lab" data-i18n="Investment (USD)">总投资(美元)</div></div>
+        <div class="kpi"><div class="num warn" id="kpi-recent">0</div><div class="lab" data-i18n="🆕 Recent (12mo)">🆕 近一年动态</div></div>
       </div>
     </header>
 
@@ -36,29 +36,29 @@
           <input id="search" type="text" placeholder="搜索项目 / 国家 / 业主…">
         </div>
 
-        <button class="recent-toggle" id="recent-toggle">🆕 仅看最近一年动态</button>
+        <button class="recent-toggle" id="recent-toggle" data-i18n="🆕 Recent 12 months only">🆕 仅看最近一年动态</button>
 
         <div class="block">
-          <div class="block-title">能源品类 <span class="count">点击切换显示</span></div>
+          <div class="block-title"><span data-i18n="Categories">能源品类</span> <span class="count" data-i18n="click to toggle">点击切换显示</span></div>
           <div class="cat-list" id="cat-list"></div>
         </div>
 
         <div class="block">
-          <div class="block-title">所属大区</div>
+          <div class="block-title" data-i18n="Region">所属大区</div>
           <div class="chip-row" id="region-chips"></div>
         </div>
 
         <div class="block">
-          <div class="block-title">项目状态</div>
+          <div class="block-title" data-i18n="Status">项目状态</div>
           <div class="chip-row" id="status-chips"></div>
         </div>
 
         <div class="block">
-          <div class="block-title">年份区间 <span class="count" id="year-label">全部</span></div>
+          <div class="block-title"><span data-i18n="Year range">年份区间</span> <span class="count" id="year-label">全部</span></div>
           <div class="year-presets">
-            <button class="yp on" data-preset="all">全部</button>
-            <button class="yp" data-preset="recent">🆕 近一年</button>
-            <button class="yp" data-preset="future">未来管线 2027+</button>
+            <button class="yp on" data-preset="all" data-i18n="All">全部</button>
+            <button class="yp" data-preset="recent" data-i18n="🆕 Recent">🆕 近一年</button>
+            <button class="yp" data-preset="future" data-i18n="Future 2027+">未来管线 2027+</button>
           </div>
           <div class="year-wrap">
             <div class="year-val"><b id="year-min-lab">2012</b><span>—</span><b id="year-max-lab">2035</b></div>
@@ -73,10 +73,10 @@
         </div>
 
         <div class="action-row">
-          <button class="btn-act" id="btn-share" title="复制当前筛选视图的分享链接">🔗 分享视图</button>
-          <button class="btn-act" id="btn-export" title="导出当前筛选结果为 CSV">⤓ 导出CSV</button>
+          <button class="btn-act" id="btn-share" title="复制当前筛选视图的分享链接" data-i18n="🔗 Share view">🔗 分享视图</button>
+          <button class="btn-act" id="btn-export" title="导出当前筛选结果为 CSV" data-i18n="⤓ Export CSV">⤓ 导出CSV</button>
         </div>
-        <button class="btn-reset" id="btn-reset">↺ 重置全部筛选</button>
+        <button class="btn-reset" id="btn-reset" data-i18n="↺ Reset all filters">↺ 重置全部筛选</button>
       </aside>
 
       <!-- 中间：地图 -->
@@ -89,34 +89,37 @@
         <div class="country-panel" id="country-panel"></div>
         <div class="map-tools">
           <div class="basemap-switch" id="basemap-switch"></div>
-          <button class="btn-heat" id="btn-heat" title="按当前权重显示宏观热力格局">🔥 热力图</button>
+          <button class="btn-heat" id="btn-heat" title="按当前权重显示宏观热力格局" data-i18n="🔥 Heatmap">🔥 热力图</button>
           <button class="btn-weight" id="btn-weight" title="圆点大小与热力按 投资额 或 装机容量(MW) 加权">⚖️ 投资权重</button>
-          <button class="btn-home" id="btn-home" title="复位视图">⤢ 复位</button>
+          <button class="btn-flow on" id="btn-flow" title="显隐输变电/高铁/管道飞线" data-i18n="⚡ Flowlines">⚡ 飞线</button>
+          <button class="btn-league" id="btn-league" title="企业 / 业主全球排行榜" data-i18n="🏢 Companies">🏢 企业榜</button>
+          <button class="btn-lang" id="btn-lang" title="中文 / English">EN</button>
+          <button class="btn-home" id="btn-home" title="复位视图" data-i18n="⤢ Reset">⤢ 复位</button>
         </div>
         <div class="heat-legend" id="heat-legend">
           <span class="hl-cap">投资热力</span>
           <i class="hl-bar"></i>
           <span class="hl-lo">低</span><span class="hl-hi">高</span>
         </div>
-        <div class="map-hint">滚轮缩放看省/市 · 拖拽平移 · 点击项目看详情 · 圆点大小≈投资 · 脉冲=旗舰 · 🆕=近一年</div>
+        <div class="map-hint" data-i18n="Scroll to zoom · drag to pan · click a project for details · dot size ≈ investment · pulse = flagship · 🆕 = last 12 months">滚轮缩放看省/市 · 拖拽平移 · 点击项目看详情 · 圆点大小≈投资 · 脉冲=旗舰 · 🆕=近一年</div>
       </section>
 
       <!-- 右侧：统计 -->
       <aside class="side right">
         <div class="block">
-          <div class="block-title">硬指标 <span class="count">按当前筛选 · 解析自容量</span></div>
+          <div class="block-title"><span data-i18n="Hard metrics">硬指标</span> <span class="count" data-i18n="current filter · from capacity">按当前筛选 · 解析自容量</span></div>
           <div class="cap-stats" id="cap-stats"></div>
         </div>
         <div class="block">
-          <div class="block-title">分类分布</div>
+          <div class="block-title" data-i18n="By category">分类分布</div>
           <div id="cat-bars"></div>
         </div>
         <div class="block">
-          <div class="block-title">区域分布</div>
+          <div class="block-title" data-i18n="By region">区域分布</div>
           <div class="region-grid" id="region-grid"></div>
         </div>
         <div class="block">
-          <div class="block-title">重点项目 TOP <span class="count sort-toggle" id="sort-toggle" title="点击切换排序口径">按投资额 ⇄</span></div>
+          <div class="block-title"><span data-i18n="Top projects">重点项目 TOP</span> <span class="count sort-toggle" id="sort-toggle" title="点击切换排序口径">按投资额 ⇄</span></div>
           <div class="proj-list" id="proj-list"></div>
         </div>
       </aside>
@@ -141,6 +144,7 @@
   <script src="js/data-nuclear.js"></script>
   <script src="js/data-northam.js"></script>
   <script src="js/data-southasia.js"></script>
+  <script src="js/data-china-future.js"></script>
   <script src="js/progress.js"></script>
   <script src="js/app.js"></script>
 </body>

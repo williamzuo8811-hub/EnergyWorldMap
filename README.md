@@ -2,7 +2,7 @@
 
 一个**可交互的能源项目世界地图**：在真实可缩放的世界地图上展示全球各国近年的重点能源项目，**放大可逐级看到国家 → 省 → 市 → 街道**（带清晰国界与地名），支持按品类、区域、状态、年份多维筛选，并提供实时统计、项目详情与"最近一年"动态高亮。
 
-![品类](https://img.shields.io/badge/品类-10类-21c7ff) ![项目](https://img.shields.io/badge/项目-2434个-2ee6a6) ![核电](https://img.shields.io/badge/核电-75-facc15) ![可再生](https://img.shields.io/badge/可再生-423-2ee6a6) ![数据中心](https://img.shields.io/badge/数据中心-263-ff5fa8) ![矿业](https://img.shields.io/badge/矿业-301-d4a23a) ![石油化工](https://img.shields.io/badge/石油化工-298-ef4444) ![大交通](https://img.shields.io/badge/大交通-279-3b82f6) ![国际大客户](https://img.shields.io/badge/国际大客户-137-a3e635) ![输变电](https://img.shields.io/badge/输变电-236-21c7ff) ![工商业·配网](https://img.shields.io/badge/工商业·配网-223-f0883e) ![储能](https://img.shields.io/badge/储能-199-a855f7)
+![品类](https://img.shields.io/badge/品类-10类-21c7ff) ![项目](https://img.shields.io/badge/项目-2661个-2ee6a6) ![核电](https://img.shields.io/badge/核电-101-facc15) ![可再生](https://img.shields.io/badge/可再生-449-2ee6a6) ![矿业](https://img.shields.io/badge/矿业-325-d4a23a) ![石油化工](https://img.shields.io/badge/石油化工-319-ef4444) ![大交通](https://img.shields.io/badge/大交通-307-3b82f6) ![数据中心](https://img.shields.io/badge/数据中心-286-ff5fa8) ![输变电](https://img.shields.io/badge/输变电-256-21c7ff) ![工商业·配网](https://img.shields.io/badge/工商业·配网-256-f0883e) ![储能](https://img.shields.io/badge/储能-225-a855f7) ![国际大客户](https://img.shields.io/badge/国际大客户-137-a3e635)
 
 ---
 
@@ -64,6 +64,7 @@ powershell -ExecutionPolicy Bypass -File serve.ps1 -Port 4173
 │   ├── data-nuclear.js       # ★ 核电专项：35 个项目（全球大型堆/SMR/四代堆/聚变，cat='nuclear'）
 │   ├── data-northam.js       # ★ 北美专项：170 个项目（美/加/墨近一年+未来5年，9 大品类，id 2900+）
 │   ├── data-southasia.js     # ★ 南亚专项：224 个项目（印/巴/孟/斯/尼/不/阿近一年+未来5年，9 大品类，region='亚洲'，id 3100+）
+│   ├── data-china-future.js  # ★ 中国十五五专项：227 个项目（近一年动态+2026-2030 规划管线，9 大品类，region='中国'，id 3400+）
 │   ├── progress.js     # 各项目"📍 最新进展"映射（id → 进展文本，537 条，按 id 合并）
 │   └── app.js          # 交互逻辑（地图、底图切换、筛选、统计、详情；两份数据按名称去重合并）
 ├── lib/                # Leaflet 地图库与插件（本地）
@@ -170,6 +171,8 @@ powershell -ExecutionPolicy Bypass -File serve.ps1 -Port 4173
 **2026-06 欧洲专项深挖**：对欧洲各国近一年（2025 年中–2026 年中）已开工/投运 + 未来 5 年（到 2030/2031）规划/在建项目做了 8 大品类地毯式联网检索（聚焦既有数据集尚未收录的新项目），新增 **64 个欧洲项目**（`js/data-europe.js`，id 2700–2763）：可再生 20（He Dreiht/北海集群/艾默伊登费尔/Codling/Berwick Bank/Baltic Power/Thor 海上风电、壳牌/RWE/液空绿氢、奥胡斯地热）、石化油气 8（挪威 Johan Castberg/Yggdrasil、德波希意 LNG 接收站、罗马尼亚 Neptun Deep 黑海气田）、矿业 8（芬兰 Keliber 锂、德国 Vulcan 地热提锂、葡 Barroso/奥 Wolfsberg/法 Imerys 锂、瑞典 LKAB 稀土/Aitik 铜、芬兰 Sakatti 铜镍钴——多为欧盟 CRMA 战略项目）、输变电 7（Tyrrhenian/Adriatic Link、LionLink/Sea Link、莱茵-美因走廊、波罗的三国脱俄并网、东部绿色链路4）、储能 5（英 Thorpe Marsh、奥 Limberg III/德奥 Riedl 抽蓄、意 MACSE 长时储能拍卖、苏格兰 Cruachan 2）、工商业 5（亿纬/远景/中创新航/海辰电池电解槽欧洲厂、丹麦 Topsoe SOEC）、数据中心 5（英伟达-德国电信工业 AI 云、英伟达英国、欧盟 AI 超级工厂、谷歌德国、AWS 欧洲主权云）、大交通 4（Rail Baltica、大巴黎快线、巴斯克 Y 高铁、热那亚-米兰 Terzo Valico）、国际大客户 2（中国电建克罗地亚塞尼风电、三峡欧洲德国 Meerwind 海上风电）。注：受 9 大品类无"核电"桶限制，本轮未纳入欣克利角 C/Sizewell C/法国 EPR2/波捷匈核电等核电项目。叠加既有约 150 个欧洲项目后，欧洲项目逾 **210 个**，数据集总量约 **2005 个**。
 
 **2026-06 新增"核电"品类（☢️）**：将品类从 9 类扩展到 **10 类**，新增 `nuclear`（核电，黄色 ☢️），并配套 5 个子分类（大型反应堆 · 小型模块化堆 SMR · 四代·特种堆 · 核燃料·后端 · 核聚变，由 `app.js` 的 `SUB_DEFS` 自动归类）。同步全球地毯式检索近一年 + 未来 5 年核电项目，新增 **35 个核电项目**（`js/data-nuclear.js`，id 2800–2834），并把既有错归在"可再生"下的巴西安格拉 3 号核电（id 1824）改归 `nuclear`，全品类共 **36 个核电项目**：欧洲 11（英国欣克利角 C/塞兹韦尔 C/罗罗 SMR、法国 EPR2、波兰卢比亚托沃、捷克杜科瓦尼、匈牙利帕克什 II、罗马尼亚切尔纳沃达/NuScale、保加利亚科兹洛杜伊、ITER 聚变）、中国 9（漳州/海阳三期/三门三期/廉江华龙一号、国和一号 CAP1400、玲龙一号 SMR、霞浦 CFR-600 快堆、石岛湾高温气冷堆、合肥 BEST 聚变）、亚洲其他 5（孟加拉鲁普尔、印度库丹库拉姆/SMR 使命、韩国新蔚珍、俄罗斯 BREST 铅冷快堆）、中东 2（阿联酋巴拉卡、土耳其阿库尤）、非洲 1（埃及达巴）、北美 6（美国 TerraPower Natrium/Kairos/联邦聚变 SPARC/帕利塞兹重启/HALEU 浓缩、加拿大达灵顿 SMR）、南美 2（阿根廷 CAREM、巴西安格拉 3）。覆盖三代大型压水堆、SMR、四代快堆/高温气冷堆、核燃料后端与核聚变全谱系。数据集总量约 **2040 个**。
+
+**2026-06 中国"十五五"专项深挖**：聚焦中国本土，对近一年（2025 年中–2026 年中）已开工/投运 + "十五五"（2026-2030）规划/在建项目做了 9 大品类并行地毯式联网检索（按既有 235 条中国项目逐品类发"排除清单"给子代理避免重复，并做跨品类去重 + HTML 实体清理），新增 **227 个中国项目**（`js/data-china-future.js`，id 3400+，region='中国'）：可再生 26（库布其/巴丹吉林/腾格里沙戈荒大基地、若羌 4GW 光伏、茨哈峡/旭龙/孟底沟水电、青岛/阳江漂浮式海上风电、哈密/格尔木 GW 级光热储、风光制绿氢氨醇一体化）、核电 26、储能 26（沙戈荒配套与构网型独立储能）、工商业·配网 33（中芯东方/长鑫二期/积塔/三安意法 SiC 等晶圆厂、宁德/亿纬/比亚迪/楚能电池超级工厂、通威/晶科/隆基/钙钛矿光伏制造、宝武/河钢绿色钢铁）、大交通 28（永清广/太绥/沪杭/川藏雅林等十五五高铁新线、沪甬/甬舟/厦金跨海通道、厦门翔安/昆明长水/南京禄口枢纽机场、深广蓉渝地铁新一期、深圳低空经济网）、数据中心 23（火山引擎太行/和林格尔、平湖润泽三期、哈密算力耦合新能源、西宁/乌兰察布绿色零碳算力、百度昆仑芯三万卡集群）、油气石化 21（古雷/裕龙岛二期炼化、宝丰/东方希望准东煤制烯烃、国能哈密煤制油、西气东输四线/川气东送二线、龙口/漳州 LNG、渤中 26-6/垦利 10-2 油田、恩平海上 CCUS）、矿业 24（玉龙/巨龙二期铜矿、山东海域金矿、拉果错/麻米错/加达锂矿、牦牛坪/凉山稀土、大湖塘/柿竹园钨矿、红格南钒钛、陈台沟铁矿）、输变电 20（哈密-重庆/陇东-山东/金上-湖北等十五五特高压直流与柔直）。叠加后中国本土项目达 **462 个**，数据集总量增至 **2661 个**（已在浏览器中校验：无重名、无重 id、坐标全部落在中国境内、零 JS 报错）。
 
 **2026-06 数据校验脚本**：新增零依赖校验工具 `scripts/validate-data.js`（`node scripts/validate-data.js`），按 `index.html` 真实加载顺序载入全部数据，检查：必填字段齐全、枚举合法（品类/大区/状态）、**坐标与大区一致**（抓"美洲正经/南半球正纬"等符号错误）、重名（会被去重丢弃）/重 id、各文件 id 段重叠、进展映射孤儿，并打印分品类/大区/状态概览。有错误即非零退出（CI 友好）。每次刷新数据后跑一遍确保干净再提交。
 

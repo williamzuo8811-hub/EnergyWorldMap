@@ -250,7 +250,31 @@
     minYear: MIN_YEAR, maxYear: MAX_YEAR, q: '', recentOnly: false, heat: false,
     weight: 'inv', sort: 'inv', // weight: 圆点/热力按 inv 投资 或 cap 装机容量；sort: TOP 排序
     playYear: null,             // 时间轴播放时的"当前年"（用于年份大字 + 当年新项目高亮）
+    lang: 'zh',                 // 'zh' | 'en'：项目名称与分析标签的中英切换
+    lines: true,                // 飞线（输变电/高铁/管道连线）显隐开关
   };
+
+  /* ---------- 中 / EN 语言（项目名走 en 字段；分类/大区/状态/界面标签走映射） ---------- */
+  const CAT_EN = { renewable: 'Renewables', nuclear: 'Nuclear', grid: 'Grid & T&D', storage: 'Storage', ci: 'Industry', datacenter: 'Data Center', transport: 'Transport', petro: 'Oil·Gas·Chem', mining: 'Mining', client: 'Key Clients' };
+  const REGION_EN = { '中国': 'China', '亚洲': 'Asia', '中东': 'Middle East', '欧洲': 'Europe', '北美': 'N. America', '南美': 'S. America', '非洲': 'Africa', '大洋洲': 'Oceania' };
+  const STATUS_EN = { '规划': 'Planned', '在建': 'Building', '投运': 'Operating' };
+  const I18N = {
+    '国家 / 地区': 'Country / Region', '状态': 'Status', '规模 / 容量': 'Capacity', '投资额': 'Investment',
+    '业主 / 参与方': 'Owner', '最近动态': 'Updated', '📍 最新进展': '📍 Latest', '🆕 近一年': '🆕 Recent',
+    '项目数': 'Projects', '总投资': 'Investment', '装机容量': 'Capacity', '分品类（项目数 · 投资额）': 'By category (count · investment)',
+    '项目状态': 'Status', '里程碑年份分布': 'Milestone years', '重点项目 TOP（按投资额）': 'Top projects (by investment)',
+    '无匹配项目，请调整筛选条件': 'No matching projects — adjust filters', '当前筛选无可解析的容量指标': 'No parseable capacity metrics in current filter',
+    '装机': 'Power', '储能': 'Storage', '线路': 'Lines', '油气产能': 'Oil/Gas', '产能': 'Output',
+    '企业 / 业主排行榜': 'Company / Owner League Table', '项目数': 'Projects', '按项目数排名（投资额为该业主累计）': 'Ranked by project count (investment = owner total)',
+    '点公司名筛选其全部项目': 'Click a company to filter its projects', '🏢 企业榜': '🏢 Companies',
+  };
+  const tr = s => state.lang === 'en' ? (I18N[s] || s) : s;
+  const nm = p => state.lang === 'en' ? (p.en || p.name) : (p.name || p.en || '');
+  const altName = p => state.lang === 'en' ? (p.name || '') : (p.en || '');
+  const catShort = k => state.lang === 'en' ? (CAT_EN[k] || (CATEGORIES[k] || {}).short || k) : ((CATEGORIES[k] || {}).short || k);
+  const catName = k => state.lang === 'en' ? (CAT_EN[k] || (CATEGORIES[k] || {}).name || k) : ((CATEGORIES[k] || {}).name || k);
+  const regionName = r => state.lang === 'en' ? (REGION_EN[r] || r) : r;
+  const statusName = s => state.lang === 'en' ? (STATUS_EN[s] || s) : s;
 
   const sizeFn = v => Math.max(8, Math.min(34, 7 + Math.sqrt(Math.max(v, 1)) * 0.95));
   const fmtNum = n => Math.round(n).toLocaleString('en-US');
@@ -318,8 +342,8 @@
   function updateMap(items) {
     lineLayer.clearLayers();
     markerCluster.clearLayers();
-    // 连线（输变电/高铁/管道，常显）
-    items.forEach(p => {
+    // 连线（输变电/高铁/管道，飞线）—— 可经 ⚡ 按钮显隐
+    if (state.lines) items.forEach(p => {
       if (p.route && p.route.length >= 2) {
         L.polyline(p.route.map(toLatLng), {
           color: CATEGORIES[p.cat].color, weight: 2, opacity: 0.55,
@@ -360,8 +384,8 @@
       const m = L.marker(toLatLng(p.coord), { icon, riseOnHover: true });
       m._cat = p.cat;
       m.bindTooltip(
-        '<b>' + (isRecent(p) ? '🆕 ' : '') + esc(p.name) + '</b><br>' +
-        '<span style="color:' + c.color + '">' + c.short + (subLabel(p) ? ' / ' + subLabel(p) : '') + '</span> · ' + esc(p.country) +
+        '<b>' + (isRecent(p) ? '🆕 ' : '') + esc(nm(p)) + '</b><br>' +
+        '<span style="color:' + c.color + '">' + catShort(p.cat) + (subLabel(p) ? ' / ' + subLabel(p) : '') + '</span> · ' + esc(p.country) +
         ' · ' + esc(usd(p)) + (p.capMW ? ' · ' + capFmt(p.capMW) : '') +
         (p.progress ? '<br><span style="color:#8fb0e0">📍 ' + esc(p.progress) + '</span>' : ''),
         { direction: 'top', offset: [0, -d / 2 - 2], className: 'mk-tip', sticky: true }
@@ -553,6 +577,37 @@
     render();
   });
 
+  // ⚡ 飞线显隐（输变电/高铁/管道连线）
+  const btnFlow = document.getElementById('btn-flow');
+  if (btnFlow) btnFlow.addEventListener('click', () => {
+    state.lines = !state.lines;
+    btnFlow.classList.toggle('on', state.lines);
+    render();
+  });
+
+  // 🏢 企业 / 业主排行榜
+  const btnLeague = document.getElementById('btn-league');
+  if (btnLeague) btnLeague.addEventListener('click', showLeague);
+
+  // 中 / EN 语言切换
+  const btnLang = document.getElementById('btn-lang');
+  function applyLang() {
+    document.documentElement.lang = state.lang === 'en' ? 'en' : 'zh-CN';
+    document.body.classList.toggle('lang-en', state.lang === 'en');
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      if (el.dataset.zh == null) el.dataset.zh = el.textContent;
+      el.textContent = state.lang === 'en' ? el.dataset.i18n : el.dataset.zh;
+    });
+    const sEl = document.getElementById('search');
+    if (sEl) sEl.placeholder = state.lang === 'en' ? 'Search project / country / owner…' : '搜索项目 / 国家 / 业主…';
+    if (btnLang) btnLang.textContent = state.lang === 'en' ? '中' : 'EN';
+    if (sortToggle) sortToggle.textContent = state.lang === 'en' ? (state.sort === 'cap' ? 'by capacity ⇄' : 'by investment ⇄') : (state.sort === 'cap' ? '按装机容量 ⇄' : '按投资额 ⇄');
+  }
+  if (btnLang) btnLang.addEventListener('click', () => {
+    state.lang = state.lang === 'en' ? 'zh' : 'en';
+    applyLang(); render();
+  });
+
   /* ---------- 右侧统计 ---------- */
   // 硬指标：把结构化容量按当前筛选汇总（仅显示有数值的口径）
   function updateCapStats(items) {
@@ -568,8 +623,8 @@
     if (kbd > 0) chips.push(['🛢️', '油气产能', Math.round(kbd).toLocaleString('en-US') + ' 万桶/日']);
     if (wty > 0) chips.push(['🏭', '产能', Math.round(wty).toLocaleString('en-US') + ' 万吨/年']);
     el.innerHTML = chips.length
-      ? chips.map(c => '<div class="cap-chip"><div class="cc-ico">' + c[0] + '</div><div class="cc-body"><div class="cc-v">' + c[2] + '</div><div class="cc-l">' + c[1] + '</div></div></div>').join('')
-      : '<div class="cap-empty">当前筛选无可解析的容量指标</div>';
+      ? chips.map(c => '<div class="cap-chip"><div class="cc-ico">' + c[0] + '</div><div class="cc-body"><div class="cc-v">' + c[2] + '</div><div class="cc-l">' + tr(c[1]) + '</div></div></div>').join('')
+      : '<div class="cap-empty">' + tr('当前筛选无可解析的容量指标') + '</div>';
   }
 
   function updateStats(items) {
@@ -592,7 +647,7 @@
     document.getElementById('cat-bars').innerHTML = CAT_KEYS.map(k => {
       const c = CATEGORIES[k], n = catCount[k], dim = state.cats.has(k) ? '' : 'opacity:.35';
       return '<div class="bar-row" data-key="' + k + '" style="cursor:pointer;' + dim + '"><div class="bar-head"><span class="dot" style="background:' + c.color + '"></span>' +
-        '<span class="nm">' + c.short + '</span><span class="vv">' + n + '</span></div>' +
+        '<span class="nm">' + catShort(k) + '</span><span class="vv">' + n + '</span></div>' +
         '<div class="bar-track"><div class="bar-fill" style="width:' + (n / maxC * 100) + '%;background:' + c.color + '"></div></div></div>';
     }).join('');
     document.querySelectorAll('.cat-chip').forEach(el => { el.querySelector('.ct').textContent = catCount[el.dataset.key]; });
@@ -606,21 +661,21 @@
     const regCount = {}; REGIONS.forEach(r => regCount[r] = 0);
     items.forEach(p => { if (regCount[p.region] != null) regCount[p.region]++; });
     document.getElementById('region-grid').innerHTML = REGIONS.map(r =>
-      '<div class="region-cell' + (state.regions.has(r) ? ' on' : '') + '" data-region="' + r + '"><div class="rv">' + regCount[r] + '</div><div class="rl">' + r + '</div></div>').join('');
+      '<div class="region-cell' + (state.regions.has(r) ? ' on' : '') + '" data-region="' + r + '"><div class="rv">' + regCount[r] + '</div><div class="rl">' + regionName(r) + '</div></div>').join('');
   }
 
   /* ---------- 项目列表（投资额排序） ---------- */
   function updateList(items) {
     const listEl = document.getElementById('proj-list');
-    if (!items.length) { listEl.innerHTML = '<div class="empty">无匹配项目，请调整筛选条件</div>'; return; }
+    if (!items.length) { listEl.innerHTML = '<div class="empty">' + tr('无匹配项目，请调整筛选条件') + '</div>'; return; }
     const sortCap = state.sort === 'cap';
     const sorted = items.slice().sort((a, b) => sortCap ? ((b.capMW || 0) - (a.capMW || 0)) : (b.inv - a.inv)).slice(0, 14);
     listEl.innerHTML = sorted.map(p => {
       const c = CATEGORIES[p.cat];
       return '<div class="proj-item" data-id="' + p.id + '" style="border-left-color:' + c.color + '">' +
-        '<div class="pn">' + (p.flagship ? '<span class="star">★</span>' : '') + esc(p.name) +
+        '<div class="pn">' + (p.flagship ? '<span class="star">★</span>' : '') + esc(nm(p)) +
         (isRecent(p) ? '<span class="newtag">🆕</span>' : '') + '</div>' +
-        '<div class="pm"><span>' + esc(p.country) + '</span><span>' + c.short + '</span><span>' + (sortCap ? esc(capFmt(p.capMW)) : esc(usd(p))) + '</span></div></div>';
+        '<div class="pm"><span>' + esc(p.country) + '</span><span>' + catShort(p.cat) + '</span><span>' + (sortCap ? esc(capFmt(p.capMW)) : esc(usd(p))) + '</span></div></div>';
     }).join('');
     listEl.querySelectorAll('.proj-item').forEach(el => {
       el.addEventListener('click', () => {
@@ -636,18 +691,18 @@
     const c = CATEGORIES[p.cat];
     detailEl.innerHTML =
       '<div class="d-top"><button class="d-close" id="d-close">×</button>' +
-      '<span class="d-cat" style="background:' + c.color + '22;color:' + c.color + '">' + c.icon + ' ' + c.name + (subLabel(p) ? ' · ' + subLabel(p) : '') + '</span>' +
-      (isRecent(p) ? '<span class="d-new">🆕 近一年</span>' : '') +
-      '<div class="d-name">' + (p.flagship ? '★ ' : '') + esc(p.name) + '</div>' +
-      (p.en ? '<div class="d-en">' + esc(p.en) + '</div>' : '') + '</div>' +
-      (p.progress ? '<div class="d-progress"><span class="dp-tag">📍 最新进展</span>' + esc(p.progress) + '</div>' : '') +
+      '<span class="d-cat" style="background:' + c.color + '22;color:' + c.color + '">' + c.icon + ' ' + catName(p.cat) + (subLabel(p) ? ' · ' + subLabel(p) : '') + '</span>' +
+      (isRecent(p) ? '<span class="d-new">' + tr('🆕 近一年') + '</span>' : '') +
+      '<div class="d-name">' + (p.flagship ? '★ ' : '') + esc(nm(p)) + '</div>' +
+      (altName(p) ? '<div class="d-en">' + esc(altName(p)) + '</div>' : '') + '</div>' +
+      (p.progress ? '<div class="d-progress"><span class="dp-tag">' + tr('📍 最新进展') + '</span>' + esc(p.progress) + '</div>' : '') +
       '<div class="d-grid">' +
-      cell('国家 / 地区', '<span class="d-country-link" data-country="' + esc(p.country) + '">' + esc(p.country) + ' 🔎</span>') +
-      cell('状态', '<span class="tag-status st-' + p.status + '">' + p.status + '</span>') +
-      cell('规模 / 容量', esc(p.cap)) +
-      cell('投资额', usd(p) + (/美元|\$/.test(p.invText || '') || !p.invText ? '' : ' <span class="d-usd">（原币种：' + esc(p.invText) + '）</span>')) +
-      cell('业主 / 参与方', esc(p.owner || '—')) +
-      cell('最近动态', esc(p.updated || '—')) +
+      cell(tr('国家 / 地区'), '<span class="d-country-link" data-country="' + esc(p.country) + '">' + esc(p.country) + ' 🔎</span>') +
+      cell(tr('状态'), '<span class="tag-status st-' + p.status + '">' + statusName(p.status) + '</span>') +
+      cell(tr('规模 / 容量'), esc(p.cap)) +
+      cell(tr('投资额'), usd(p) + (/美元|\$/.test(p.invText || '') || !p.invText ? '' : ' <span class="d-usd">（原币种：' + esc(p.invText) + '）</span>')) +
+      cell(tr('业主 / 参与方'), esc(p.owner || '—')) +
+      cell(tr('最近动态'), esc(p.updated || '—')) +
       '</div><div class="d-desc">' + esc(p.detail || p.desc) + '</div>';
     detailEl.classList.add('show');
     document.getElementById('d-close').addEventListener('click', hideDetail);
@@ -684,31 +739,31 @@
     const catBars = cats.map(k => {
       const c = CATEGORIES[k];
       return '<div class="bar-row"><div class="bar-head"><span class="dot" style="background:' + c.color + '"></span>' +
-        '<span class="nm">' + c.short + '</span><span class="vv">' + catCount[k] + ' · ≈$' + fmtInv(catInv[k] || 0) + '</span></div>' +
+        '<span class="nm">' + catShort(k) + '</span><span class="vv">' + catCount[k] + ' · ≈$' + fmtInv(catInv[k] || 0) + '</span></div>' +
         '<div class="bar-track"><div class="bar-fill" style="width:' + ((catInv[k] || 0) / maxCatInv * 100) + '%;background:' + c.color + '"></div></div></div>';
     }).join('');
-    const statusChips = STATUS.map(s => '<div class="s"><b>' + ps.filter(p => p.status === s).length + '</b><span>' + s + '</span></div>').join('');
+    const statusChips = STATUS.map(s => '<div class="s"><b>' + ps.filter(p => p.status === s).length + '</b><span>' + statusName(s) + '</span></div>').join('');
     const yearBars = Object.keys(yc).map(y => '<div class="yb" style="height:' + (yc[y] / ymaxN * 100) + '%" title="' + y + '：' + yc[y] + ' 个"></div>').join('');
     const topRows = top.map(p => {
       const c = CATEGORIES[p.cat];
       return '<div class="proj-item" data-id="' + p.id + '" style="border-left-color:' + c.color + '">' +
-        '<div class="pn">' + (p.flagship ? '<span class="star">★</span>' : '') + esc(p.name) + (isRecent(p) ? '<span class="newtag">🆕</span>' : '') + '</div>' +
-        '<div class="pm"><span>' + c.short + '</span><span>' + esc(p.status) + '</span><span>' + esc(usd(p)) + (p.capMW ? ' · ' + capFmt(p.capMW) : '') + '</span></div></div>';
+        '<div class="pn">' + (p.flagship ? '<span class="star">★</span>' : '') + esc(nm(p)) + (isRecent(p) ? '<span class="newtag">🆕</span>' : '') + '</div>' +
+        '<div class="pm"><span>' + catShort(p.cat) + '</span><span>' + statusName(p.status) + '</span><span>' + esc(usd(p)) + (p.capMW ? ' · ' + capFmt(p.capMW) : '') + '</span></div></div>';
     }).join('');
 
     countryPanel.innerHTML =
       '<div class="cp-head"><span style="font-size:20px">🌍</span><div class="cp-name">' + esc(country) + '</div>' +
       '<button class="cp-close" id="cp-close">×</button></div>' +
       '<div class="cp-kpis">' +
-      kpi(ps.length, '项目数') + kpi('≈$' + fmtInv(totalInv), '总投资') +
-      kpi(totalMW >= 1000 ? (totalMW / 1000).toFixed(1) + ' GW' : Math.round(totalMW) + ' MW', '装机容量') +
-      kpi(recentN, '🆕 近一年') + '</div>' +
+      kpi(ps.length, tr('项目数')) + kpi('≈$' + fmtInv(totalInv), tr('总投资')) +
+      kpi(totalMW >= 1000 ? (totalMW / 1000).toFixed(1) + ' GW' : Math.round(totalMW) + ' MW', tr('装机容量')) +
+      kpi(recentN, tr('🆕 近一年')) + '</div>' +
       '<div class="cp-body">' +
-      '<div class="cp-sec-title">分品类（项目数 · 投资额）</div>' + catBars +
-      '<div class="cp-sec-title">项目状态</div><div class="cp-status">' + statusChips + '</div>' +
-      '<div class="cp-sec-title">里程碑年份分布（' + ymin + '–' + ymax + '）</div>' +
+      '<div class="cp-sec-title">' + tr('分品类（项目数 · 投资额）') + '</div>' + catBars +
+      '<div class="cp-sec-title">' + tr('项目状态') + '</div><div class="cp-status">' + statusChips + '</div>' +
+      '<div class="cp-sec-title">' + tr('里程碑年份分布') + '（' + ymin + '–' + ymax + '）</div>' +
       '<div class="cp-years">' + yearBars + '</div><div class="cp-years-ax"><span>' + ymin + '</span><span>' + ymax + '</span></div>' +
-      '<div class="cp-sec-title">重点项目 TOP（按投资额）</div><div class="cp-proj">' + topRows + '</div>' +
+      '<div class="cp-sec-title">' + tr('重点项目 TOP（按投资额）') + '</div><div class="cp-proj">' + topRows + '</div>' +
       (hasClient ? '<div class="cp-note">* 总投资/装机口径不含「国际大客户」，避免与能源品类对同一物理项目重复计。</div>' : '') +
       '</div>';
     countryBackdrop.classList.add('show');
@@ -720,6 +775,40 @@
     }));
   }
   countryBackdrop.addEventListener('click', hideCountry);
+
+  /* ---------- 🏢 企业 / 业主全球排行榜（点公司名筛选其全部项目）---------- */
+  const ownerKey = o => ((o || '').split(/[\/、（(]/)[0] || '').trim();
+  function showLeague() {
+    const ag = {};
+    PROJECTS.forEach(p => {
+      const k = ownerKey(p.owner); if (!k || k === '—') return;
+      if (!ag[k]) ag[k] = { n: 0, inv: 0, cats: {}, countries: new Set() };
+      ag[k].n++; ag[k].inv += (p.inv || 0); ag[k].cats[p.cat] = (ag[k].cats[p.cat] || 0) + 1; ag[k].countries.add(p.country);
+    });
+    const rows = Object.entries(ag).sort((a, b) => b[1].n - a[1].n || b[1].inv - a[1].inv).slice(0, 40);
+    const maxN = Math.max(1, ...rows.map(r => r[1].n));
+    const body = rows.map((r, i) => {
+      const o = r[0], d = r[1];
+      const domCats = Object.keys(d.cats).sort((a, b) => d.cats[b] - d.cats[a]).slice(0, 5)
+        .map(k => '<span class="lg-dot" title="' + catShort(k) + '" style="background:' + (CATEGORIES[k] || {}).color + '"></span>').join('');
+      return '<div class="lg-row" data-owner="' + esc(o) + '">' +
+        '<div class="lg-rank">' + (i + 1) + '</div>' +
+        '<div class="lg-main"><div class="lg-name">' + esc(o) + ' ' + domCats + '</div>' +
+        '<div class="lg-track"><div class="lg-fill" style="width:' + (d.n / maxN * 100) + '%"></div></div></div>' +
+        '<div class="lg-meta"><b>' + d.n + '</b><span>' + tr('项目数') + '</span></div>' +
+        '<div class="lg-meta"><b>≈$' + fmtInv(d.inv) + '</b><span>' + d.countries.size + ' ' + (state.lang === 'en' ? 'countries' : '国') + '</span></div></div>';
+    }).join('');
+    countryPanel.innerHTML =
+      '<div class="cp-head"><span style="font-size:20px">🏢</span><div class="cp-name">' + tr('企业 / 业主排行榜') + '</div>' +
+      '<button class="cp-close" id="cp-close">×</button></div>' +
+      '<div class="cp-body"><div class="cp-note" style="margin:0 0 8px">' + tr('按项目数排名（投资额为该业主累计）') + ' · ' + tr('点公司名筛选其全部项目') + '</div>' +
+      '<div class="lg-list">' + body + '</div></div>';
+    countryBackdrop.classList.add('show'); countryPanel.classList.add('show');
+    document.getElementById('cp-close').addEventListener('click', hideCountry);
+    countryPanel.querySelectorAll('.lg-row').forEach(el => el.addEventListener('click', () => {
+      hideCountry(); state.q = el.dataset.owner; const sEl = document.getElementById('search'); if (sEl) sEl.value = state.q; render();
+    }));
+  }
 
   /* ---------- 品类色图例（地图左上，点击=切换该品类）---------- */
   const legendEl = document.getElementById('cat-legend');
@@ -831,6 +920,7 @@
   // 应用 URL 分享状态（如有），同步 UI 后首次渲染
   applyHash();
   applyUIFromState();
+  applyLang();
   render();
 
   // 调试 / 程序化控制句柄
