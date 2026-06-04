@@ -184,5 +184,17 @@
     return [lng + dLng, lat + dLat];
   }
 
-  return { SUB_DEFS, classifySub, parseCapacity, wgs2gcj, outOfChina };
+  /* ---------- 业主归一化（企业排行榜聚合键）----------
+   * 取首段（以 / 、，（( 分隔），再剥离纯法律主体后缀，
+   * 让「中国电建」与「中国电建集团」、「国家电网」与「国家电网有限公司」归到同一家。
+   * 兜底：若剥空（业主本就只是"公司"之类）则回退原文。 */
+  function normalizeOwner(o) {
+    let k = ((o || '').split(/[\/、，（(]/)[0] || '').trim();
+    k = k.replace(/[\s,]*(?:Group|Corp(?:oration)?|Co\.?,?\s*Ltd\.?|Ltd\.?|Inc\.?|PLC)\.?$/i, '');
+    k = k.replace(/(?:集团|控股|股份|有限|责任|公司)+$/g, '');
+    k = k.trim();
+    return k || (o || '').trim();
+  }
+
+  return { SUB_DEFS, classifySub, parseCapacity, wgs2gcj, outOfChina, normalizeOwner };
 });

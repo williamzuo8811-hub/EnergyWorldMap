@@ -8,7 +8,7 @@
   const { META, CATEGORIES, REGIONS, STATUS } = window.ENERGY;
   const CAT_KEYS = Object.keys(CATEGORIES);
   // 纯逻辑（子分类规则 / 容量解析 / 坐标纠偏）抽至 js/util.js，与 scripts/test-units.js 共享同一实现
-  const { SUB_DEFS, classifySub, parseCapacity, wgs2gcj } = window.ENERGY_UTIL;
+  const { SUB_DEFS, classifySub, parseCapacity, wgs2gcj, normalizeOwner } = window.ENERGY_UTIL;
 
   const SUB_LABEL = {};
   Object.keys(SUB_DEFS).forEach(cat => { SUB_LABEL[cat] = {}; SUB_DEFS[cat].forEach(d => { SUB_LABEL[cat][d.key] = d.label; }); });
@@ -87,6 +87,7 @@
     playYear: null,             // 时间轴播放时的"当前年"（用于年份大字 + 当年新项目高亮）
     lang: 'zh',                 // 'zh' | 'en'：项目名称与分析标签的中英切换
     lines: true,                // 飞线（输变电/高铁/管道连线）显隐开关
+    compare: [],                // 🆚 国别对比已选国家（最多 4 个）
   };
 
   /* ---------- 中 / EN 语言（项目名走 en 字段；分类/大区/状态/界面标签走映射） ---------- */
@@ -430,6 +431,10 @@
   const btnLeague = document.getElementById('btn-league');
   if (btnLeague) btnLeague.addEventListener('click', showLeague);
 
+  // 🆚 国别对比
+  const btnCompare = document.getElementById('btn-compare');
+  if (btnCompare) btnCompare.addEventListener('click', openCompare);
+
   // 中 / EN 语言切换
   const btnLang = document.getElementById('btn-lang');
   function applyLang() {
@@ -558,32 +563,40 @@
   const countryPanel = document.getElementById('country-panel');
   const countryBackdrop = document.getElementById('country-backdrop');
   function hideCountry() { countryPanel.classList.remove('show'); countryBackdrop.classList.remove('show'); }
-  function showCountry(country) {
+  // 单国能源组合聚合（showCountry 与 🆚 国别对比 共用；投资/装机口径排除国际大客户）
+  function computeCountry(country) {
     const ps = PROJECTS.filter(p => p.country === country);
-    if (!ps.length) return;
     const hasClient = ps.some(p => p.cat === 'client');
-    const base = ps.filter(p => p.cat !== 'client');           // 投资/装机 口径排除国际大客户
+    const base = ps.filter(p => p.cat !== 'client');
     const invBase = base.length ? base : ps;
     const totalInv = invBase.reduce((s, p) => s + (p.inv || 0), 0);
     const totalMW = invBase.reduce((s, p) => s + (p.capMW || 0), 0);
     const catCount = {}, catInv = {};
     ps.forEach(p => { catCount[p.cat] = (catCount[p.cat] || 0) + 1; catInv[p.cat] = (catInv[p.cat] || 0) + (p.inv || 0); });
-    const cats = CAT_KEYS.filter(k => catCount[k]).sort((a, b) => (catInv[b] || 0) - (catInv[a] || 0));
-    const maxCatInv = Math.max(1, ...cats.map(k => catInv[k] || 0));
+    const recentN = ps.filter(isRecent).length;
+    const statusCount = {}; STATUS.forEach(s => { statusCount[s] = ps.filter(p => p.status === s).length; });
+    return { country, ps, hasClient, totalInv, totalMW, catCount, catInv, recentN, statusCount };
+  }
+
+  function showCountry(country) {
+    const d = computeCountry(country);
+    const ps = d.ps;
+    if (!ps.length) return;
+    const cats = CAT_KEYS.filter(k => d.catCount[k]).sort((a, b) => (d.catInv[b] || 0) - (d.catInv[a] || 0));
+    const maxCatInv = Math.max(1, ...cats.map(k => d.catInv[k] || 0));
     const ys = ps.map(p => p.year), ymin = Math.min(...ys), ymax = Math.max(...ys);
     const yc = {}; for (let y = ymin; y <= ymax; y++) yc[y] = 0; ps.forEach(p => { yc[p.year] = (yc[p.year] || 0) + 1; });
     const ymaxN = Math.max(1, ...Object.values(yc));
-    const recentN = ps.filter(isRecent).length;
     const top = ps.slice().sort((a, b) => b.inv - a.inv).slice(0, 12);
 
     const kpi = (v, l) => '<div class="cp-kpi"><div class="v">' + v + '</div><div class="l">' + l + '</div></div>';
     const catBars = cats.map(k => {
       const c = CATEGORIES[k];
       return '<div class="bar-row"><div class="bar-head"><span class="dot" style="background:' + c.color + '"></span>' +
-        '<span class="nm">' + catShort(k) + '</span><span class="vv">' + catCount[k] + ' · ≈$' + fmtInv(catInv[k] || 0) + '</span></div>' +
-        '<div class="bar-track"><div class="bar-fill" style="width:' + ((catInv[k] || 0) / maxCatInv * 100) + '%;background:' + c.color + '"></div></div></div>';
+        '<span class="nm">' + catShort(k) + '</span><span class="vv">' + d.catCount[k] + ' · ≈$' + fmtInv(d.catInv[k] || 0) + '</span></div>' +
+        '<div class="bar-track"><div class="bar-fill" style="width:' + ((d.catInv[k] || 0) / maxCatInv * 100) + '%;background:' + c.color + '"></div></div></div>';
     }).join('');
-    const statusChips = STATUS.map(s => '<div class="s"><b>' + ps.filter(p => p.status === s).length + '</b><span>' + statusName(s) + '</span></div>').join('');
+    const statusChips = STATUS.map(s => '<div class="s"><b>' + d.statusCount[s] + '</b><span>' + statusName(s) + '</span></div>').join('');
     const yearBars = Object.keys(yc).map(y => '<div class="yb" style="height:' + (yc[y] / ymaxN * 100) + '%" title="' + y + '：' + yc[y] + ' 个"></div>').join('');
     const topRows = top.map(p => {
       const c = CATEGORIES[p.cat];
@@ -592,24 +605,28 @@
         '<div class="pm"><span>' + catShort(p.cat) + '</span><span>' + statusName(p.status) + '</span><span>' + esc(usd(p)) + (p.capMW ? ' · ' + capFmt(p.capMW) : '') + '</span></div></div>';
     }).join('');
 
+    countryPanel.classList.remove('wide');
     countryPanel.innerHTML =
       '<div class="cp-head"><span style="font-size:20px">🌍</span><div class="cp-name">' + esc(country) + '</div>' +
+      '<button class="cp-add" id="cp-add" title="加入国别对比">⊕ ' + (state.lang === 'en' ? 'Compare' : '加入对比') + '</button>' +
       '<button class="cp-close" id="cp-close" aria-label="关闭面板" title="关闭">×</button></div>' +
       '<div class="cp-kpis">' +
-      kpi(ps.length, tr('项目数')) + kpi('≈$' + fmtInv(totalInv), tr('总投资')) +
-      kpi(totalMW >= 1000 ? (totalMW / 1000).toFixed(1) + ' GW' : Math.round(totalMW) + ' MW', tr('装机容量')) +
-      kpi(recentN, tr('🆕 近一年')) + '</div>' +
+      kpi(ps.length, tr('项目数')) + kpi('≈$' + fmtInv(d.totalInv), tr('总投资')) +
+      kpi(d.totalMW >= 1000 ? (d.totalMW / 1000).toFixed(1) + ' GW' : Math.round(d.totalMW) + ' MW', tr('装机容量')) +
+      kpi(d.recentN, tr('🆕 近一年')) + '</div>' +
       '<div class="cp-body">' +
       '<div class="cp-sec-title">' + tr('分品类（项目数 · 投资额）') + '</div>' + catBars +
       '<div class="cp-sec-title">' + tr('项目状态') + '</div><div class="cp-status">' + statusChips + '</div>' +
       '<div class="cp-sec-title">' + tr('里程碑年份分布') + '（' + ymin + '–' + ymax + '）</div>' +
       '<div class="cp-years">' + yearBars + '</div><div class="cp-years-ax"><span>' + ymin + '</span><span>' + ymax + '</span></div>' +
       '<div class="cp-sec-title">' + tr('重点项目 TOP（按投资额）') + '</div><div class="cp-proj">' + topRows + '</div>' +
-      (hasClient ? '<div class="cp-note">* 总投资/装机口径不含「国际大客户」，避免与能源品类对同一物理项目重复计。</div>' : '') +
+      (d.hasClient ? '<div class="cp-note">* 总投资/装机口径不含「国际大客户」，避免与能源品类对同一物理项目重复计。</div>' : '') +
       '</div>';
     countryBackdrop.classList.add('show');
     countryPanel.classList.add('show');
     document.getElementById('cp-close').addEventListener('click', hideCountry);
+    const addBtn = document.getElementById('cp-add');
+    if (addBtn) addBtn.addEventListener('click', () => addCompare(country));
     countryPanel.querySelectorAll('.proj-item').forEach(el => el.addEventListener('click', () => {
       const p = PROJECTS.find(x => String(x.id) === el.dataset.id);
       if (p) { hideCountry(); showDetail(p); map.flyTo(toLatLng(p.coord), 8, { duration: 0.7 }); }
@@ -617,8 +634,84 @@
   }
   countryBackdrop.addEventListener('click', hideCountry);
 
+  /* ---------- 🆚 国别对比（多国并排，复用 computeCountry 聚合）---------- */
+  let comparePickerOpen = false;
+  function openCompare() { comparePickerOpen = state.compare.length < 2; showCompare(); }
+  function addCompare(country) {
+    if (country && !state.compare.includes(country) && state.compare.length < 4) state.compare.push(country);
+    comparePickerOpen = state.compare.length < 2;
+    showCompare();
+  }
+  function removeCompare(country) { state.compare = state.compare.filter(c => c !== country); showCompare(); }
+  const cmpKpi = (v, l) => '<div class="cmp-kpi"><b>' + v + '</b><span>' + l + '</span></div>';
+  function countryCounts() {
+    const m = {}; PROJECTS.forEach(p => { m[p.country] = (m[p.country] || 0) + 1; });
+    return Object.keys(m).sort((a, b) => m[b] - m[a]).map(c => ({ c, n: m[c] }));
+  }
+  function showCompare() {
+    const cols = state.compare.map(country => {
+      const d = computeCountry(country);
+      const cats = CAT_KEYS.filter(k => d.catCount[k]).sort((a, b) => (d.catInv[b] || 0) - (d.catInv[a] || 0)).slice(0, 6);
+      const maxCatInv = Math.max(1, ...cats.map(k => d.catInv[k] || 0));
+      const catBars = cats.map(k => {
+        const c = CATEGORIES[k];
+        return '<div class="cmp-cat"><span class="dot" style="background:' + c.color + '"></span><span class="cn">' + catShort(k) + '</span>' +
+          '<span class="cv">≈$' + fmtInv(d.catInv[k] || 0) + '</span>' +
+          '<div class="cmp-cbar"><i style="width:' + ((d.catInv[k] || 0) / maxCatInv * 100) + '%;background:' + c.color + '"></i></div></div>';
+      }).join('');
+      const top = d.ps.slice().sort((a, b) => b.inv - a.inv).slice(0, 3).map((p, i) =>
+        '<div class="cmp-top" data-id="' + p.id + '"><span class="r">' + (i + 1) + '</span><span class="t">' + esc(nm(p)) + '</span><span class="v">' + esc(usd(p)) + '</span></div>').join('');
+      return '<div class="cmp-col">' +
+        '<div class="cmp-col-head"><span class="cc-name">' + esc(country) + '</span>' +
+        '<button class="cmp-rm" data-rm="' + esc(country) + '" aria-label="移除" title="移除">✕</button></div>' +
+        '<div class="cmp-kpis">' +
+        cmpKpi(d.ps.length, tr('项目数')) + cmpKpi('≈$' + fmtInv(d.totalInv), tr('总投资')) +
+        cmpKpi(d.totalMW >= 1000 ? (d.totalMW / 1000).toFixed(1) + ' GW' : Math.round(d.totalMW) + ' MW', tr('装机容量')) +
+        cmpKpi(d.recentN, tr('🆕 近一年')) + '</div>' +
+        '<div class="cmp-sec">' + tr('分品类（项目数 · 投资额）') + '</div>' + (catBars || '<div class="cmp-empty">—</div>') +
+        '<div class="cmp-sec">' + tr('重点项目 TOP（按投资额）') + '</div>' + (top || '<div class="cmp-empty">—</div>') +
+        '</div>';
+    }).join('');
+    const canAdd = state.compare.length < 4;
+    const addTile = canAdd ? '<button class="cmp-addtile" id="cmp-addtile">＋<span>' + (state.lang === 'en' ? 'Add' : '添加') + '</span></button>' : '';
+    let picker = '';
+    if (comparePickerOpen && canAdd) {
+      const list = countryCounts().filter(o => !state.compare.includes(o.c))
+        .map(o => '<button class="cmp-pick" data-pick="' + esc(o.c) + '">' + esc(o.c) + '<span>' + o.n + '</span></button>').join('');
+      picker = '<div class="cmp-picker"><input id="cmp-search" placeholder="' + (state.lang === 'en' ? 'Search country…' : '搜索国家…') + '" aria-label="搜索国家"><div class="cmp-picklist" id="cmp-picklist">' + list + '</div></div>';
+    }
+    const hint = state.compare.length < 2
+      ? '<div class="cmp-hint">' + (state.lang === 'en' ? 'Pick at least two countries to compare.' : '至少选择两个国家并排对比。') + '</div>' : '';
+
+    countryPanel.classList.add('wide');
+    countryPanel.innerHTML =
+      '<div class="cp-head"><span style="font-size:20px">🆚</span><div class="cp-name">' + (state.lang === 'en' ? 'Country comparison' : '国别对比') + '</div>' +
+      '<button class="cp-close" id="cp-close" aria-label="关闭面板" title="关闭">×</button></div>' +
+      '<div class="cp-body">' + hint +
+      '<div class="cmp-grid">' + cols + addTile + '</div>' + picker +
+      '<div class="cp-note">* 各国投资/装机口径不含「国际大客户」。点 TOP 项目可看详情。</div>' +
+      '</div>';
+    countryBackdrop.classList.add('show'); countryPanel.classList.add('show');
+    document.getElementById('cp-close').addEventListener('click', hideCountry);
+    const addtile = document.getElementById('cmp-addtile');
+    if (addtile) addtile.addEventListener('click', () => { comparePickerOpen = !comparePickerOpen; showCompare(); });
+    countryPanel.querySelectorAll('.cmp-rm').forEach(el => el.addEventListener('click', () => removeCompare(el.dataset.rm)));
+    countryPanel.querySelectorAll('.cmp-pick').forEach(el => el.addEventListener('click', () => addCompare(el.dataset.pick)));
+    countryPanel.querySelectorAll('.cmp-top').forEach(el => el.addEventListener('click', () => {
+      const p = PROJECTS.find(x => String(x.id) === el.dataset.id);
+      if (p) { hideCountry(); showDetail(p); map.flyTo(toLatLng(p.coord), 8, { duration: 0.7 }); }
+    }));
+    const cs = document.getElementById('cmp-search');
+    if (cs) cs.addEventListener('input', () => {
+      const q = cs.value.trim().toLowerCase();
+      countryPanel.querySelectorAll('#cmp-picklist .cmp-pick').forEach(b => {
+        b.style.display = b.dataset.pick.toLowerCase().indexOf(q) >= 0 ? '' : 'none';
+      });
+    });
+  }
+
   /* ---------- 🏢 企业 / 业主全球排行榜（点公司名筛选其全部项目）---------- */
-  const ownerKey = o => ((o || '').split(/[\/、（(]/)[0] || '').trim();
+  const ownerKey = normalizeOwner;  // 归并「中国电建」与「中国电建集团」等同义业主
   function showLeague() {
     const ag = {};
     PROJECTS.forEach(p => {

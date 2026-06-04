@@ -546,13 +546,13 @@ body.heat-on .heat-legend { display: flex; }
 .btn-weight:hover { color: var(--txt); border-color: var(--border-strong); }
 .btn-weight.on { color: #fff; border-color: var(--good); background: linear-gradient(90deg, rgba(46, 230, 166, 0.28), rgba(33, 199, 255, 0.22)); box-shadow: 0 0 0 1px rgba(46, 230, 166, 0.4), var(--shadow); }
 
-/* ⚡ 飞线 / 🏢 企业榜 / 中·EN 三个新按钮（沿用 map-tools 按钮风格）*/
-.btn-flow, .btn-league, .btn-lang {
+/* ⚡ 飞线 / 🏢 企业榜 / 🆚 对比 / 中·EN 按钮（沿用 map-tools 按钮风格）*/
+.btn-flow, .btn-league, .btn-compare, .btn-lang {
   padding: 7px 12px; font-size: 12px; color: var(--txt-dim); background: var(--panel);
   border: 1px solid var(--border); border-radius: 10px; cursor: pointer;
   backdrop-filter: blur(8px); box-shadow: var(--shadow); white-space: nowrap;
 }
-.btn-flow:hover, .btn-league:hover, .btn-lang:hover { color: var(--txt); border-color: var(--border-strong); }
+.btn-flow:hover, .btn-league:hover, .btn-compare:hover, .btn-lang:hover { color: var(--txt); border-color: var(--border-strong); }
 .btn-flow.on { color: #fff; border-color: #21c7ff; background: linear-gradient(90deg, rgba(33,199,255,.28), rgba(46,230,166,.18)); box-shadow: 0 0 0 1px rgba(33,199,255,.42), var(--shadow); }
 .btn-lang { font-weight: 800; letter-spacing: .04em; min-width: 34px; text-align: center; }
 
@@ -661,3 +661,55 @@ body.heat-on .heat-legend { display: flex; }
 .cp-proj { display: flex; flex-direction: column; gap: 6px; }
 .cp-note { font-size: 10px; color: var(--txt-faint); margin-top: 12px; line-height: 1.5; }
 @media (max-width: 920px) { .country-panel { width: 94%; } .cp-kpis { grid-template-columns: repeat(2, 1fr); } }
+
+/* 国别下钻面板里的「⊕ 加入对比」按钮 */
+.cp-add {
+  flex: none; margin-left: auto; margin-right: 6px; padding: 5px 11px; font-size: 12px; font-weight: 600;
+  color: #cdeeff; background: rgba(33, 199, 255, 0.14); border: 1px solid rgba(33, 199, 255, 0.4);
+  border-radius: 8px; cursor: pointer; white-space: nowrap;
+}
+.cp-add:hover { background: rgba(33, 199, 255, 0.24); border-color: var(--accent); }
+
+/* ============================================================
+ * 🆚 国别对比（复用 country-panel 外壳，加宽为多列并排）
+ * ============================================================ */
+.country-panel.wide { width: min(920px, 96%); }
+.cmp-hint { font-size: 12px; color: #ffd596; background: rgba(255, 176, 46, 0.12); border: 1px solid rgba(255, 176, 46, 0.3); border-radius: 9px; padding: 9px 12px; margin-bottom: 12px; }
+.cmp-grid { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; }
+.cmp-grid::-webkit-scrollbar { height: 8px; }
+.cmp-grid::-webkit-scrollbar-thumb { background: rgba(120, 160, 220, 0.28); border-radius: 6px; }
+.cmp-col { flex: 0 0 232px; min-width: 0; border: 1px solid var(--border); border-radius: 11px; background: rgba(255, 255, 255, 0.03); padding: 11px; }
+.cmp-col-head { display: flex; align-items: center; gap: 6px; margin-bottom: 9px; }
+.cmp-col-head .cc-name { flex: 1; font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmp-rm { flex: none; width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.04); color: var(--txt-dim); font-size: 12px; line-height: 1; cursor: pointer; }
+.cmp-rm:hover { color: #ff6f59; border-color: rgba(255, 111, 89, 0.5); }
+.cmp-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 4px; }
+.cmp-kpi { background: rgba(0, 0, 0, 0.22); border: 1px solid var(--border); border-radius: 8px; padding: 7px 8px; }
+.cmp-kpi b { display: block; font-size: 14px; font-weight: 800; color: var(--txt); font-variant-numeric: tabular-nums; line-height: 1.2; }
+.cmp-kpi span { font-size: 10px; color: var(--txt-dim); }
+.cmp-sec { font-size: 10px; color: var(--txt-faint); letter-spacing: .4px; margin: 11px 0 6px; }
+.cmp-cat { display: grid; grid-template-columns: 12px 1fr auto; align-items: center; gap: 5px; margin-bottom: 5px; font-size: 11.5px; }
+.cmp-cat .dot { width: 8px; height: 8px; border-radius: 50%; }
+.cmp-cat .cn { color: var(--txt-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmp-cat .cv { font-size: 11px; color: var(--txt); font-variant-numeric: tabular-nums; }
+.cmp-cat .cmp-cbar { grid-column: 2 / -1; height: 3px; border-radius: 2px; background: var(--border); overflow: hidden; margin-top: 1px; }
+.cmp-cat .cmp-cbar i { display: block; height: 100%; border-radius: 2px; }
+.cmp-top { display: flex; align-items: center; gap: 6px; padding: 5px 6px; border-radius: 7px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); cursor: pointer; margin-bottom: 5px; }
+.cmp-top:hover { border-color: var(--border-strong); }
+.cmp-top .r { flex: none; width: 14px; text-align: center; font-weight: 800; color: var(--txt-faint); font-size: 11px; }
+.cmp-top .t { flex: 1; min-width: 0; font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmp-top .v { flex: none; font-size: 10.5px; color: var(--good); font-variant-numeric: tabular-nums; }
+.cmp-empty { font-size: 11px; color: var(--txt-faint); padding: 4px 2px; }
+.cmp-addtile { flex: 0 0 96px; align-self: stretch; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 1px dashed var(--border-strong); border-radius: 11px; background: rgba(255, 255, 255, 0.02); color: var(--txt-dim); font-size: 22px; cursor: pointer; }
+.cmp-addtile span { font-size: 12px; }
+.cmp-addtile:hover { color: var(--txt); border-color: var(--accent); background: rgba(33, 199, 255, 0.06); }
+.cmp-picker { margin-top: 12px; border: 1px solid var(--border); border-radius: 11px; padding: 10px; background: rgba(0, 0, 0, 0.18); }
+.cmp-picker input { width: 100%; padding: 8px 11px; margin-bottom: 9px; background: rgba(0, 0, 0, 0.3); color: var(--txt); border: 1px solid var(--border); border-radius: 9px; font-size: 13px; outline: none; }
+.cmp-picker input:focus { border-color: var(--accent); }
+.cmp-picklist { display: flex; flex-wrap: wrap; gap: 6px; max-height: 168px; overflow-y: auto; }
+.cmp-picklist::-webkit-scrollbar { width: 7px; }
+.cmp-picklist::-webkit-scrollbar-thumb { background: rgba(120, 160, 220, 0.28); border-radius: 6px; }
+.cmp-pick { display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; font-size: 12px; color: var(--txt-dim); background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border); border-radius: 16px; cursor: pointer; }
+.cmp-pick:hover { color: var(--txt); border-color: var(--accent); background: rgba(33, 199, 255, 0.1); }
+.cmp-pick span { font-size: 10px; color: var(--txt-faint); font-variant-numeric: tabular-nums; }
+@media (max-width: 920px) { .country-panel.wide { width: 96%; } .cmp-col { flex-basis: 78%; } }
