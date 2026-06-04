@@ -114,8 +114,9 @@ These power the right-panel **硬指标** block (`updateCapStats`, sums per the 
 weight both switch between investment and `capMW`. The TOP list sorts by `state.sort` (`inv`|`cap`).
 Two correctness rules in `updateStats`: investment + 硬指标 totals exclude `cat==='client'` (the 国际大客户
 cross-view double-counts physical projects) unless client is the only selected category; and money is
-shown in a unified USD form via `usd(p)` (from the numeric `inv`, 亿美元) in tooltips/list, with the
-original-currency `invText` kept in the detail card.
+shown in a unified USD form via `usd(p)`/`fmtInv` (from the numeric `inv`, 亿美元) **everywhere** —
+tooltips, list, KPIs, country panel, and the detail card all lead with USD; the original-currency
+`invText` survives only as a dimmed 原币种 note in the detail card and as a separate CSV column.
 
 `showCountry(country)` (opened from the detail card's clickable 国家 link) renders a centered modal
 dashboard for one country — KPIs, per-category bars, status split, year-distribution sparkline, and a

@@ -645,7 +645,7 @@
       cell('国家 / 地区', '<span class="d-country-link" data-country="' + esc(p.country) + '">' + esc(p.country) + ' 🔎</span>') +
       cell('状态', '<span class="tag-status st-' + p.status + '">' + p.status + '</span>') +
       cell('规模 / 容量', esc(p.cap)) +
-      cell('投资额', esc(p.invText) + (/美元|\$/.test(p.invText || '') ? '' : ' <span class="d-usd">（' + usd(p) + '）</span>')) +
+      cell('投资额', usd(p) + (/美元|\$/.test(p.invText || '') || !p.invText ? '' : ' <span class="d-usd">（原币种：' + esc(p.invText) + '）</span>')) +
       cell('业主 / 参与方', esc(p.owner || '—')) +
       cell('最近动态', esc(p.updated || '—')) +
       '</div><div class="d-desc">' + esc(p.detail || p.desc) + '</div>';
