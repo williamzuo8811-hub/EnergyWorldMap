@@ -2,7 +2,7 @@
 
 一个**可交互的能源项目世界地图**：在真实可缩放的世界地图上展示全球各国近年的重点能源项目，**放大可逐级看到国家 → 省 → 市 → 街道**（带清晰国界与地名），支持按品类、区域、状态、年份多维筛选，并提供实时统计、项目详情与"最近一年"动态高亮。
 
-![品类](https://img.shields.io/badge/品类-10类-21c7ff) ![项目](https://img.shields.io/badge/项目-2210个-2ee6a6) ![核电](https://img.shields.io/badge/核电-57-facc15) ![可再生](https://img.shields.io/badge/可再生-394-2ee6a6) ![数据中心](https://img.shields.io/badge/数据中心-240-ff5fa8) ![矿业](https://img.shields.io/badge/矿业-277-d4a23a) ![石油化工](https://img.shields.io/badge/石油化工-273-ef4444) ![大交通](https://img.shields.io/badge/大交通-243-3b82f6) ![国际大客户](https://img.shields.io/badge/国际大客户-137-a3e635) ![输变电](https://img.shields.io/badge/输变电-216-21c7ff) ![工商业·配网](https://img.shields.io/badge/工商业·配网-199-f0883e) ![储能](https://img.shields.io/badge/储能-174-a855f7)
+![品类](https://img.shields.io/badge/品类-10类-21c7ff) ![项目](https://img.shields.io/badge/项目-2434个-2ee6a6) ![核电](https://img.shields.io/badge/核电-75-facc15) ![可再生](https://img.shields.io/badge/可再生-423-2ee6a6) ![数据中心](https://img.shields.io/badge/数据中心-263-ff5fa8) ![矿业](https://img.shields.io/badge/矿业-301-d4a23a) ![石油化工](https://img.shields.io/badge/石油化工-298-ef4444) ![大交通](https://img.shields.io/badge/大交通-279-3b82f6) ![国际大客户](https://img.shields.io/badge/国际大客户-137-a3e635) ![输变电](https://img.shields.io/badge/输变电-236-21c7ff) ![工商业·配网](https://img.shields.io/badge/工商业·配网-223-f0883e) ![储能](https://img.shields.io/badge/储能-199-a855f7)
 
 ---
 
@@ -63,6 +63,7 @@ powershell -ExecutionPolicy Bypass -File serve.ps1 -Port 4173
 │   ├── data-europe.js        # ★ 欧洲专项：64 个项目（西欧/北欧/南欧/中东欧，8 大品类）
 │   ├── data-nuclear.js       # ★ 核电专项：35 个项目（全球大型堆/SMR/四代堆/聚变，cat='nuclear'）
 │   ├── data-northam.js       # ★ 北美专项：170 个项目（美/加/墨近一年+未来5年，9 大品类，id 2900+）
+│   ├── data-southasia.js     # ★ 南亚专项：224 个项目（印/巴/孟/斯/尼/不/阿近一年+未来5年，9 大品类，region='亚洲'，id 3100+）
 │   ├── progress.js     # 各项目"📍 最新进展"映射（id → 进展文本，537 条，按 id 合并）
 │   └── app.js          # 交互逻辑（地图、底图切换、筛选、统计、详情；两份数据按名称去重合并）
 ├── lib/                # Leaflet 地图库与插件（本地）
@@ -139,7 +140,7 @@ powershell -ExecutionPolicy Bypass -File serve.ps1 -Port 4173
 
 内置数据已联网刷新至 **2026-06**，采用"地标打底 + 重点补充最近一年"策略：保留三峡级标志性大项目，并补齐 2025–2026 的新项目与状态变化（如墨脱水电 2025.7 开工、哈密-重庆/甘肃-浙江特高压、Simandou 铁矿 2025.12 首船、CP2/Alaska/Lake Charles LNG 的 FID、Google-Xcel 30GWh 铁空气储能、台湾海峡 43.3GW 海风、Stargate 扩至 10GW 等）。
 
-经多轮地毯式联网检索（按 9 大品类 × 各大洲并行），数据集已扩充至 **2210 个项目**（纳入门槛：投资 > 5000 万元人民币），覆盖中国各省与全球各大洲。**9 大能源品类均已完成专项深挖**（含新增 **☢️ 核电**），并对 **巴西**（+96，`js/data-brazil.js`）、**中东**（+114，`js/data-mideast.js`）、**中亚+俄罗斯**（+118，`js/data-russia-ca.js`）、**巴西未来 5 年规划管线**（+115，`js/data-brazil-future.js`）、**沙特未来 5 年规划管线**（+107，`js/data-saudi-future.js`）、**东南亚（东盟十国）**（+156，`js/data-seasia.js`）、**非洲大陆**（+224，`js/data-africa.js`）、**欧洲**（+64，`js/data-europe.js`）、**大洋洲**（+83，`js/data-oceania.js`）与 **北美（美/加/墨）近一年+未来 5 年**（+170，`js/data-northam.js`，核电复兴/Gulf LNG/AI 数据中心/半导体与电池超级工厂/关键矿产回流）做了全品类国别/地区深挖，并新增 **☢️ 核电** 品类（+35，`js/data-nuclear.js`，全球大型堆/SMR/四代堆/聚变）；另设 **🤝 国际大客户**（+129，`js/data-clients.js`）——专题收录 14 家中国出海龙头企业（中国电建/中国能建/国网国际/中石油工程/三峡/国家电投/紫金/洛钼/中国有色/比亚迪/宁德时代/格林美/万国DayOne/秦淮数据）近一年的海外（不含中国）重点项目，并按客户公司细分：
+经多轮地毯式联网检索（按 9 大品类 × 各大洲并行），数据集已扩充至 **2434 个项目**（纳入门槛：投资 > 5000 万元人民币），覆盖中国各省与全球各大洲。**9 大能源品类均已完成专项深挖**（含新增 **☢️ 核电**），并对 **巴西**（+96，`js/data-brazil.js`）、**中东**（+114，`js/data-mideast.js`）、**中亚+俄罗斯**（+118，`js/data-russia-ca.js`）、**巴西未来 5 年规划管线**（+115，`js/data-brazil-future.js`）、**沙特未来 5 年规划管线**（+107，`js/data-saudi-future.js`）、**东南亚（东盟十国）**（+156，`js/data-seasia.js`）、**非洲大陆**（+224，`js/data-africa.js`）、**欧洲**（+64，`js/data-europe.js`）、**大洋洲**（+83，`js/data-oceania.js`）、**北美（美/加/墨）近一年+未来 5 年**（+170，`js/data-northam.js`，核电复兴/Gulf LNG/AI 数据中心/半导体与电池超级工厂/关键矿产回流）与 **南亚（印/巴/孟/斯/尼/不/阿）近一年+未来 5 年**（+224，`js/data-southasia.js`，印度光储+绿氢/核电舰队/抽蓄狂潮/半导体使命/AI 数据中心/钾锂铜煤/巴孟斯尼跨境电网水电）做了全品类国别/地区深挖，并新增 **☢️ 核电** 品类（+35，`js/data-nuclear.js`，全球大型堆/SMR/四代堆/聚变）；另设 **🤝 国际大客户**（+129，`js/data-clients.js`）——专题收录 14 家中国出海龙头企业（中国电建/中国能建/国网国际/中石油工程/三峡/国家电投/紫金/洛钼/中国有色/比亚迪/宁德时代/格林美/万国DayOne/秦淮数据）近一年的海外（不含中国）重点项目，并按客户公司细分：
 
 - **输变电·电网 94 个**（近一年 62）：中国特高压（川渝、张北-胜利、陕北-安徽、巴丹吉林-四川等）、欧洲互联（SuedLink、NeuConnect、比斯开湾、EGL1）、全球 HVDC（Grain Belt Express、Marinus Link、智利 Kimal-Lo Aguirre、埃塞-肯尼亚）。
 
