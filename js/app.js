@@ -81,6 +81,11 @@
   const years = PROJECTS.map(p => p.year);
   const MIN_YEAR = Math.min.apply(null, years);
   const MAX_YEAR = Math.max.apply(null, years);
+  // 默认大区：初始进入与重置都只点亮南美
+  const DEFAULT_REGIONS = ['南美'];
+  // 南美取景：fitBounds 自动适配各屏幕（SW [纬,经] → NE [纬,经]）
+  const SA_BOUNDS = [[-56, -82], [13, -34]];
+  function fitSouthAmerica() { map.fitBounds(SA_BOUNDS, { padding: [24, 24] }); }
   const state = {
     cats: new Set(CAT_KEYS), subOff: new Set(), regions: new Set(), countries: new Set(), statuses: new Set(),
     minYear: MIN_YEAR, maxYear: MAX_YEAR, q: '', recentOnly: false, heat: false,
@@ -463,11 +468,13 @@
 
   document.getElementById('btn-reset').addEventListener('click', () => {
     pausePlay();
-    state.cats = new Set(CAT_KEYS); state.subOff.clear(); state.regions.clear(); state.countries.clear(); state.statuses.clear();
+    state.cats = new Set(CAT_KEYS); state.subOff.clear(); state.countries.clear(); state.statuses.clear();
+    state.regions = new Set(DEFAULT_REGIONS); // 重置后仍只点亮南美
     state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.q = ''; state.recentOnly = false;
     state.weight = 'inv'; state.sort = 'inv'; state.heatCat = null;
     clearPresetActive(); document.querySelector('.year-presets .yp[data-preset="all"]').classList.add('on');
     if (typeof syncHeatFacets === 'function') syncHeatFacets();
+    fitSouthAmerica(); // 重置视图取景到南美
     applyUIFromState(); render();
   });
 
@@ -1165,10 +1172,10 @@
 
   // 应用 URL 分享状态（如有），同步 UI 后首次渲染
   applyHash();
-  // 初始进入（无分享链接时）只点亮南美的项目，其他大区默认不亮，并把视图定位到南美
+  // 初始进入（无分享链接时）只点亮南美的项目，其他大区默认不亮，并把视图取景到南美
   if (!location.hash) {
-    state.regions = new Set(['南美']);
-    map.setView([-20, -60], 3);
+    state.regions = new Set(DEFAULT_REGIONS);
+    fitSouthAmerica();
   }
   applyUIFromState();
   applyLang();
