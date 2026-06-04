@@ -1,0 +1,55 @@
+name: deploy-pages
+
+# 把这个纯静态站点（零构建：HTML + CSS + 原生 JS）发布到 GitHub Pages。
+# 触发：推送到 main 自动部署；也可在 Actions 页手动 Run workflow。
+# 一次性前置设置：仓库 Settings → Pages → Source 选 "GitHub Actions"。
+
+on:
+  push:
+    branches: ['main']
+  workflow_dispatch:
+
+# 允许该 workflow 写入 Pages 部署
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同一时刻只跑一个部署；新部署进行中不取消，排队顺序发布
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # 先跑数据校验，校验通过才发布（与 validate.yml 同一套零依赖检查）
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: 数据 Schema 校验
+        run: node scripts/validate-data.js
+      - name: 纯逻辑单元测试
+        run: node scripts/test-units.js
+      - name: app.js 初始化冒烟测试
+        run: node scripts/test-smoke.js
+
+  deploy:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: 配置 Pages
+        uses: actions/configure-pages@v5
+      - name: 上传站点（整个仓库根目录即站点）
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+      - name: 部署到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
