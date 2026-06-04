@@ -2,7 +2,7 @@
 
 一个**可交互的能源项目世界地图**：在真实可缩放的世界地图上展示全球各国近年的重点能源项目，**放大可逐级看到国家 → 省 → 市 → 街道**（带清晰国界与地名），支持按品类、区域、状态、年份多维筛选，并提供实时统计、项目详情与"最近一年"动态高亮。
 
-![品类](https://img.shields.io/badge/品类-10类-21c7ff) ![项目](https://img.shields.io/badge/项目-1634个-2ee6a6) ![可再生](https://img.shields.io/badge/可再生-256-2ee6a6) ![数据中心](https://img.shields.io/badge/数据中心-203-ff5fa8) ![矿业](https://img.shields.io/badge/矿业-197-d4a23a) ![石油化工](https://img.shields.io/badge/石油化工-200-ef4444) ![大交通](https://img.shields.io/badge/大交通-191-3b82f6) ![国际大客户](https://img.shields.io/badge/国际大客户-133-a3e635) ![输变电](https://img.shields.io/badge/输变电-173-21c7ff) ![工商业·配网](https://img.shields.io/badge/工商业·配网-156-f0883e) ![储能](https://img.shields.io/badge/储能-125-a855f7)
+![品类](https://img.shields.io/badge/品类-10类-21c7ff) ![项目](https://img.shields.io/badge/项目-2040个-2ee6a6) ![核电](https://img.shields.io/badge/核电-36-facc15) ![可再生](https://img.shields.io/badge/可再生-368-2ee6a6) ![数据中心](https://img.shields.io/badge/数据中心-228-ff5fa8) ![矿业](https://img.shields.io/badge/矿业-257-d4a23a) ![石油化工](https://img.shields.io/badge/石油化工-260-ef4444) ![大交通](https://img.shields.io/badge/大交通-219-3b82f6) ![国际大客户](https://img.shields.io/badge/国际大客户-137-a3e635) ![输变电](https://img.shields.io/badge/输变电-198-21c7ff) ![工商业·配网](https://img.shields.io/badge/工商业·配网-182-f0883e) ![储能](https://img.shields.io/badge/储能-155-a855f7)
 
 ---
 
@@ -59,6 +59,9 @@ powershell -ExecutionPolicy Bypass -File serve.ps1 -Port 4173
 │   ├── data-saudi-future.js  # ★ 沙特未来5年规划：107 个项目（愿景2030/NEOM/Aramco/Ma'aden 2026-2031 管线）
 │   ├── data-seasia.js        # ★ 东南亚专项：156 个项目（东盟十国近一年+未来5年，8 大品类）
 │   ├── data-africa.js        # ★ 非洲大陆专项：224 个项目（北非/西非/东非/中部/南部 45 国近一年+未来5年，8 大品类）
+│   ├── data-oceania.js       # ★ 大洋洲专项：83 个项目（澳大利亚/新西兰/巴布亚新几内亚，8 大品类）
+│   ├── data-europe.js        # ★ 欧洲专项：64 个项目（西欧/北欧/南欧/中东欧，8 大品类）
+│   ├── data-nuclear.js       # ★ 核电专项：35 个项目（全球大型堆/SMR/四代堆/聚变，cat='nuclear'）
 │   ├── progress.js     # 各项目"📍 最新进展"映射（id → 进展文本，537 条，按 id 合并）
 │   └── app.js          # 交互逻辑（地图、底图切换、筛选、统计、详情；两份数据按名称去重合并）
 ├── lib/                # Leaflet 地图库与插件（本地）
@@ -135,7 +138,7 @@ powershell -ExecutionPolicy Bypass -File serve.ps1 -Port 4173
 
 内置数据已联网刷新至 **2026-06**，采用"地标打底 + 重点补充最近一年"策略：保留三峡级标志性大项目，并补齐 2025–2026 的新项目与状态变化（如墨脱水电 2025.7 开工、哈密-重庆/甘肃-浙江特高压、Simandou 铁矿 2025.12 首船、CP2/Alaska/Lake Charles LNG 的 FID、Google-Xcel 30GWh 铁空气储能、台湾海峡 43.3GW 海风、Stargate 扩至 10GW 等）。
 
-经多轮地毯式联网检索（按 9 大品类 × 各大洲并行），数据集已扩充至 **1634 个项目**（纳入门槛：投资 > 5000 万元人民币），覆盖中国各省与全球各大洲。**8 大能源品类均已完成专项深挖**，并对 **巴西**（+96，`js/data-brazil.js`）、**中东**（+114，`js/data-mideast.js`）、**中亚+俄罗斯**（+118，`js/data-russia-ca.js`）、**巴西未来 5 年规划管线**（+115，`js/data-brazil-future.js`）、**沙特未来 5 年规划管线**（+107，`js/data-saudi-future.js`）与 **东南亚（东盟十国）近一年+未来 5 年**（+156，`js/data-seasia.js`，印尼镍铜/越南 PDP8/柔佛数据中心潮/泰国陆桥/老柬越电网铁路等）做了全品类国别/地区深挖；另设 **🤝 国际大客户**（+129，`js/data-clients.js`）——专题收录 14 家中国出海龙头企业（中国电建/中国能建/国网国际/中石油工程/三峡/国家电投/紫金/洛钼/中国有色/比亚迪/宁德时代/格林美/万国DayOne/秦淮数据）近一年的海外（不含中国）重点项目，并按客户公司细分：
+经多轮地毯式联网检索（按 9 大品类 × 各大洲并行），数据集已扩充至 **2040 个项目**（纳入门槛：投资 > 5000 万元人民币），覆盖中国各省与全球各大洲。**9 大能源品类均已完成专项深挖**（含新增 **☢️ 核电**），并对 **巴西**（+96，`js/data-brazil.js`）、**中东**（+114，`js/data-mideast.js`）、**中亚+俄罗斯**（+118，`js/data-russia-ca.js`）、**巴西未来 5 年规划管线**（+115，`js/data-brazil-future.js`）、**沙特未来 5 年规划管线**（+107，`js/data-saudi-future.js`）、**东南亚（东盟十国）**（+156，`js/data-seasia.js`）、**非洲大陆**（+224，`js/data-africa.js`）、**欧洲**（+64，`js/data-europe.js`）与 **大洋洲**（+83，`js/data-oceania.js`）做了全品类国别/地区深挖，并新增 **☢️ 核电** 品类（+35，`js/data-nuclear.js`，全球大型堆/SMR/四代堆/聚变）；另设 **🤝 国际大客户**（+129，`js/data-clients.js`）——专题收录 14 家中国出海龙头企业（中国电建/中国能建/国网国际/中石油工程/三峡/国家电投/紫金/洛钼/中国有色/比亚迪/宁德时代/格林美/万国DayOne/秦淮数据）近一年的海外（不含中国）重点项目，并按客户公司细分：
 
 - **输变电·电网 94 个**（近一年 62）：中国特高压（川渝、张北-胜利、陕北-安徽、巴丹吉林-四川等）、欧洲互联（SuedLink、NeuConnect、比斯开湾、EGL1）、全球 HVDC（Grain Belt Express、Marinus Link、智利 Kimal-Lo Aguirre、埃塞-肯尼亚）。
 
