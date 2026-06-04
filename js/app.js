@@ -212,7 +212,7 @@
   const MAX_YEAR = Math.max.apply(null, years);
   const state = {
     cats: new Set(CAT_KEYS), subOff: new Set(), regions: new Set(), statuses: new Set(),
-    minYear: MIN_YEAR, q: '', recentOnly: false, heat: false,
+    minYear: MIN_YEAR, maxYear: MAX_YEAR, q: '', recentOnly: false, heat: false,
   };
 
   const sizeFn = inv => Math.max(8, Math.min(34, 7 + Math.sqrt(Math.max(inv, 1)) * 0.95));
@@ -229,9 +229,21 @@
     return (state.regions.size === 0 || state.regions.has(p.region))
       && (state.statuses.size === 0 || state.statuses.has(p.status))
       && (!state.recentOnly || isRecent(p))
-      && p.year >= state.minYear && matchQ(p, state.q);
+      && p.year >= state.minYear && p.year <= state.maxYear && matchQ(p, state.q);
   }
   const filtered = () => PROJECTS.filter(p => state.cats.has(p.cat) && !state.subOff.has(p.cat + ':' + p.sub) && passBase(p));
+
+  // 品类 / 大区切换（供品类条、图例、区域格、筛选项共用，保持联动）
+  function toggleCat(key) { if (state.cats.has(key)) state.cats.delete(key); else state.cats.add(key); syncCatUI(); render(); }
+  function syncCatUI() {
+    document.querySelectorAll('.cat-chip').forEach(el => el.classList.toggle('off', !state.cats.has(el.dataset.key)));
+    document.querySelectorAll('.cat-legend .cl').forEach(el => el.classList.toggle('off', !state.cats.has(el.dataset.key)));
+  }
+  function toggleRegion(r) {
+    if (state.regions.has(r)) state.regions.delete(r); else state.regions.add(r);
+    document.querySelectorAll('#region-chips .pill').forEach(el => el.classList.toggle('on', state.regions.has(el.dataset.v)));
+    render();
+  }
 
   /* ---------- 地图标记（含聚合） ---------- */
   // 飞线常显（不参与聚合），项目标记进入聚合组
@@ -329,9 +341,7 @@
       '<span class="caret" title="展开子分类">▸</span>';
     chip.addEventListener('click', (e) => {
       if (e.target.classList.contains('caret')) { group.classList.toggle('open'); return; }
-      if (state.cats.has(key)) state.cats.delete(key); else state.cats.add(key);
-      chip.classList.toggle('off', !state.cats.has(key));
-      render();
+      toggleCat(key);
     });
     group.appendChild(chip);
     const subWrap = document.createElement('div');
@@ -356,10 +366,7 @@
   REGIONS.forEach(r => {
     const el = document.createElement('div');
     el.className = 'pill'; el.textContent = r; el.dataset.v = r;
-    el.addEventListener('click', () => {
-      if (state.regions.has(r)) state.regions.delete(r); else state.regions.add(r);
-      el.classList.toggle('on', state.regions.has(r)); render();
-    });
+    el.addEventListener('click', () => toggleRegion(r));
     regionEl.appendChild(el);
   });
 
@@ -382,29 +389,51 @@
     render();
   });
 
-  const slider = document.getElementById('year-slider');
+  // 年份区间：双手柄滑块 [minYear, maxYear] + 快捷预设
   const yearLabel = document.getElementById('year-label');
-  const yearCur = document.getElementById('year-cur');
-  slider.min = MIN_YEAR; slider.max = MAX_YEAR; slider.value = MIN_YEAR;
-  yearCur.textContent = '全部';
-  slider.addEventListener('input', () => {
-    state.minYear = +slider.value;
-    const txt = state.minYear <= MIN_YEAR ? '全部' : state.minYear + ' 年起';
-    yearLabel.textContent = txt; yearCur.textContent = txt; render();
+  const yearMin = document.getElementById('year-min');
+  const yearMax = document.getElementById('year-max');
+  const yearMinLab = document.getElementById('year-min-lab');
+  const yearMaxLab = document.getElementById('year-max-lab');
+  const rdFill = document.getElementById('rd-fill');
+  [yearMin, yearMax].forEach(s => { s.min = MIN_YEAR; s.max = MAX_YEAR; });
+  yearMin.value = MIN_YEAR; yearMax.value = MAX_YEAR;
+  function syncYearUI() {
+    yearMinLab.textContent = state.minYear; yearMaxLab.textContent = state.maxYear;
+    const span = (MAX_YEAR - MIN_YEAR) || 1;
+    rdFill.style.left = ((state.minYear - MIN_YEAR) / span * 100) + '%';
+    rdFill.style.right = ((MAX_YEAR - state.maxYear) / span * 100) + '%';
+    yearLabel.textContent = (state.minYear <= MIN_YEAR && state.maxYear >= MAX_YEAR) ? '全部' : state.minYear + '–' + state.maxYear;
+  }
+  function clearPresetActive() { document.querySelectorAll('.year-presets .yp').forEach(b => b.classList.remove('on')); }
+  function onYearInput(which) {
+    let lo = +yearMin.value, hi = +yearMax.value;
+    if (lo > hi) { if (which === 'min') { yearMin.value = hi; lo = hi; } else { yearMax.value = lo; hi = lo; } }
+    state.minYear = lo; state.maxYear = hi;
+    clearPresetActive(); syncYearUI(); render();
+  }
+  yearMin.addEventListener('input', () => onYearInput('min'));
+  yearMax.addEventListener('input', () => onYearInput('max'));
+  document.querySelectorAll('.year-presets .yp').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pr = btn.dataset.preset;
+      if (pr === 'recent') { state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.recentOnly = true; }
+      else if (pr === 'future') { state.minYear = Math.min(2027, MAX_YEAR); state.maxYear = MAX_YEAR; state.recentOnly = false; }
+      else { state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.recentOnly = false; }
+      clearPresetActive(); btn.classList.add('on');
+      yearMin.value = state.minYear; yearMax.value = state.maxYear;
+      if (recentBtn) recentBtn.classList.toggle('on', state.recentOnly);
+      syncYearUI(); render();
+    });
   });
 
   document.getElementById('search').addEventListener('input', e => { state.q = e.target.value.trim(); render(); });
 
   document.getElementById('btn-reset').addEventListener('click', () => {
     state.cats = new Set(CAT_KEYS); state.subOff.clear(); state.regions.clear(); state.statuses.clear();
-    state.minYear = MIN_YEAR; state.q = ''; state.recentOnly = false;
-    document.getElementById('search').value = '';
-    slider.value = MIN_YEAR; yearLabel.textContent = '全部'; yearCur.textContent = '全部';
-    recentBtn.classList.remove('on');
-    document.querySelectorAll('.cat-chip').forEach(e => e.classList.remove('off'));
-    document.querySelectorAll('.sub-chip').forEach(e => e.classList.remove('off'));
-    document.querySelectorAll('.pill').forEach(e => e.classList.remove('on'));
-    render();
+    state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.q = ''; state.recentOnly = false;
+    clearPresetActive(); document.querySelector('.year-presets .yp[data-preset="all"]').classList.add('on');
+    applyUIFromState(); render();
   });
 
   // 底图切换按钮
@@ -443,7 +472,7 @@
     const maxC = Math.max(1, ...Object.values(catCount));
     document.getElementById('cat-bars').innerHTML = CAT_KEYS.map(k => {
       const c = CATEGORIES[k], n = catCount[k], dim = state.cats.has(k) ? '' : 'opacity:.35';
-      return '<div class="bar-row" style="' + dim + '"><div class="bar-head"><span class="dot" style="background:' + c.color + '"></span>' +
+      return '<div class="bar-row" data-key="' + k + '" style="cursor:pointer;' + dim + '"><div class="bar-head"><span class="dot" style="background:' + c.color + '"></span>' +
         '<span class="nm">' + c.short + '</span><span class="vv">' + n + '</span></div>' +
         '<div class="bar-track"><div class="bar-fill" style="width:' + (n / maxC * 100) + '%;background:' + c.color + '"></div></div></div>';
     }).join('');
@@ -458,7 +487,7 @@
     const regCount = {}; REGIONS.forEach(r => regCount[r] = 0);
     items.forEach(p => { if (regCount[p.region] != null) regCount[p.region]++; });
     document.getElementById('region-grid').innerHTML = REGIONS.map(r =>
-      '<div class="region-cell"><div class="rv">' + regCount[r] + '</div><div class="rl">' + r + '</div></div>').join('');
+      '<div class="region-cell' + (state.regions.has(r) ? ' on' : '') + '" data-region="' + r + '"><div class="rv">' + regCount[r] + '</div><div class="rl">' + r + '</div></div>').join('');
   }
 
   /* ---------- 项目列表（投资额排序） ---------- */
@@ -507,6 +536,100 @@
   const hideDetail = () => detailEl.classList.remove('show');
   map.on('click', hideDetail);
 
+  /* ---------- 品类色图例（地图左上，点击=切换该品类）---------- */
+  const legendEl = document.getElementById('cat-legend');
+  if (legendEl) {
+    legendEl.innerHTML = '<div class="cl-title">品类（点击切换）</div>' + CAT_KEYS.map(k => {
+      const c = CATEGORIES[k];
+      return '<div class="cl" data-key="' + k + '"><span class="d" style="background:' + c.color + '"></span>' + c.short + '</div>';
+    }).join('');
+    legendEl.querySelectorAll('.cl').forEach(el => el.addEventListener('click', () => toggleCat(el.dataset.key)));
+  }
+
+  /* ---------- 点统计即筛选（右侧分类条 / 区域格 双向联动）---------- */
+  document.getElementById('cat-bars').addEventListener('click', e => {
+    const row = e.target.closest('.bar-row'); if (row && row.dataset.key) toggleCat(row.dataset.key);
+  });
+  document.getElementById('region-grid').addEventListener('click', e => {
+    const cell = e.target.closest('.region-cell'); if (cell && cell.dataset.region) toggleRegion(cell.dataset.region);
+  });
+
+  /* ---------- 轻量提示条 ---------- */
+  function toast(msg) {
+    let t = document.getElementById('toast');
+    if (!t) { t = document.createElement('div'); t.id = 'toast'; t.className = 'toast'; document.body.appendChild(t); }
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  /* ---------- 可分享链接：把筛选状态编码进 URL（仅记录非默认项）---------- */
+  function stateToHash() {
+    const p = new URLSearchParams();
+    const offCats = CAT_KEYS.filter(k => !state.cats.has(k));
+    if (offCats.length) p.set('coff', offCats.join('~'));
+    if (state.subOff.size) p.set('soff', [...state.subOff].join('~'));
+    if (state.regions.size) p.set('reg', [...state.regions].join('~'));
+    if (state.statuses.size) p.set('st', [...state.statuses].join('~'));
+    if (state.minYear > MIN_YEAR || state.maxYear < MAX_YEAR) p.set('yr', state.minYear + '-' + state.maxYear);
+    if (state.q) p.set('q', state.q);
+    if (state.recentOnly) p.set('recent', '1');
+    if (state.heat) p.set('heat', '1');
+    return p.toString();
+  }
+  function applyHash() {
+    const h = (location.hash || '').replace(/^#/, '');
+    if (!h) return;
+    const p = new URLSearchParams(h);
+    if (p.has('coff')) { const off = new Set(p.get('coff').split('~')); state.cats = new Set(CAT_KEYS.filter(k => !off.has(k))); }
+    if (p.has('soff')) state.subOff = new Set(p.get('soff').split('~').filter(Boolean));
+    if (p.has('reg')) state.regions = new Set(p.get('reg').split('~').filter(Boolean));
+    if (p.has('st')) state.statuses = new Set(p.get('st').split('~').filter(Boolean));
+    if (p.has('yr')) {
+      const m = p.get('yr').split('-'); const lo = +m[0], hi = +m[1];
+      if (!isNaN(lo)) state.minYear = Math.max(MIN_YEAR, Math.min(lo, MAX_YEAR));
+      if (!isNaN(hi)) state.maxYear = Math.max(MIN_YEAR, Math.min(hi, MAX_YEAR));
+      if (state.minYear > state.maxYear) { const t = state.minYear; state.minYear = state.maxYear; state.maxYear = t; }
+    }
+    if (p.has('q')) state.q = p.get('q');
+    if (p.has('recent')) state.recentOnly = true;
+    if (p.has('heat')) state.heat = true;
+  }
+  document.getElementById('btn-share').addEventListener('click', () => {
+    const hash = stateToHash();
+    const url = location.href.split('#')[0] + (hash ? ('#' + hash) : '');
+    try { history.replaceState(null, '', hash ? ('#' + hash) : (location.pathname + location.search)); } catch (e) { /* file:// 等环境忽略 */ }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(() => toast('🔗 视图链接已复制到剪贴板'), () => toast('🔗 链接已生成（见地址栏）'));
+    } else { toast('🔗 链接已生成（见地址栏）'); }
+  });
+
+  /* ---------- 导出当前筛选结果为 CSV（含 BOM，Excel 中文不乱码）---------- */
+  document.getElementById('btn-export').addEventListener('click', () => {
+    const items = filtered();
+    const head = ['编号', '名称', '英文名', '国家', '大区', '品类', '子分类', '状态', '里程碑年', '更新', '容量', '投资亿美元', '投资文本', '业主', '旗舰', '经度', '纬度', '简介'];
+    const q = v => { v = (v == null ? '' : String(v)); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    const rows = items.map(p => [p.id, p.name, p.en, p.country, p.region, (CATEGORIES[p.cat] || {}).name || p.cat, subLabel(p), p.status, p.year, p.updated, p.cap, p.inv, p.invText, p.owner, p.flagship ? '是' : '', p.coord && p.coord[0], p.coord && p.coord[1], p.desc].map(q).join(','));
+    const csv = '﻿' + head.join(',') + '\n' + rows.join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'energy-projects-' + items.length + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    toast('⤓ 已导出 ' + items.length + ' 个项目 (CSV)');
+  });
+
+  /* ---------- 由 state 同步所有筛选 UI（用于 URL 载入与重置）---------- */
+  function applyUIFromState() {
+    syncCatUI();
+    document.querySelectorAll('.sub-chip').forEach(el => el.classList.toggle('off', state.subOff.has(el.dataset.key + ':' + el.dataset.sub)));
+    document.querySelectorAll('#region-chips .pill').forEach(el => el.classList.toggle('on', state.regions.has(el.dataset.v)));
+    document.querySelectorAll('#status-chips .pill').forEach(el => el.classList.toggle('on', state.statuses.has(el.dataset.v)));
+    if (recentBtn) recentBtn.classList.toggle('on', state.recentOnly);
+    if (btnHeat) { btnHeat.classList.toggle('on', state.heat); document.body.classList.toggle('heat-on', state.heat); }
+    const sEl = document.getElementById('search'); if (sEl) sEl.value = state.q;
+    if (yearMin) { yearMin.value = state.minYear; yearMax.value = state.maxYear; syncYearUI(); }
+  }
+
   /* ---------- 渲染 ---------- */
   function render() { const items = filtered(); updateMap(items); updateStats(items); updateList(items); }
 
@@ -514,8 +637,11 @@
   const lu = document.getElementById('last-updated');
   if (lu) lu.textContent = '数据更新 ' + META.lastUpdated;
 
+  // 应用 URL 分享状态（如有），同步 UI 后首次渲染
+  applyHash();
+  applyUIFromState();
   render();
 
   // 调试 / 程序化控制句柄
-  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer };
+  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash };
 })();

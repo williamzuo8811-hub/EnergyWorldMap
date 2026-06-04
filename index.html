@@ -54,19 +54,34 @@
         </div>
 
         <div class="block">
-          <div class="block-title">起始年份 <span class="count" id="year-label">全部</span></div>
+          <div class="block-title">年份区间 <span class="count" id="year-label">全部</span></div>
+          <div class="year-presets">
+            <button class="yp on" data-preset="all">全部</button>
+            <button class="yp" data-preset="recent">🆕 近一年</button>
+            <button class="yp" data-preset="future">未来管线 2027+</button>
+          </div>
           <div class="year-wrap">
-            <div class="year-val"><span>更早</span><b id="year-cur"></b><span>至今</span></div>
-            <input id="year-slider" type="range" min="2020" max="2026" step="1" value="2020">
+            <div class="year-val"><b id="year-min-lab">2012</b><span>—</span><b id="year-max-lab">2035</b></div>
+            <div class="range-dual">
+              <div class="rd-track"></div>
+              <div class="rd-fill" id="rd-fill"></div>
+              <input id="year-min" type="range" min="2012" max="2035" step="1" value="2012">
+              <input id="year-max" type="range" min="2012" max="2035" step="1" value="2035">
+            </div>
           </div>
         </div>
 
+        <div class="action-row">
+          <button class="btn-act" id="btn-share" title="复制当前筛选视图的分享链接">🔗 分享视图</button>
+          <button class="btn-act" id="btn-export" title="导出当前筛选结果为 CSV">⤓ 导出CSV</button>
+        </div>
         <button class="btn-reset" id="btn-reset">↺ 重置全部筛选</button>
       </aside>
 
       <!-- 中间：地图 -->
       <section class="map-wrap">
         <div id="map"></div>
+        <div class="cat-legend" id="cat-legend"></div>
         <div class="detail" id="detail"></div>
         <div class="map-tools">
           <div class="basemap-switch" id="basemap-switch"></div>

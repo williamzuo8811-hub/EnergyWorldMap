@@ -85,6 +85,15 @@ polylines ("flowlines" for grids/HSR/pipelines) are always shown and never clust
 (`state.heat`) hides markers and renders a `√inv`-weighted `L.heatLayer` instead. A debug handle is
 exposed at `window.__APP__`.
 
+Year filtering is an interval `[state.minYear, state.maxYear]` driven by a dual-handle range slider
+(bounds set dynamically from data min/max year) plus presets (全部 / 🆕近一年 / 未来管线2027+).
+Category/region toggles are centralized in `toggleCat`/`toggleRegion` (+ `syncCatUI`) and shared by
+the left filter chips, the on-map category legend (`#cat-legend`), and the right-panel stat bars /
+region cells (click-to-filter, two-way). Filter state round-trips through the URL hash via
+`stateToHash`/`applyHash` (only non-default fields encoded) — the 🔗 share button copies the link and
+`applyHash`+`applyUIFromState` restore it on load; `applyUIFromState` is the single place that syncs
+every toggle's visual from `state` (also used by reset). ⤓ export dumps `filtered()` to a BOM-prefixed CSV.
+
 ## Project data conventions
 
 A project object (see `data.js` header comment for the full field reference):
