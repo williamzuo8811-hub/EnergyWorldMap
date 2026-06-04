@@ -499,3 +499,34 @@ body.heat-on .heat-legend { display: flex; }
 
 /* 详情卡：投资额的美元折算说明 */
 .detail .d-usd { color: #8fb0e0; font-size: 12px; }
+
+/* ============================================================
+ * 时间轴播放：播放按钮 / 年份大字 / 当年新项目高亮
+ * ============================================================ */
+.btn-play {
+  width: 100%; margin-top: 10px; padding: 9px; border-radius: 10px; cursor: pointer;
+  font-size: 13px; font-weight: 600; transition: all .15s;
+  color: #cdeeff; background: rgba(33, 199, 255, 0.12); border: 1px solid rgba(33, 199, 255, 0.35);
+}
+.btn-play:hover { border-color: var(--accent); }
+.btn-play.on { background: linear-gradient(135deg, rgba(33, 199, 255, 0.30), rgba(46, 230, 166, 0.24)); color: #fff; border-color: var(--accent); box-shadow: 0 0 14px rgba(33, 199, 255, 0.3); }
+
+/* 播放时地图上的年份大字 */
+.year-ticker {
+  position: absolute; right: 26px; top: 50%; transform: translateY(-50%);
+  z-index: 1100; display: none; pointer-events: none;
+  font-size: 132px; font-weight: 800; line-height: 1; letter-spacing: 2px;
+  font-variant-numeric: tabular-nums; color: rgba(205, 238, 255, 0.12);
+  text-shadow: 0 0 46px rgba(33, 199, 255, 0.28);
+}
+.year-ticker.show { display: block; animation: tickerIn .4s ease-out; }
+@keyframes tickerIn { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 920px) { .year-ticker { font-size: 64px; right: 14px; } }
+
+/* 播放中"当年新增"项目的弹入高亮（覆盖旗舰脉冲，一次性）*/
+.dot.is-year-new { animation: yearPop .85s cubic-bezier(.2,.9,.2,1); transform-origin: center; }
+@keyframes yearPop {
+  0% { transform: scale(2.4); filter: brightness(1.9) drop-shadow(0 0 8px currentColor); }
+  55% { transform: scale(1); }
+  100% { transform: scale(1); filter: none; }
+}

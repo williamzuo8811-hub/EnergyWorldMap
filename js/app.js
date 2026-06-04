@@ -249,6 +249,7 @@
     cats: new Set(CAT_KEYS), subOff: new Set(), regions: new Set(), statuses: new Set(),
     minYear: MIN_YEAR, maxYear: MAX_YEAR, q: '', recentOnly: false, heat: false,
     weight: 'inv', sort: 'inv', // weight: 圆点/热力按 inv 投资 或 cap 装机容量；sort: TOP 排序
+    playYear: null,             // 时间轴播放时的"当前年"（用于年份大字 + 当年新项目高亮）
   };
 
   const sizeFn = v => Math.max(8, Math.min(34, 7 + Math.sqrt(Math.max(v, 1)) * 0.95));
@@ -351,7 +352,7 @@
     const markers = [];
     items.forEach(p => {
       const c = CATEGORIES[p.cat], d = Math.round(sizeFn(weightVal(p)));
-      const cls = 'dot' + (p.flagship ? ' is-flag' : '') + (isRecent(p) ? ' is-new' : '');
+      const cls = 'dot' + (p.flagship ? ' is-flag' : '') + (isRecent(p) ? ' is-new' : '') + (state.playYear === p.year ? ' is-year-new' : '');
       const icon = L.divIcon({
         className: 'mk', iconSize: [d, d], iconAnchor: [d / 2, d / 2],
         html: '<i class="' + cls + '" style="--c:' + c.color + ';width:' + d + 'px;height:' + d + 'px"></i>',
@@ -450,6 +451,7 @@
   }
   function clearPresetActive() { document.querySelectorAll('.year-presets .yp').forEach(b => b.classList.remove('on')); }
   function onYearInput(which) {
+    pausePlay();
     let lo = +yearMin.value, hi = +yearMax.value;
     if (lo > hi) { if (which === 'min') { yearMin.value = hi; lo = hi; } else { yearMax.value = lo; hi = lo; } }
     state.minYear = lo; state.maxYear = hi;
@@ -459,6 +461,7 @@
   yearMax.addEventListener('input', () => onYearInput('max'));
   document.querySelectorAll('.year-presets .yp').forEach(btn => {
     btn.addEventListener('click', () => {
+      pausePlay();
       const pr = btn.dataset.preset;
       if (pr === 'recent') { state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.recentOnly = true; }
       else if (pr === 'future') { state.minYear = Math.min(2027, MAX_YEAR); state.maxYear = MAX_YEAR; state.recentOnly = false; }
@@ -470,9 +473,42 @@
     });
   });
 
+  // ▶ 时间轴播放：2012→今 逐年累计揭示，看能源版图"长"出来
+  let playTimer = null, playYearN = MIN_YEAR;
+  const btnPlay = document.getElementById('btn-play');
+  const yearTicker = document.getElementById('year-ticker');
+  function setPlayUI(on) {
+    if (btnPlay) { btnPlay.classList.toggle('on', on); btnPlay.textContent = on ? '⏸ 暂停' : '▶ 播放时间轴'; }
+    if (yearTicker) yearTicker.classList.toggle('show', on);
+  }
+  function playStep(y) {
+    state.maxYear = y; state.playYear = y; yearMax.value = y;
+    if (yearTicker) yearTicker.textContent = y;
+    syncYearUI(); render();
+  }
+  function pausePlay() {
+    if (playTimer) { clearInterval(playTimer); playTimer = null; }
+    state.playYear = null; setPlayUI(false);
+  }
+  function startPlay() {
+    if (!btnPlay) return;
+    clearPresetActive();
+    state.minYear = MIN_YEAR; yearMin.value = MIN_YEAR;      // 从头累计
+    playYearN = (state.maxYear >= MAX_YEAR || state.maxYear <= MIN_YEAR) ? MIN_YEAR : state.maxYear; // 重头或续播
+    setPlayUI(true); playStep(playYearN);
+    playTimer = setInterval(() => {
+      if (playYearN >= MAX_YEAR) {                            // 到末年：定格全量并停
+        pausePlay(); state.maxYear = MAX_YEAR; yearMax.value = MAX_YEAR; syncYearUI(); render(); return;
+      }
+      playYearN += 1; playStep(playYearN);
+    }, 850);
+  }
+  if (btnPlay) btnPlay.addEventListener('click', () => { playTimer ? pausePlay() : startPlay(); });
+
   document.getElementById('search').addEventListener('input', e => { state.q = e.target.value.trim(); render(); });
 
   document.getElementById('btn-reset').addEventListener('click', () => {
+    pausePlay();
     state.cats = new Set(CAT_KEYS); state.subOff.clear(); state.regions.clear(); state.statuses.clear();
     state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.q = ''; state.recentOnly = false;
     state.weight = 'inv'; state.sort = 'inv';

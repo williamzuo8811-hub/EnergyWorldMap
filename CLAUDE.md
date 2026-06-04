@@ -86,7 +86,9 @@ polylines ("flowlines" for grids/HSR/pipelines) are always shown and never clust
 exposed at `window.__APP__`.
 
 Year filtering is an interval `[state.minYear, state.maxYear]` driven by a dual-handle range slider
-(bounds set dynamically from data min/max year) plus presets (全部 / 🆕近一年 / 未来管线2027+).
+(bounds set dynamically from data min/max year) plus presets (全部 / 🆕近一年 / 未来管线2027+) and a
+▶ timeline play (cumulative reveal: advances `maxYear` MIN→MAX on a timer, sets `state.playYear` to
+pulse that year's new projects and show a big year ticker; any manual year interaction calls `pausePlay`).
 Category/region toggles are centralized in `toggleCat`/`toggleRegion` (+ `syncCatUI`) and shared by
 the left filter chips, the on-map category legend (`#cat-legend`), and the right-panel stat bars /
 region cells (click-to-filter, two-way). Filter state round-trips through the URL hash via
