@@ -117,6 +117,11 @@ cross-view double-counts physical projects) unless client is the only selected c
 shown in a unified USD form via `usd(p)` (from the numeric `inv`, 亿美元) in tooltips/list, with the
 original-currency `invText` kept in the detail card.
 
+`showCountry(country)` (opened from the detail card's clickable 国家 link) renders a centered modal
+dashboard for one country — KPIs, per-category bars, status split, year-distribution sparkline, and a
+clickable TOP list — computed over **all** `PROJECTS` in that country (independent of the active filter);
+its 投资/装机 totals apply the same client-exclusion rule.
+
 ## Project data conventions
 
 A project object (see `data.js` header comment for the full field reference):

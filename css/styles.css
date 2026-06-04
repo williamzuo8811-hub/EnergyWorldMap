@@ -530,3 +530,57 @@ body.heat-on .heat-legend { display: flex; }
   55% { transform: scale(1); }
   100% { transform: scale(1); filter: none; }
 }
+
+/* ============================================================
+ * 国别下钻面板（点详情卡的国家打开的能源组合仪表盘）
+ * ============================================================ */
+.d-country-link { color: var(--accent); cursor: pointer; border-bottom: 1px dashed rgba(33,199,255,0.5); }
+.d-country-link:hover { color: #cdeeff; }
+
+.country-backdrop {
+  position: absolute; inset: 0; z-index: 2400; background: rgba(4, 8, 18, 0.55);
+  backdrop-filter: blur(2px); opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.country-backdrop.show { opacity: 1; pointer-events: auto; }
+
+.country-panel {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -46%);
+  width: min(540px, 92%); max-height: 84vh; z-index: 2450;
+  background: var(--panel-solid); border: 1px solid var(--border-strong);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  display: flex; flex-direction: column; overflow: hidden;
+  opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+}
+.country-panel.show { opacity: 1; transform: translate(-50%, -50%); pointer-events: auto; }
+
+.cp-head { display: flex; align-items: center; gap: 10px; padding: 15px 18px; border-bottom: 1px solid var(--border); flex: none; }
+.cp-head .cp-name { flex: 1; font-size: 19px; font-weight: 800; }
+.cp-close {
+  width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border);
+  background: rgba(255,255,255,0.04); color: var(--txt-dim); font-size: 18px; line-height: 1; cursor: pointer;
+}
+.cp-close:hover { color: #fff; border-color: var(--border-strong); }
+
+.cp-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); flex: none; }
+.cp-kpi { background: var(--panel-solid); padding: 11px 6px; text-align: center; }
+.cp-kpi .v { font-size: 16px; font-weight: 800; color: var(--txt); font-variant-numeric: tabular-nums; }
+.cp-kpi .l { font-size: 10px; color: var(--txt-dim); margin-top: 3px; }
+
+.cp-body { padding: 14px 18px; overflow-y: auto; flex: 1 1 auto; }
+.cp-body::-webkit-scrollbar { width: 7px; }
+.cp-body::-webkit-scrollbar-thumb { background: rgba(120,160,220,0.28); border-radius: 6px; }
+.cp-sec-title { font-size: 11px; color: var(--txt-faint); letter-spacing: .5px; margin: 14px 0 8px; }
+.cp-sec-title:first-child { margin-top: 0; }
+
+.cp-status { display: flex; gap: 8px; }
+.cp-status .s { flex: 1; text-align: center; padding: 9px 6px; border-radius: 9px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); }
+.cp-status .s b { display: block; font-size: 17px; font-variant-numeric: tabular-nums; }
+.cp-status .s span { font-size: 11px; color: var(--txt-dim); }
+
+.cp-years { display: flex; align-items: flex-end; gap: 2px; height: 48px; }
+.cp-years .yb { flex: 1; min-height: 2px; background: linear-gradient(180deg, var(--accent), rgba(33,199,255,0.18)); border-radius: 2px 2px 0 0; }
+.cp-years-ax { display: flex; justify-content: space-between; font-size: 10px; color: var(--txt-faint); margin-top: 4px; }
+
+.cp-proj { display: flex; flex-direction: column; gap: 6px; }
+.cp-note { font-size: 10px; color: var(--txt-faint); margin-top: 12px; line-height: 1.5; }
+@media (max-width: 920px) { .country-panel { width: 94%; } .cp-kpis { grid-template-columns: repeat(2, 1fr); } }
