@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "energy-map",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-ExecutionPolicy", "Bypass", "-NoProfile", "-File", "serve.ps1", "-Port", "4188"],
+      "port": 4188
+    }
+  ]
+}

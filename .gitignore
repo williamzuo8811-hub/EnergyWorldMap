@@ -1,0 +1,11 @@
+# OS / 编辑器杂项
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.log
+.vscode/
+.idea/
+
+# 临时/缓存
+*.tmp
+node_modules/

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>全球能源项目世界地图</title>
+  <link rel="stylesheet" href="lib/leaflet.css">
+  <link rel="stylesheet" href="lib/MarkerCluster.css">
+  <link rel="stylesheet" href="lib/MarkerCluster.Default.css">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app">
+    <!-- 顶栏 -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">🌐</div>
+        <div>
+          <h1>全球能源项目世界地图</h1>
+          <div class="sub">GLOBAL ENERGY PROJECTS · <span id="last-updated">数据更新</span></div>
+        </div>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><div class="num accent" id="kpi-proj">0</div><div class="lab">项目总数</div></div>
+        <div class="kpi"><div class="num" id="kpi-country">0</div><div class="lab">覆盖国家/地区</div></div>
+        <div class="kpi"><div class="num good" id="kpi-inv">0</div><div class="lab">总投资(美元)</div></div>
+        <div class="kpi"><div class="num warn" id="kpi-recent">0</div><div class="lab">🆕 近一年动态</div></div>
+      </div>
+    </header>
+
+    <div class="main">
+      <!-- 左侧：筛选 -->
+      <aside class="side left">
+        <div class="search">
+          <span class="ico">🔍</span>
+          <input id="search" type="text" placeholder="搜索项目 / 国家 / 业主…">
+        </div>
+
+        <button class="recent-toggle" id="recent-toggle">🆕 仅看最近一年动态</button>
+
+        <div class="block">
+          <div class="block-title">能源品类 <span class="count">点击切换显示</span></div>
+          <div class="cat-list" id="cat-list"></div>
+        </div>
+
+        <div class="block">
+          <div class="block-title">所属大区</div>
+          <div class="chip-row" id="region-chips"></div>
+        </div>
+
+        <div class="block">
+          <div class="block-title">项目状态</div>
+          <div class="chip-row" id="status-chips"></div>
+        </div>
+
+        <div class="block">
+          <div class="block-title">起始年份 <span class="count" id="year-label">全部</span></div>
+          <div class="year-wrap">
+            <div class="year-val"><span>更早</span><b id="year-cur"></b><span>至今</span></div>
+            <input id="year-slider" type="range" min="2020" max="2026" step="1" value="2020">
+          </div>
+        </div>
+
+        <button class="btn-reset" id="btn-reset">↺ 重置全部筛选</button>
+      </aside>
+
+      <!-- 中间：地图 -->
+      <section class="map-wrap">
+        <div id="map"></div>
+        <div class="detail" id="detail"></div>
+        <div class="map-tools">
+          <div class="basemap-switch" id="basemap-switch"></div>
+          <button class="btn-heat" id="btn-heat" title="按投资额显示宏观热力格局">🔥 投资热力</button>
+          <button class="btn-home" id="btn-home" title="复位视图">⤢ 复位</button>
+        </div>
+        <div class="heat-legend" id="heat-legend">
+          <span class="hl-cap">投资热力</span>
+          <i class="hl-bar"></i>
+          <span class="hl-lo">低</span><span class="hl-hi">高</span>
+        </div>
+        <div class="map-hint">滚轮缩放看省/市 · 拖拽平移 · 点击项目看详情 · 圆点大小≈投资 · 脉冲=旗舰 · 🆕=近一年</div>
+      </section>
+
+      <!-- 右侧：统计 -->
+      <aside class="side right">
+        <div class="block">
+          <div class="block-title">分类分布</div>
+          <div id="cat-bars"></div>
+        </div>
+        <div class="block">
+          <div class="block-title">区域分布</div>
+          <div class="region-grid" id="region-grid"></div>
+        </div>
+        <div class="block">
+          <div class="block-title">重点项目 TOP <span class="count">按投资额</span></div>
+          <div class="proj-list" id="proj-list"></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script src="lib/leaflet.js"></script>
+  <script src="lib/leaflet.markercluster.js"></script>
+  <script src="lib/leaflet-heat.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/data-extra.js"></script>
+  <script src="js/data-brazil.js"></script>
+  <script src="js/data-mideast.js"></script>
+  <script src="js/data-russia-ca.js"></script>
+  <script src="js/data-clients.js"></script>
+  <script src="js/data-brazil-future.js"></script>
+  <script src="js/data-saudi-future.js"></script>
+  <script src="js/data-seasia.js"></script>
+  <script src="js/data-africa.js"></script>
+  <script src="js/progress.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
