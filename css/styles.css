@@ -159,6 +159,33 @@ html, body {
 .pill.status.on[data-v="在建"] { background: rgba(255,176,46,0.18); border-color: var(--warn); color: #ffe0a8; }
 .pill.status.on[data-v="投运"] { background: rgba(46,230,166,0.16); border-color: var(--good); color: #b6f5df; }
 
+/* ---------- 所属大区 → 国家树（可展开列出各区国家，点国家筛选地图） ---------- */
+.region-tree { display: flex; flex-direction: column; gap: 5px; }
+.region-group { border-radius: 9px; }
+.region-group.has-sel { background: rgba(46,230,166,0.05); }
+.region-row { display: flex; align-items: center; gap: 7px; }
+.region-row .rg-pill { flex: none; }
+.region-row .rg-meta { flex: 1; font-size: 10.5px; color: var(--txt-faint); font-variant-numeric: tabular-nums; }
+.rg-caret {
+  flex: none; font-size: 11px; color: var(--txt-faint); cursor: pointer; user-select: none;
+  width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+  border-radius: 6px; transition: transform .15s, color .15s, background .15s;
+}
+.rg-caret:hover { color: var(--accent); background: rgba(255,255,255,0.08); }
+.region-group.open .rg-caret { transform: rotate(90deg); color: var(--accent); }
+.country-list { display: none; flex-wrap: wrap; gap: 5px; margin: 6px 0 4px 4px; padding: 4px 0 4px 10px; border-left: 1px dashed var(--border); }
+.region-group.open .country-list { display: flex; }
+.country-chip {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 14px;
+  border: 1px solid var(--border); background: rgba(255,255,255,0.02); color: var(--txt-dim);
+  font-size: 11.5px; cursor: pointer; user-select: none; transition: all .15s;
+}
+.country-chip:hover { border-color: var(--border-strong); color: var(--txt); }
+.country-chip .cc { font-style: normal; font-size: 10px; color: var(--txt-faint); font-variant-numeric: tabular-nums; }
+.country-chip.on { background: rgba(46,230,166,0.16); border-color: var(--good); color: #b6f5df; }
+.country-chip.on .cc { color: #8de9c6; }
+.country-empty { font-size: 11px; color: var(--txt-faint); padding: 2px 4px; }
+
 /* ---------- 年份滑块 ---------- */
 .year-wrap { padding: 0 2px; }
 .year-val { display: flex; justify-content: space-between; font-size: 12px; color: var(--txt-dim); margin-bottom: 8px; }
@@ -710,11 +737,18 @@ body.heat-on .heat-facets { display: flex; }
 
 /* 国别下钻面板里的「⊕ 加入对比」按钮 */
 .cp-add {
-  flex: none; margin-left: auto; margin-right: 6px; padding: 5px 11px; font-size: 12px; font-weight: 600;
+  flex: none; margin-right: 6px; padding: 5px 11px; font-size: 12px; font-weight: 600;
   color: #cdeeff; background: rgba(33, 199, 255, 0.14); border: 1px solid rgba(33, 199, 255, 0.4);
   border-radius: 8px; cursor: pointer; white-space: nowrap;
 }
 .cp-add:hover { background: rgba(33, 199, 255, 0.24); border-color: var(--accent); }
+/* 国别下钻面板里的「📍 地图筛选」按钮：把当前国家设为地图筛选并飞到该国 */
+.cp-filter {
+  flex: none; margin-left: auto; margin-right: 6px; padding: 5px 11px; font-size: 12px; font-weight: 600;
+  color: #b6f5df; background: rgba(46, 230, 166, 0.14); border: 1px solid rgba(46, 230, 166, 0.42);
+  border-radius: 8px; cursor: pointer; white-space: nowrap;
+}
+.cp-filter:hover { background: rgba(46, 230, 166, 0.24); border-color: var(--good); }
 
 /* ============================================================
  * 🆚 国别对比（复用 country-panel 外壳，加宽为多列并排）

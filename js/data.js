@@ -107,7 +107,7 @@ window.ENERGY = (function () {
       detail: '由西班牙 Grenergy 在智利阿塔卡马沙漠建设，分期配置约 11 GWh 电池储能，与大型光伏配套。它把白天充沛的太阳能储存到夜间释放，是拉美规模最大的储能项目之一，助力智利电网摆脱对化石调峰电源的依赖。' },
     { id: 43, name: '湖北应城压缩空气储能', en: 'Yingcheng Compressed Air Storage', country: '中国', region: '中国', cat: 'storage', coord: [113.5, 30.9], cap: '300 MW / 1500 MWh', inv: 3, invText: '约 20 亿元', status: '投运', year: 2024, updated: '2024-04', owner: '中能建 等', flagship: false, desc: '世界最大压缩空气储能。',
       detail: '位于湖北应城，单机 300 MW，利用地下盐穴储存压缩空气，是当时世界单机规模最大、效率最高的非补燃压缩空气储能电站，2024 年投运。它为长时、大容量、低成本储能提供了新路径，是新型储能多元化的代表。' },
-    { id: 44, name: '沙特四基地电池储能', en: 'Saudi BESS Mega Project', country: '沙特', region: '中东', cat: 'storage', coord: [42.6, 19.98], cap: '约 8 GWh', inv: 5, invText: '约 5 亿美元', status: '在建', year: 2024, updated: '2025-07', owner: 'BYD / 沙特电力', flagship: true, desc: '全球最大单体电池储能之一。',
+    { id: 44, name: '沙特四基地电池储能', en: 'Saudi BESS Mega Project', country: '沙特阿拉伯', region: '中东', cat: 'storage', coord: [42.6, 19.98], cap: '约 8 GWh', inv: 5, invText: '约 5 亿美元', status: '在建', year: 2024, updated: '2025-07', owner: 'BYD / 沙特电力', flagship: true, desc: '全球最大单体电池储能之一。',
       detail: '沙特电力公司在比沙等多个基地部署的大型电池储能，单批容量达数 GWh，由比亚迪等供货，是全球最大的单体电池储能项目之一。它支撑沙特快速增长的光伏装机消纳，并为"2030 愿景"高比例可再生目标兜底。' },
 
     /* ============ 工商业 · 配网大客户 ============ */
@@ -129,7 +129,7 @@ window.ENERGY = (function () {
       detail: '弗吉尼亚州劳登县阿什本一带聚集了全球最密集的数据中心集群，承载着全球相当大比例的互联网流量，总用电已超 5 GW 并持续扩张。AWS、微软、谷歌等在此密集布局，其电力需求已迫使当地电网与电源规划进行大规模调整。' },
     { id: 54, name: '柔佛数据中心集群', en: 'Johor Data Center Hub', country: '马来西亚', region: '亚洲', cat: 'datacenter', coord: [103.76, 1.49], cap: '在建数 GW', inv: 200, invText: '约 200 亿美元', status: '在建', year: 2024, updated: '2025-11', owner: '多家云厂商', flagship: false, desc: '东南亚增长最快的数据中心枢纽。',
       detail: '马来西亚柔佛紧邻新加坡，承接新加坡因土地与电力受限而外溢的数据中心需求，在建容量已达数 GW，是东南亚增长最快的数据中心枢纽。各大云厂商与 AI 公司在此密集投资，带动当地电力、光伏与配套基础设施快速扩张。' },
-    { id: 55, name: '利雅得 AI 数据中心（HUMAIN）', en: 'Riyadh AI Data Centers', country: '沙特', region: '中东', cat: 'datacenter', coord: [46.7, 24.7], cap: '规划数 GW', inv: 150, invText: '约 150 亿美元', status: '在建', year: 2025, updated: '2025-11', owner: 'HUMAIN / 多家云厂商', flagship: false, desc: '中东 AI 算力中心。',
+    { id: 55, name: '利雅得 AI 数据中心（HUMAIN）', en: 'Riyadh AI Data Centers', country: '沙特阿拉伯', region: '中东', cat: 'datacenter', coord: [46.7, 24.7], cap: '规划数 GW', inv: 150, invText: '约 150 亿美元', status: '在建', year: 2025, updated: '2025-11', owner: 'HUMAIN / 多家云厂商', flagship: false, desc: '中东 AI 算力中心。',
       detail: '沙特主权基金支持的 HUMAIN 联合英伟达、AMD 等在利雅得等地建设大规模 AI 数据中心，规划数 GW 算力。依托廉价能源与资本，沙特意在把算力打造成"2030 愿景"下的新经济支柱。' },
 
     /* ============ 大交通 · 轨交机场港口 ============ */
@@ -137,7 +137,7 @@ window.ENERGY = (function () {
       detail: '连接匈牙利布达佩斯与塞尔维亚贝尔格莱德，全长约 350 公里的电气化提速改造铁路。其中贝尔格莱德—诺维萨德段已通车运营，是中国—中东欧合作和"一带一路"在欧洲的旗舰项目，将提升中欧陆海快线的运输效率。', route: [[20.46, 44.79], [19.0, 47.5]] },
     { id: 61, name: '钱凯港', en: 'Port of Chancay', country: '秘鲁', region: '南美', cat: 'transport', coord: [-77.27, -11.57], cap: '南美首个智慧绿色大港', inv: 35, invText: '约 35 亿美元', status: '投运', year: 2024, updated: '2024-11', owner: '中远海运 / Volcan', flagship: true, desc: '南美—亚洲海运新枢纽。',
       detail: '位于秘鲁首都利马以北，由中远海运控股建设运营，是南美西海岸首个智慧、绿色深水大港，2024 年 11 月开港。它开通了直达上海的航线，把秘鲁到中国的海运时间缩短约 10 天，重塑南美—亚洲贸易格局并带动港口岸电等绿色基建。' },
-    { id: 62, name: '利雅得萨勒曼国王国际机场', en: 'King Salman Intl Airport', country: '沙特', region: '中东', cat: 'transport', coord: [46.7, 24.96], cap: '远期年吞吐 1.85 亿人次', inv: 300, invText: '约 300 亿美元', status: '在建', year: 2025, updated: '2025-09', owner: '沙特 PIF', flagship: true, desc: '规划中全球最大机场之一。',
+    { id: 62, name: '利雅得萨勒曼国王国际机场', en: 'King Salman Intl Airport', country: '沙特阿拉伯', region: '中东', cat: 'transport', coord: [46.7, 24.96], cap: '远期年吞吐 1.85 亿人次', inv: 300, invText: '约 300 亿美元', status: '在建', year: 2025, updated: '2025-09', owner: '沙特 PIF', flagship: true, desc: '规划中全球最大机场之一。',
       detail: '由沙特主权基金 PIF 主导，规划六条跑道、远期年吞吐量高达 1.85 亿人次，建成后将是全球最大的机场之一。它是利雅得打造全球航空与物流枢纽、支撑"2030 愿景"经济多元化的核心基建。' },
     { id: 63, name: '隆城国际机场', en: 'Long Thanh Intl Airport', country: '越南', region: '亚洲', cat: 'transport', coord: [107.0, 10.8], cap: '一期年 2500 万→远期 1 亿人次', inv: 78, invText: '约 78 亿美元（一期）', status: '在建', year: 2026, updated: '2026-01', owner: 'ACV', flagship: true, desc: '越南最大空港。',
       detail: '位于胡志明市以东同奈省，一期工程计划 2026 年完工、年吞吐 2500 万人次，远期扩至 1 亿人次，建成后将是越南最大机场。它将分流新山一机场压力、强化越南区域航空枢纽地位，并带动周边产业与电力配套。' },
@@ -165,7 +165,7 @@ window.ENERGY = (function () {
       detail: '位于不列颠哥伦比亚省基蒂马特，由壳牌牵头的合资体运营，一期已投产并向亚洲出口 LNG，二期扩能在 2026 年内推进最终投资决定。依托加拿大西海岸到亚洲的较短航程，它是北美对亚 LNG 供应的重要增量。' },
     { id: 76, name: '丹格特炼油厂', en: 'Dangote Refinery', country: '尼日利亚', region: '非洲', cat: 'petro', coord: [3.6, 6.45], cap: '65 万桶/日', inv: 200, invText: '约 200 亿美元', status: '投运', year: 2024, updated: '2025-06', owner: 'Dangote Group', flagship: true, desc: '全球最大单体炼油厂。',
       detail: '位于尼日利亚拉各斯莱基自贸区，加工能力 65 万桶/日，是全球最大的单一系列炼油厂，2024 年起投产。它扭转了西非长期依赖成品油进口的格局，使尼日利亚有望从原油出口国转变为成品油净出口国，并配套自备电厂与码头。' },
-    { id: 77, name: 'Jafurah 页岩气田', en: 'Jafurah Shale Gas', country: '沙特', region: '中东', cat: 'petro', coord: [49.5, 25.0], cap: '中东最大非常规气田', inv: 1000, invText: '约 1000 亿美元', status: '在建', year: 2024, updated: '2025-08', owner: '沙特阿美', flagship: true, desc: '沙特"气代油"战略核心。',
+    { id: 77, name: 'Jafurah 页岩气田', en: 'Jafurah Shale Gas', country: '沙特阿拉伯', region: '中东', cat: 'petro', coord: [49.5, 25.0], cap: '中东最大非常规气田', inv: 1000, invText: '约 1000 亿美元', status: '在建', year: 2024, updated: '2025-08', owner: '沙特阿美', flagship: true, desc: '沙特"气代油"战略核心。',
       detail: '位于沙特东部，是中东最大的非常规（页岩）气田，沙特阿美计划投入约 1000 亿美元分阶段开发。增产的天然气用于发电、工业和制蓝氢，从而把更多原油腾出用于出口，是沙特"气代油"能源战略的核心工程。' },
     { id: 78, name: '北极 LNG-2', en: 'Arctic LNG 2', country: '俄罗斯', region: '欧洲', cat: 'petro', coord: [73.3, 71.5], cap: 'LNG 约 20 MTPA', inv: 210, invText: '约 210 亿美元', status: '在建', year: 2024, updated: '2025-06', owner: 'Novatek 等', flagship: false, desc: '北极圈重力式 LNG 工厂。',
       detail: '位于俄罗斯北极圈格丹半岛，由诺瓦泰克牵头，采用建在重力式基座（GBS）上的模块化液化线，规划产能约 2000 万吨/年。项目受西方制裁影响，在设备、船运与销售上进展受阻，是地缘政治对能源工程影响的典型案例。' },
