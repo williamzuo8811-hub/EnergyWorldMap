@@ -1,5 +1,5 @@
 // 国际大客户（cat:'client'）—— 14 家中国出海企业近一年海外（不含中国）项目，2026-06 第九轮
-// 子分类按 owner 归到各公司（见 app.js SUB_DEFS.client）。concat 进 window.ENERGY_EXTRA；
+// 子分类按 owner 归到各公司（见 js/util.js SUB_DEFS.client）。concat 进 window.ENERGY_EXTRA；
 // index.html 在 data-russia-ca.js 之后、progress.js 之前加载。
 window.ENERGY_EXTRA = (window.ENERGY_EXTRA || []).concat([
   // ===== 中国电建 PowerChina / Sinohydro（1570-1589）=====

@@ -7,149 +7,12 @@
 
   const { META, CATEGORIES, REGIONS, STATUS } = window.ENERGY;
   const CAT_KEYS = Object.keys(CATEGORIES);
+  // 纯逻辑（子分类规则 / 容量解析 / 坐标纠偏）抽至 js/util.js，与 scripts/test-units.js 共享同一实现
+  const { SUB_DEFS, classifySub, parseCapacity, wgs2gcj, normalizeOwner } = window.ENERGY_UTIL;
 
-  /* ---------- 子分类（按关键词在 name/cap/desc 上自动归类）----------
-   * 每个品类一组有序子分类：{key,label,zh[],en[]} 或 {key,label,fn}；
-   * 末项无规则=兜底桶。classifySub 按顺序取首个命中，未命中归末项。 */
-  const SUB_DEFS = {
-    renewable: [
-      { key: 'hydrogen', label: '绿氢绿氨', zh: ['绿氢', '绿氨', '制氢', '氢氨', '氢能'], en: ['hydrogen', 'ammonia'] },
-      { key: 'offshore', label: '海上风电', zh: ['海上风', '海风'], en: ['offshore'] },
-      { key: 'csp', label: '光热', zh: ['光热', '熔盐塔', '塔式光'], en: ['csp'] },
-      { key: 'hydro', label: '水电', zh: ['水电'], en: ['hydropower', 'hydro'] },
-      { key: 'geo', label: '地热', zh: ['地热'], en: ['geothermal'] },
-      { key: 'solar', label: '光伏', zh: ['光伏', '太阳能', '光储'], en: ['solar', 'photovolta'] },
-      { key: 'wind', label: '陆上风电', zh: ['风电', '风力'], en: ['wind'] },
-      { key: 'base', label: '综合基地·其他' },
-    ],
-    nuclear: [
-      { key: 'fusion', label: '核聚变', zh: ['聚变', '托卡马克', '人造太阳'], en: ['fusion', 'tokamak', 'iter'] },
-      { key: 'smr', label: '小型模块化堆', zh: ['小型模块化', '模块化堆', '小堆', '玲龙'], en: ['smr', 'small modular'] },
-      { key: 'gen4', label: '四代·特种堆', zh: ['高温气冷', '快堆', '第四代', '钍', '熔盐堆'], en: ['htgr', 'fast reactor', 'thorium', 'molten salt'] },
-      { key: 'fuel', label: '核燃料·后端', zh: ['核燃料', '浓缩', '铀浓缩', '后处理', '乏燃料'], en: ['enrichment', 'fuel cycle', 'reprocessing'] },
-      { key: 'pwr', label: '大型反应堆' },
-    ],
-    grid: [
-      { key: 'uhv', label: '特高压', zh: ['特高压', '±800', '±1100', '1000千伏', '1100千伏'], en: ['uhv'] },
-      { key: 'subsea', label: '海底电缆', zh: ['海缆', '海底电缆', '海底线', '跨海'], en: ['submarine', 'subsea'] },
-      { key: 'hvdc', label: '直流输电', zh: ['直流', '柔直', '柔性直流', '±'], en: ['hvdc'] },
-      { key: 'cross', label: '跨境互联', zh: ['互联', '跨境', '跨国'], en: ['interconnect'] },
-      { key: 'ac', label: '交流输变电' },
-    ],
-    storage: [
-      { key: 'pumped', label: '抽水蓄能', zh: ['抽水蓄能', '抽蓄'], en: ['pumped'] },
-      { key: 'caes', label: '压缩空气', zh: ['压缩空气'], en: ['compressed air', 'caes'] },
-      { key: 'flow', label: '液流电池', zh: ['液流', '全钒'], en: ['vanadium', 'flow batter'] },
-      { key: 'novel', label: '新型长时储能', zh: ['钠离子', '锂钠', '重力储能', '液态空气', '熔盐', '储热', '铁空气'], en: ['laes', 'gravity', 'iron-air', 'molten', 'sodium'] },
-      { key: 'liion', label: '锂电池储能' },
-    ],
-    ci: [
-      { key: 'semi', label: '半导体晶圆', zh: ['半导体', '晶圆', '封测', '芯片', '晶体管'], en: ['fab', 'semiconductor', 'wafer', 'dram', 'osat'] },
-      { key: 'auto', label: '整车工厂', zh: ['整车', '汽车', '车厂'], en: ['motors', 'vinfast'] },
-      { key: 'battery', label: '电池工厂', zh: ['电池', '电芯', '储能系统'], en: ['battery', 'gigafactory', 'gwh'] },
-      { key: 'steel', label: '绿色钢铁', zh: ['钢', '电弧炉', '绿钢', '直接还原铁'], en: ['steel', 'eaf', 'dri'] },
-      { key: 'alu', label: '电解铝·有色', zh: ['电解铝', '铝业', '铝厂', '绿色铝', '惰性阳极'], en: ['aluminum', 'aluminium', 'smelter'] },
-      { key: 'solar', label: '光伏制造', zh: ['光伏', '多晶硅', '硅片', '组件', '电池片'], en: ['qcells', 'hjt', 'solar'] },
-      { key: 'chem', label: '化工新材料·其他' },
-    ],
-    datacenter: [
-      { key: 'sovereign', label: '主权AI工厂', zh: ['主权'], en: ['sovereign'] },
-      { key: 'hub', label: '东数西算枢纽', fn: (h, l, p) => p.region === '中国' && /东数西算|枢纽|集群/.test(h) },
-      { key: 'ai', label: 'AI智算中心', zh: ['AI', '智算', '算力', '超算', '万卡', '人工智能'], en: ['stargate', 'xai', 'blackwell', 'nvidia', 'gpu'] },
-      { key: 'cloud', label: '超大规模·云' },
-    ],
-    transport: [
-      { key: 'airport', label: '机场', zh: ['机场', '航站楼'], en: ['airport'] },
-      { key: 'port', label: '港口码头', zh: ['港', '码头'], en: ['port', 'terminal'] },
-      { key: 'bridge', label: '跨海桥隧', fn: (h, l, p) => /大桥|隧道|通道|跨海|跨江|桥/.test(p.name) || /bridge|tunnel|crossing/.test((p.en || '').toLowerCase()) },
-      { key: 'metro', label: '城市轨道', zh: ['地铁', '轻轨', '单轨', '市域', '有轨', '快速轨道', '快线'], en: ['metro', 'lrt', 'rrts', 'gtx'] },
-      { key: 'hsr', label: '高铁铁路' },
-    ],
-    petro: [
-      { key: 'lng', label: 'LNG液化·接收', zh: ['LNG', '液化天然气', '接收站', '再气化'], en: ['lng', 'flng'] },
-      { key: 'pipe', label: '油气管道', zh: ['管道', '输气', '输油'], en: ['pipeline'] },
-      { key: 'coal', label: '煤化工', zh: ['煤制', '煤化工', '煤直接液化', '甲醇制烯烃'], en: ['coal-to', 'mto'] },
-      { key: 'upstream', label: '上游油气', zh: ['油田', '气田', '页岩', '区块', '增油', '增气', '油气田'], en: ['fpso', 'shale', 'oilfield', 'oil field', 'gas field'] },
-      { key: 'refine', label: '炼化·乙烯' },
-    ],
-    mining: [
-      { key: 'lithium', label: '锂', zh: ['锂', '盐湖'], en: ['lithium'] },
-      { key: 'rareearth', label: '稀土', zh: ['稀土'], en: ['rare earth', 'rare-earth'] },
-      { key: 'iron', label: '铁矿', zh: ['铁矿'], en: ['iron ore'] },
-      { key: 'uranium', label: '铀', zh: ['铀'], en: ['uranium'] },
-      { key: 'copper', label: '铜', zh: ['铜'], en: ['copper'] },
-      { key: 'nickel', label: '镍钴', zh: ['镍', '钴'], en: ['nickel', 'cobalt'] },
-      { key: 'other', label: '其他金属·煤' },
-    ],
-    client: [
-      { key: 'powerchina',  label: '中国电建',  fn: (h, l, p) => /中国电建/.test(p.owner || '') },
-      { key: 'energychina', label: '中国能建',  fn: (h, l, p) => /中国能建/.test(p.owner || '') },
-      { key: 'sgcc',        label: '国网国际',  fn: (h, l, p) => /电力技术装备|国网/.test(p.owner || '') },
-      { key: 'cpecc',       label: '中石油工程', fn: (h, l, p) => /中石油工程/.test(p.owner || '') },
-      { key: 'ctg',         label: '三峡国际',  fn: (h, l, p) => /三峡/.test(p.owner || '') },
-      { key: 'spic',        label: '国家电投',  fn: (h, l, p) => /国家电投/.test(p.owner || '') },
-      { key: 'zijin',       label: '紫金矿业',  fn: (h, l, p) => /紫金/.test(p.owner || '') },
-      { key: 'cmoc',        label: '洛阳钼业',  fn: (h, l, p) => /洛阳钼业|洛钼/.test(p.owner || '') },
-      { key: 'cnmc',        label: '中国有色',  fn: (h, l, p) => /中国有色/.test(p.owner || '') },
-      { key: 'byd',         label: '比亚迪',    fn: (h, l, p) => /比亚迪/.test(p.owner || '') },
-      { key: 'catl',        label: '宁德时代',  fn: (h, l, p) => /宁德时代/.test(p.owner || '') },
-      { key: 'gem',         label: '格林美',    fn: (h, l, p) => /格林美/.test(p.owner || '') },
-      { key: 'gds',         label: '万国DayOne', fn: (h, l, p) => /万国数据|DayOne/.test(p.owner || '') },
-      { key: 'chindata',    label: '秦淮数据',  fn: (h, l, p) => /秦淮/.test(p.owner || '') },
-      { key: 'other', label: '其他客户' },
-    ],
-  };
   const SUB_LABEL = {};
   Object.keys(SUB_DEFS).forEach(cat => { SUB_LABEL[cat] = {}; SUB_DEFS[cat].forEach(d => { SUB_LABEL[cat][d.key] = d.label; }); });
-  function classifySub(p) {
-    const defs = SUB_DEFS[p.cat]; if (!defs) return '';
-    const hay = p.name + ' ' + (p.en || '') + ' ' + (p.cap || '') + ' ' + (p.desc || '');
-    const low = hay.toLowerCase();
-    for (let i = 0; i < defs.length; i++) {
-      const d = defs[i];
-      if (!d.zh && !d.en && !d.fn) return d.key;
-      if (d.fn) { if (d.fn(hay, low, p)) return d.key; continue; }
-      let hit = false;
-      if (d.zh) for (const w of d.zh) if (hay.indexOf(w) >= 0) { hit = true; break; }
-      if (!hit && d.en) for (const w of d.en) if (low.indexOf(w) >= 0) { hit = true; break; }
-      if (hit) return d.key;
-    }
-    return defs[defs.length - 1].key;
-  }
   const subLabel = p => (SUB_LABEL[p.cat] && SUB_LABEL[p.cat][p.sub]) || '';
-
-  /* ---------- 容量解析：把自由文本 cap 抽成结构化数值 ----------
-   * 返回 { mw, mwh, km, kbd, wty }：电功率MW / 储能MWh / 线路km / 油气万桶日 / 产能万吨年。
-   * 取首个匹配为准；遇 "A+B" 加和；"N×M 单位" 相乘；MW/GW 用前瞻避免误吞 MWh/GWh。无则 null。 */
-  function parseCapacity(cap) {
-    const out = { mw: null, mwh: null, km: null, kbd: null, wty: null };
-    if (!cap) return out;
-    const s = String(cap).replace(/[，、]/g, ',').replace(/＋/g, '+').replace(/／/g, '/').replace(/[×✕⨯]/g, 'x').replace(/～/g, '~');
-    const NUM = '(\\d+(?:\\.\\d+)?)', MUL = '(?:\\s*x\\s*(\\d+(?:\\.\\d+)?))?';
-    function collect(unitAlt, factor) {
-      const rg = new RegExp(NUM + MUL + '\\s*(?:' + unitAlt + ')', 'gi'), vals = []; let m;
-      while ((m = rg.exec(s))) { let v = parseFloat(m[1]); if (m[2]) v *= parseFloat(m[2]); if (!isNaN(v)) vals.push({ v: v * factor, i: m.index }); }
-      return vals;
-    }
-    function pick(vals) {
-      if (!vals.length) return null;
-      if (vals.length >= 2) {
-        let additive = true;
-        for (let k = 1; k < vals.length; k++) if (s.slice(vals[k - 1].i, vals[k].i).indexOf('+') < 0) { additive = false; break; }
-        if (additive) return vals.reduce((a, b) => a + b.v, 0);
-      }
-      return vals[0].v;
-    }
-    const r = n => (n == null ? null : Math.round(n * 100) / 100);
-    const power = [].concat(collect('GWp|GW(?!h)|吉瓦', 1000)).concat(collect('万千瓦(?!时)', 10)).concat(collect('MWp|MW(?!h)|兆瓦', 1)).concat(collect('kW(?!h)|千瓦(?!时)', 0.001));
-    power.sort((a, b) => a.i - b.i); out.mw = r(pick(power));
-    const energy = [].concat(collect('GWh', 1000)).concat(collect('MWh', 1)).concat(collect('万千瓦时', 10)).concat(collect('kWh', 0.001));
-    energy.sort((a, b) => a.i - b.i); out.mwh = r(pick(energy));
-    const len = collect('公里|km', 1); len.sort((a, b) => a.i - b.i); out.km = len.length ? r(len[0].v) : null;
-    let oil = collect('万桶', 1); if (!oil.length) oil = collect('桶', 1 / 10000); oil.sort((a, b) => a.i - b.i); out.kbd = oil.length ? r(oil[0].v) : null;
-    const mass = [].concat(collect('万吨', 1)).concat(collect('Mtpa|Mt', 100)); mass.sort((a, b) => a.i - b.i); out.wty = mass.length ? r(mass[0].v) : null;
-    return out;
-  }
 
   // 合并核心数据与扩充数据（data-extra.js），按名称去重
   const PROJECTS = (function () {
@@ -170,34 +33,6 @@
   const RECENT_SINCE = META.recentSince;
   const isRecent = p => (p.updated || '') >= RECENT_SINCE;
 
-  /* ---------- WGS-84 → GCJ-02 纠偏（高德等国内底图为 GCJ-02） ---------- */
-  const PI = Math.PI, AXIS = 6378245.0, EE = 0.00669342162296594323;
-  function tLat(x, y) {
-    let r = -100 + 2 * x + 3 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * Math.sqrt(Math.abs(x));
-    r += (20 * Math.sin(6 * x * PI) + 20 * Math.sin(2 * x * PI)) * 2 / 3;
-    r += (20 * Math.sin(y * PI) + 40 * Math.sin(y / 3 * PI)) * 2 / 3;
-    r += (160 * Math.sin(y / 12 * PI) + 320 * Math.sin(y * PI / 30)) * 2 / 3;
-    return r;
-  }
-  function tLng(x, y) {
-    let r = 300 + x + 2 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * Math.sqrt(Math.abs(x));
-    r += (20 * Math.sin(6 * x * PI) + 20 * Math.sin(2 * x * PI)) * 2 / 3;
-    r += (20 * Math.sin(x * PI) + 40 * Math.sin(x / 3 * PI)) * 2 / 3;
-    r += (150 * Math.sin(x / 12 * PI) + 300 * Math.sin(x / 30 * PI)) * 2 / 3;
-    return r;
-  }
-  const outOfChina = (lng, lat) => lng < 72.004 || lng > 137.8347 || lat < 0.8293 || lat > 55.8271;
-  function wgs2gcj(lng, lat) {
-    if (outOfChina(lng, lat)) return [lng, lat];
-    let dLat = tLat(lng - 105, lat - 35), dLng = tLng(lng - 105, lat - 35);
-    const radLat = lat / 180 * PI;
-    let magic = Math.sin(radLat); magic = 1 - EE * magic * magic;
-    const sqrtMagic = Math.sqrt(magic);
-    dLat = (dLat * 180) / ((AXIS * (1 - EE)) / (magic * sqrtMagic) * PI);
-    dLng = (dLng * 180) / (AXIS / sqrtMagic * Math.cos(radLat) * PI);
-    return [lng + dLng, lat + dLat];
-  }
-
   /* ---------- 地图与底图 ---------- */
   const map = L.map('map', {
     center: [25, 30], zoom: 3, minZoom: 2, maxZoom: 18,
@@ -207,9 +42,10 @@
   L.control.zoom({ position: 'bottomleft' }).addTo(map);
   map.attributionControl.setPrefix('');
 
+  const esriDarkBase = L.tileLayer('https://{s}.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    { subdomains: ['server', 'services'], maxZoom: 16, attribution: '© Esri' });
   const esriDark = L.layerGroup([
-    L.tileLayer('https://{s}.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-      { subdomains: ['server', 'services'], maxZoom: 16, attribution: '© Esri' }),
+    esriDarkBase,
     L.tileLayer('https://{s}.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
       { subdomains: ['server', 'services'], maxZoom: 16 }),
   ]);
@@ -252,6 +88,8 @@
     playYear: null,             // 时间轴播放时的"当前年"（用于年份大字 + 当年新项目高亮）
     lang: 'zh',                 // 'zh' | 'en'：项目名称与分析标签的中英切换
     lines: true,                // 飞线（输变电/高铁/管道连线）显隐开关
+    compare: [],                // 🆚 国别对比已选国家（最多 4 个）
+    heatCat: null,              // 🔥 热力分面：聚焦单一品类（null=全部）
   };
 
   /* ---------- 中 / EN 语言（项目名走 en 字段；分类/大区/状态/界面标签走映射） ---------- */
@@ -278,11 +116,21 @@
 
   const sizeFn = v => Math.max(8, Math.min(34, 7 + Math.sqrt(Math.max(v, 1)) * 0.95));
   const fmtNum = n => Math.round(n).toLocaleString('en-US');
-  const fmtInv = n => n >= 10000 ? (n / 10000).toFixed(1) + ' 万亿' : fmtNum(n) + ' 亿';
+  // 投资额量级（inv 单位为亿美元）：中文 亿/万亿；英文 $B/$T（÷10 得 billion，÷10000 得 trillion）
+  const invMag = n => {
+    n = n || 0;
+    if (state.lang === 'en') {
+      if (n >= 10000) return (n / 10000).toFixed(1) + 'T';
+      const b = n / 10;
+      return (b >= 100 ? Math.round(b) : Math.round(b * 10) / 10).toLocaleString('en-US') + 'B';
+    }
+    return n >= 10000 ? (n / 10000).toFixed(1) + ' 万亿' : (n < 10 ? (Math.round(n * 10) / 10) : Math.round(n)).toLocaleString('en-US') + ' 亿';
+  };
+  const fmtInv = invMag;
   // 圆点/热力权重值：投资额 或 装机容量(MW)
   const weightVal = p => state.weight === 'cap' ? (p.capMW || 0) : (p.inv || 0);
-  // 统一美元口径展示（小额保留 1 位小数）
-  const usd = p => { const n = p.inv || 0; return '≈$' + (n >= 10000 ? (n / 10000).toFixed(1) + ' 万亿' : (n < 10 ? (Math.round(n * 10) / 10) : Math.round(n)).toLocaleString('en-US') + ' 亿'); };
+  // 统一美元口径展示
+  const usd = p => '≈$' + invMag(p.inv || 0);
   const capFmt = mw => mw == null ? '—' : (mw >= 1000 ? (mw / 1000).toFixed(mw < 10000 ? 1 : 0) + ' GW' : Math.round(mw) + ' MW');
   const esc = s => String(s == null ? '' : s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
@@ -354,9 +202,11 @@
     if (state.heat) {
       // —— 热力图模式：按 √(投资 或 装机容量) 加权显示宏观格局，隐藏聚合标记 ——
       if (map.hasLayer(markerCluster)) map.removeLayer(markerCluster);
+      // 分面：聚焦单一品类时，只让该品类项目贡献热力
+      const hitems = state.heatCat ? items.filter(p => p.cat === state.heatCat) : items;
       const hlCap = document.querySelector('.heat-legend .hl-cap');
-      if (hlCap) hlCap.textContent = state.weight === 'cap' ? '装机热力' : '投资热力';
-      const pts = items.map(p => {
+      if (hlCap) hlCap.textContent = (state.weight === 'cap' ? '装机热力' : '投资热力') + (state.heatCat ? ' · ' + catShort(state.heatCat) : '');
+      const pts = hitems.map(p => {
         const ll = toLatLng(p.coord);
         const w = weightVal(p); const v = (w > 0) ? w : 1;   // 开方压缩量级，避免超大项目独占
         return [ll[0], ll[1], Math.sqrt(v)];
@@ -403,7 +253,7 @@
     const group = document.createElement('div');
     group.className = 'cat-group'; group.dataset.key = key;
     const chip = document.createElement('div');
-    chip.className = 'cat-chip'; chip.dataset.key = key;
+    chip.className = 'cat-chip'; chip.dataset.key = key; chip.tabIndex = 0; chip.setAttribute('role', 'button');
     chip.innerHTML = '<span class="dot" style="background:' + c.color + ';color:' + c.color + '"></span>' +
       '<span class="nm">' + c.icon + ' ' + c.name + '</span><span class="ct">0</span>' +
       '<span class="caret" title="展开子分类">▸</span>';
@@ -416,7 +266,7 @@
     subWrap.className = 'sub-list';
     SUB_DEFS[key].forEach(d => {
       const s = document.createElement('div');
-      s.className = 'sub-chip'; s.dataset.key = key; s.dataset.sub = d.key;
+      s.className = 'sub-chip'; s.dataset.key = key; s.dataset.sub = d.key; s.tabIndex = 0; s.setAttribute('role', 'button');
       s.innerHTML = '<span class="sdot" style="background:' + c.color + '"></span><span class="snm">' + d.label + '</span><span class="sct">0</span>';
       s.addEventListener('click', () => {
         const id = key + ':' + d.key;
@@ -433,7 +283,7 @@
   const regionEl = document.getElementById('region-chips');
   REGIONS.forEach(r => {
     const el = document.createElement('div');
-    el.className = 'pill'; el.textContent = r; el.dataset.v = r;
+    el.className = 'pill'; el.textContent = r; el.dataset.v = r; el.tabIndex = 0; el.setAttribute('role', 'button');
     el.addEventListener('click', () => toggleRegion(r));
     regionEl.appendChild(el);
   });
@@ -441,7 +291,7 @@
   const statusEl = document.getElementById('status-chips');
   STATUS.forEach(s => {
     const el = document.createElement('div');
-    el.className = 'pill status'; el.textContent = s; el.dataset.v = s;
+    el.className = 'pill status'; el.textContent = s; el.dataset.v = s; el.tabIndex = 0; el.setAttribute('role', 'button');
     el.addEventListener('click', () => {
       if (state.statuses.has(s)) state.statuses.delete(s); else state.statuses.add(s);
       el.classList.toggle('on', state.statuses.has(s)); render();
@@ -529,14 +379,21 @@
   }
   if (btnPlay) btnPlay.addEventListener('click', () => { playTimer ? pausePlay() : startPlay(); });
 
-  document.getElementById('search').addEventListener('input', e => { state.q = e.target.value.trim(); render(); });
+  // 搜索：防抖 160ms（2600+ 项目，避免逐字符全量重渲染卡顿）
+  let searchTimer = null;
+  document.getElementById('search').addEventListener('input', e => {
+    const v = e.target.value.trim();
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => { state.q = v; render(); }, 160);
+  });
 
   document.getElementById('btn-reset').addEventListener('click', () => {
     pausePlay();
     state.cats = new Set(CAT_KEYS); state.subOff.clear(); state.regions.clear(); state.statuses.clear();
     state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.q = ''; state.recentOnly = false;
-    state.weight = 'inv'; state.sort = 'inv';
+    state.weight = 'inv'; state.sort = 'inv'; state.heatCat = null;
     clearPresetActive(); document.querySelector('.year-presets .yp[data-preset="all"]').classList.add('on');
+    if (typeof syncHeatFacets === 'function') syncHeatFacets();
     applyUIFromState(); render();
   });
 
@@ -589,6 +446,10 @@
   const btnLeague = document.getElementById('btn-league');
   if (btnLeague) btnLeague.addEventListener('click', showLeague);
 
+  // 🆚 国别对比
+  const btnCompare = document.getElementById('btn-compare');
+  if (btnCompare) btnCompare.addEventListener('click', openCompare);
+
   // 中 / EN 语言切换
   const btnLang = document.getElementById('btn-lang');
   function applyLang() {
@@ -602,6 +463,8 @@
     if (sEl) sEl.placeholder = state.lang === 'en' ? 'Search project / country / owner…' : '搜索项目 / 国家 / 业主…';
     if (btnLang) btnLang.textContent = state.lang === 'en' ? '中' : 'EN';
     if (sortToggle) sortToggle.textContent = state.lang === 'en' ? (state.sort === 'cap' ? 'by capacity ⇄' : 'by investment ⇄') : (state.sort === 'cap' ? '按装机容量 ⇄' : '按投资额 ⇄');
+    buildCatLegend();   // 地图浮层文案随语言重建
+    buildHeatFacets();
   }
   if (btnLang) btnLang.addEventListener('click', () => {
     state.lang = state.lang === 'en' ? 'zh' : 'en';
@@ -646,7 +509,7 @@
     const maxC = Math.max(1, ...Object.values(catCount));
     document.getElementById('cat-bars').innerHTML = CAT_KEYS.map(k => {
       const c = CATEGORIES[k], n = catCount[k], dim = state.cats.has(k) ? '' : 'opacity:.35';
-      return '<div class="bar-row" data-key="' + k + '" style="cursor:pointer;' + dim + '"><div class="bar-head"><span class="dot" style="background:' + c.color + '"></span>' +
+      return '<div class="bar-row" data-key="' + k + '" tabindex="0" role="button" style="cursor:pointer;' + dim + '"><div class="bar-head"><span class="dot" style="background:' + c.color + '"></span>' +
         '<span class="nm">' + catShort(k) + '</span><span class="vv">' + n + '</span></div>' +
         '<div class="bar-track"><div class="bar-fill" style="width:' + (n / maxC * 100) + '%;background:' + c.color + '"></div></div></div>';
     }).join('');
@@ -661,7 +524,7 @@
     const regCount = {}; REGIONS.forEach(r => regCount[r] = 0);
     items.forEach(p => { if (regCount[p.region] != null) regCount[p.region]++; });
     document.getElementById('region-grid').innerHTML = REGIONS.map(r =>
-      '<div class="region-cell' + (state.regions.has(r) ? ' on' : '') + '" data-region="' + r + '"><div class="rv">' + regCount[r] + '</div><div class="rl">' + regionName(r) + '</div></div>').join('');
+      '<div class="region-cell' + (state.regions.has(r) ? ' on' : '') + '" data-region="' + r + '" tabindex="0" role="button"><div class="rv">' + regCount[r] + '</div><div class="rl">' + regionName(r) + '</div></div>').join('');
   }
 
   /* ---------- 项目列表（投资额排序） ---------- */
@@ -686,11 +549,28 @@
   }
 
   /* ---------- 详情卡 ---------- */
+  // 正文双语：EN 模式优先用 detailEn/descEn；缺失则回退中文并加一行说明（避免大规模机翻失真）
+  function descBody(p) {
+    if (state.lang === 'en') {
+      const enTxt = p.detailEn || p.descEn;
+      if (enTxt) return esc(enTxt);
+      return esc(p.detail || p.desc) + '<div class="d-zh-note">— description in Chinese (English summary pending) —</div>';
+    }
+    return esc(p.detail || p.desc);
+  }
+  // 模态焦点管理：打开时记录并把焦点移入，关闭时还原（无障碍）
+  let _lastFocus = null;
+  const captureFocus = () => { _lastFocus = document.activeElement; };
+  const restoreFocus = () => { try { if (_lastFocus && _lastFocus.focus) _lastFocus.focus(); } catch (e) { /* ignore */ } _lastFocus = null; };
+  const focusEl = id => { const el = document.getElementById(id); if (el && el.focus) try { el.focus(); } catch (e) { /* ignore */ } };
+
   const detailEl = document.getElementById('detail');
   function showDetail(p) {
     const c = CATEGORIES[p.cat];
+    captureFocus();
     detailEl.innerHTML =
-      '<div class="d-top"><button class="d-close" id="d-close">×</button>' +
+      '<div class="d-top"><button class="d-close" id="d-close" aria-label="关闭详情卡" title="关闭">×</button>' +
+      '<button class="d-share" id="d-share" aria-label="复制该项目的分享链接" title="复制项目链接">🔗</button>' +
       '<span class="d-cat" style="background:' + c.color + '22;color:' + c.color + '">' + c.icon + ' ' + catName(p.cat) + (subLabel(p) ? ' · ' + subLabel(p) : '') + '</span>' +
       (isRecent(p) ? '<span class="d-new">' + tr('🆕 近一年') + '</span>' : '') +
       '<div class="d-name">' + (p.flagship ? '★ ' : '') + esc(nm(p)) + '</div>' +
@@ -703,46 +583,63 @@
       cell(tr('投资额'), usd(p) + (/美元|\$/.test(p.invText || '') || !p.invText ? '' : ' <span class="d-usd">（原币种：' + esc(p.invText) + '）</span>')) +
       cell(tr('业主 / 参与方'), esc(p.owner || '—')) +
       cell(tr('最近动态'), esc(p.updated || '—')) +
-      '</div><div class="d-desc">' + esc(p.detail || p.desc) + '</div>';
+      '</div><div class="d-desc">' + descBody(p) + '</div>';
     detailEl.classList.add('show');
     document.getElementById('d-close').addEventListener('click', hideDetail);
+    const ds = document.getElementById('d-share');
+    if (ds) ds.addEventListener('click', () => {
+      const params = new URLSearchParams(stateToHash());
+      params.set('project', p.id);
+      const url = location.href.split('#')[0] + '#' + params.toString();
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(() => toast('🔗 项目链接已复制'), () => toast('🔗 链接已生成'));
+      else toast('🔗 链接已生成');
+    });
     const cl = detailEl.querySelector('.d-country-link');
     if (cl) cl.addEventListener('click', () => showCountry(cl.dataset.country));
+    focusEl('d-close');
   }
   const cell = (k, v) => '<div class="d-cell"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
-  const hideDetail = () => detailEl.classList.remove('show');
+  const hideDetail = () => { const was = detailEl.classList.contains('show'); detailEl.classList.remove('show'); if (was) restoreFocus(); };
   map.on('click', hideDetail);
 
   /* ---------- 国别下钻面板（点详情卡的国家打开）---------- */
   const countryPanel = document.getElementById('country-panel');
   const countryBackdrop = document.getElementById('country-backdrop');
-  function hideCountry() { countryPanel.classList.remove('show'); countryBackdrop.classList.remove('show'); }
-  function showCountry(country) {
+  function hideCountry() { const was = countryPanel.classList.contains('show'); countryPanel.classList.remove('show'); countryBackdrop.classList.remove('show'); if (was) restoreFocus(); }
+  // 单国能源组合聚合（showCountry 与 🆚 国别对比 共用；投资/装机口径排除国际大客户）
+  function computeCountry(country) {
     const ps = PROJECTS.filter(p => p.country === country);
-    if (!ps.length) return;
     const hasClient = ps.some(p => p.cat === 'client');
-    const base = ps.filter(p => p.cat !== 'client');           // 投资/装机 口径排除国际大客户
+    const base = ps.filter(p => p.cat !== 'client');
     const invBase = base.length ? base : ps;
     const totalInv = invBase.reduce((s, p) => s + (p.inv || 0), 0);
     const totalMW = invBase.reduce((s, p) => s + (p.capMW || 0), 0);
     const catCount = {}, catInv = {};
     ps.forEach(p => { catCount[p.cat] = (catCount[p.cat] || 0) + 1; catInv[p.cat] = (catInv[p.cat] || 0) + (p.inv || 0); });
-    const cats = CAT_KEYS.filter(k => catCount[k]).sort((a, b) => (catInv[b] || 0) - (catInv[a] || 0));
-    const maxCatInv = Math.max(1, ...cats.map(k => catInv[k] || 0));
+    const recentN = ps.filter(isRecent).length;
+    const statusCount = {}; STATUS.forEach(s => { statusCount[s] = ps.filter(p => p.status === s).length; });
+    return { country, ps, hasClient, totalInv, totalMW, catCount, catInv, recentN, statusCount };
+  }
+
+  function showCountry(country) {
+    const d = computeCountry(country);
+    const ps = d.ps;
+    if (!ps.length) return;
+    const cats = CAT_KEYS.filter(k => d.catCount[k]).sort((a, b) => (d.catInv[b] || 0) - (d.catInv[a] || 0));
+    const maxCatInv = Math.max(1, ...cats.map(k => d.catInv[k] || 0));
     const ys = ps.map(p => p.year), ymin = Math.min(...ys), ymax = Math.max(...ys);
     const yc = {}; for (let y = ymin; y <= ymax; y++) yc[y] = 0; ps.forEach(p => { yc[p.year] = (yc[p.year] || 0) + 1; });
     const ymaxN = Math.max(1, ...Object.values(yc));
-    const recentN = ps.filter(isRecent).length;
     const top = ps.slice().sort((a, b) => b.inv - a.inv).slice(0, 12);
 
     const kpi = (v, l) => '<div class="cp-kpi"><div class="v">' + v + '</div><div class="l">' + l + '</div></div>';
     const catBars = cats.map(k => {
       const c = CATEGORIES[k];
       return '<div class="bar-row"><div class="bar-head"><span class="dot" style="background:' + c.color + '"></span>' +
-        '<span class="nm">' + catShort(k) + '</span><span class="vv">' + catCount[k] + ' · ≈$' + fmtInv(catInv[k] || 0) + '</span></div>' +
-        '<div class="bar-track"><div class="bar-fill" style="width:' + ((catInv[k] || 0) / maxCatInv * 100) + '%;background:' + c.color + '"></div></div></div>';
+        '<span class="nm">' + catShort(k) + '</span><span class="vv">' + d.catCount[k] + ' · ≈$' + fmtInv(d.catInv[k] || 0) + '</span></div>' +
+        '<div class="bar-track"><div class="bar-fill" style="width:' + ((d.catInv[k] || 0) / maxCatInv * 100) + '%;background:' + c.color + '"></div></div></div>';
     }).join('');
-    const statusChips = STATUS.map(s => '<div class="s"><b>' + ps.filter(p => p.status === s).length + '</b><span>' + statusName(s) + '</span></div>').join('');
+    const statusChips = STATUS.map(s => '<div class="s"><b>' + d.statusCount[s] + '</b><span>' + statusName(s) + '</span></div>').join('');
     const yearBars = Object.keys(yc).map(y => '<div class="yb" style="height:' + (yc[y] / ymaxN * 100) + '%" title="' + y + '：' + yc[y] + ' 个"></div>').join('');
     const topRows = top.map(p => {
       const c = CATEGORIES[p.cat];
@@ -751,24 +648,29 @@
         '<div class="pm"><span>' + catShort(p.cat) + '</span><span>' + statusName(p.status) + '</span><span>' + esc(usd(p)) + (p.capMW ? ' · ' + capFmt(p.capMW) : '') + '</span></div></div>';
     }).join('');
 
+    countryPanel.classList.remove('wide');
     countryPanel.innerHTML =
       '<div class="cp-head"><span style="font-size:20px">🌍</span><div class="cp-name">' + esc(country) + '</div>' +
-      '<button class="cp-close" id="cp-close">×</button></div>' +
+      '<button class="cp-add" id="cp-add" title="加入国别对比">⊕ ' + (state.lang === 'en' ? 'Compare' : '加入对比') + '</button>' +
+      '<button class="cp-close" id="cp-close" aria-label="关闭面板" title="关闭">×</button></div>' +
       '<div class="cp-kpis">' +
-      kpi(ps.length, tr('项目数')) + kpi('≈$' + fmtInv(totalInv), tr('总投资')) +
-      kpi(totalMW >= 1000 ? (totalMW / 1000).toFixed(1) + ' GW' : Math.round(totalMW) + ' MW', tr('装机容量')) +
-      kpi(recentN, tr('🆕 近一年')) + '</div>' +
+      kpi(ps.length, tr('项目数')) + kpi('≈$' + fmtInv(d.totalInv), tr('总投资')) +
+      kpi(d.totalMW >= 1000 ? (d.totalMW / 1000).toFixed(1) + ' GW' : Math.round(d.totalMW) + ' MW', tr('装机容量')) +
+      kpi(d.recentN, tr('🆕 近一年')) + '</div>' +
       '<div class="cp-body">' +
       '<div class="cp-sec-title">' + tr('分品类（项目数 · 投资额）') + '</div>' + catBars +
       '<div class="cp-sec-title">' + tr('项目状态') + '</div><div class="cp-status">' + statusChips + '</div>' +
       '<div class="cp-sec-title">' + tr('里程碑年份分布') + '（' + ymin + '–' + ymax + '）</div>' +
       '<div class="cp-years">' + yearBars + '</div><div class="cp-years-ax"><span>' + ymin + '</span><span>' + ymax + '</span></div>' +
       '<div class="cp-sec-title">' + tr('重点项目 TOP（按投资额）') + '</div><div class="cp-proj">' + topRows + '</div>' +
-      (hasClient ? '<div class="cp-note">* 总投资/装机口径不含「国际大客户」，避免与能源品类对同一物理项目重复计。</div>' : '') +
+      (d.hasClient ? '<div class="cp-note">* 总投资/装机口径不含「国际大客户」，避免与能源品类对同一物理项目重复计。</div>' : '') +
       '</div>';
     countryBackdrop.classList.add('show');
     countryPanel.classList.add('show');
     document.getElementById('cp-close').addEventListener('click', hideCountry);
+    focusEl('cp-close');
+    const addBtn = document.getElementById('cp-add');
+    if (addBtn) addBtn.addEventListener('click', () => addCompare(country));
     countryPanel.querySelectorAll('.proj-item').forEach(el => el.addEventListener('click', () => {
       const p = PROJECTS.find(x => String(x.id) === el.dataset.id);
       if (p) { hideCountry(); showDetail(p); map.flyTo(toLatLng(p.coord), 8, { duration: 0.7 }); }
@@ -776,8 +678,85 @@
   }
   countryBackdrop.addEventListener('click', hideCountry);
 
+  /* ---------- 🆚 国别对比（多国并排，复用 computeCountry 聚合）---------- */
+  let comparePickerOpen = false;
+  function openCompare() { comparePickerOpen = state.compare.length < 2; showCompare(); }
+  function addCompare(country) {
+    if (country && !state.compare.includes(country) && state.compare.length < 4) state.compare.push(country);
+    comparePickerOpen = state.compare.length < 2;
+    showCompare();
+  }
+  function removeCompare(country) { state.compare = state.compare.filter(c => c !== country); showCompare(); }
+  const cmpKpi = (v, l) => '<div class="cmp-kpi"><b>' + v + '</b><span>' + l + '</span></div>';
+  function countryCounts() {
+    const m = {}; PROJECTS.forEach(p => { m[p.country] = (m[p.country] || 0) + 1; });
+    return Object.keys(m).sort((a, b) => m[b] - m[a]).map(c => ({ c, n: m[c] }));
+  }
+  function showCompare() {
+    const cols = state.compare.map(country => {
+      const d = computeCountry(country);
+      const cats = CAT_KEYS.filter(k => d.catCount[k]).sort((a, b) => (d.catInv[b] || 0) - (d.catInv[a] || 0)).slice(0, 6);
+      const maxCatInv = Math.max(1, ...cats.map(k => d.catInv[k] || 0));
+      const catBars = cats.map(k => {
+        const c = CATEGORIES[k];
+        return '<div class="cmp-cat"><span class="dot" style="background:' + c.color + '"></span><span class="cn">' + catShort(k) + '</span>' +
+          '<span class="cv">≈$' + fmtInv(d.catInv[k] || 0) + '</span>' +
+          '<div class="cmp-cbar"><i style="width:' + ((d.catInv[k] || 0) / maxCatInv * 100) + '%;background:' + c.color + '"></i></div></div>';
+      }).join('');
+      const top = d.ps.slice().sort((a, b) => b.inv - a.inv).slice(0, 3).map((p, i) =>
+        '<div class="cmp-top" data-id="' + p.id + '"><span class="r">' + (i + 1) + '</span><span class="t">' + esc(nm(p)) + '</span><span class="v">' + esc(usd(p)) + '</span></div>').join('');
+      return '<div class="cmp-col">' +
+        '<div class="cmp-col-head"><span class="cc-name">' + esc(country) + '</span>' +
+        '<button class="cmp-rm" data-rm="' + esc(country) + '" aria-label="移除" title="移除">✕</button></div>' +
+        '<div class="cmp-kpis">' +
+        cmpKpi(d.ps.length, tr('项目数')) + cmpKpi('≈$' + fmtInv(d.totalInv), tr('总投资')) +
+        cmpKpi(d.totalMW >= 1000 ? (d.totalMW / 1000).toFixed(1) + ' GW' : Math.round(d.totalMW) + ' MW', tr('装机容量')) +
+        cmpKpi(d.recentN, tr('🆕 近一年')) + '</div>' +
+        '<div class="cmp-sec">' + tr('分品类（项目数 · 投资额）') + '</div>' + (catBars || '<div class="cmp-empty">—</div>') +
+        '<div class="cmp-sec">' + tr('重点项目 TOP（按投资额）') + '</div>' + (top || '<div class="cmp-empty">—</div>') +
+        '</div>';
+    }).join('');
+    const canAdd = state.compare.length < 4;
+    const addTile = canAdd ? '<button class="cmp-addtile" id="cmp-addtile">＋<span>' + (state.lang === 'en' ? 'Add' : '添加') + '</span></button>' : '';
+    let picker = '';
+    if (comparePickerOpen && canAdd) {
+      const list = countryCounts().filter(o => !state.compare.includes(o.c))
+        .map(o => '<button class="cmp-pick" data-pick="' + esc(o.c) + '">' + esc(o.c) + '<span>' + o.n + '</span></button>').join('');
+      picker = '<div class="cmp-picker"><input id="cmp-search" placeholder="' + (state.lang === 'en' ? 'Search country…' : '搜索国家…') + '" aria-label="搜索国家"><div class="cmp-picklist" id="cmp-picklist">' + list + '</div></div>';
+    }
+    const hint = state.compare.length < 2
+      ? '<div class="cmp-hint">' + (state.lang === 'en' ? 'Pick at least two countries to compare.' : '至少选择两个国家并排对比。') + '</div>' : '';
+
+    countryPanel.classList.add('wide');
+    countryPanel.innerHTML =
+      '<div class="cp-head"><span style="font-size:20px">🆚</span><div class="cp-name">' + (state.lang === 'en' ? 'Country comparison' : '国别对比') + '</div>' +
+      '<button class="cp-close" id="cp-close" aria-label="关闭面板" title="关闭">×</button></div>' +
+      '<div class="cp-body">' + hint +
+      '<div class="cmp-grid">' + cols + addTile + '</div>' + picker +
+      '<div class="cp-note">* 各国投资/装机口径不含「国际大客户」。点 TOP 项目可看详情。</div>' +
+      '</div>';
+    countryBackdrop.classList.add('show'); countryPanel.classList.add('show');
+    document.getElementById('cp-close').addEventListener('click', hideCountry);
+    focusEl('cp-close');
+    const addtile = document.getElementById('cmp-addtile');
+    if (addtile) addtile.addEventListener('click', () => { comparePickerOpen = !comparePickerOpen; showCompare(); });
+    countryPanel.querySelectorAll('.cmp-rm').forEach(el => el.addEventListener('click', () => removeCompare(el.dataset.rm)));
+    countryPanel.querySelectorAll('.cmp-pick').forEach(el => el.addEventListener('click', () => addCompare(el.dataset.pick)));
+    countryPanel.querySelectorAll('.cmp-top').forEach(el => el.addEventListener('click', () => {
+      const p = PROJECTS.find(x => String(x.id) === el.dataset.id);
+      if (p) { hideCountry(); showDetail(p); map.flyTo(toLatLng(p.coord), 8, { duration: 0.7 }); }
+    }));
+    const cs = document.getElementById('cmp-search');
+    if (cs) cs.addEventListener('input', () => {
+      const q = cs.value.trim().toLowerCase();
+      countryPanel.querySelectorAll('#cmp-picklist .cmp-pick').forEach(b => {
+        b.style.display = b.dataset.pick.toLowerCase().indexOf(q) >= 0 ? '' : 'none';
+      });
+    });
+  }
+
   /* ---------- 🏢 企业 / 业主全球排行榜（点公司名筛选其全部项目）---------- */
-  const ownerKey = o => ((o || '').split(/[\/、（(]/)[0] || '').trim();
+  const ownerKey = normalizeOwner;  // 归并「中国电建」与「中国电建集团」等同义业主
   function showLeague() {
     const ag = {};
     PROJECTS.forEach(p => {
@@ -791,34 +770,57 @@
       const o = r[0], d = r[1];
       const domCats = Object.keys(d.cats).sort((a, b) => d.cats[b] - d.cats[a]).slice(0, 5)
         .map(k => '<span class="lg-dot" title="' + catShort(k) + '" style="background:' + (CATEGORIES[k] || {}).color + '"></span>').join('');
-      return '<div class="lg-row" data-owner="' + esc(o) + '">' +
+      return '<div class="lg-row" data-owner="' + esc(o) + '" tabindex="0" role="button">' +
         '<div class="lg-rank">' + (i + 1) + '</div>' +
         '<div class="lg-main"><div class="lg-name">' + esc(o) + ' ' + domCats + '</div>' +
         '<div class="lg-track"><div class="lg-fill" style="width:' + (d.n / maxN * 100) + '%"></div></div></div>' +
         '<div class="lg-meta"><b>' + d.n + '</b><span>' + tr('项目数') + '</span></div>' +
         '<div class="lg-meta"><b>≈$' + fmtInv(d.inv) + '</b><span>' + d.countries.size + ' ' + (state.lang === 'en' ? 'countries' : '国') + '</span></div></div>';
     }).join('');
+    countryPanel.classList.remove('wide');
     countryPanel.innerHTML =
       '<div class="cp-head"><span style="font-size:20px">🏢</span><div class="cp-name">' + tr('企业 / 业主排行榜') + '</div>' +
-      '<button class="cp-close" id="cp-close">×</button></div>' +
+      '<button class="cp-close" id="cp-close" aria-label="关闭面板" title="关闭">×</button></div>' +
       '<div class="cp-body"><div class="cp-note" style="margin:0 0 8px">' + tr('按项目数排名（投资额为该业主累计）') + ' · ' + tr('点公司名筛选其全部项目') + '</div>' +
       '<div class="lg-list">' + body + '</div></div>';
     countryBackdrop.classList.add('show'); countryPanel.classList.add('show');
     document.getElementById('cp-close').addEventListener('click', hideCountry);
+    focusEl('cp-close');
     countryPanel.querySelectorAll('.lg-row').forEach(el => el.addEventListener('click', () => {
       hideCountry(); state.q = el.dataset.owner; const sEl = document.getElementById('search'); if (sEl) sEl.value = state.q; render();
     }));
   }
 
-  /* ---------- 品类色图例（地图左上，点击=切换该品类）---------- */
+  /* ---------- 品类色图例（地图左上，点击=切换该品类；随语言重建）---------- */
   const legendEl = document.getElementById('cat-legend');
-  if (legendEl) {
-    legendEl.innerHTML = '<div class="cl-title">品类（点击切换）</div>' + CAT_KEYS.map(k => {
+  function buildCatLegend() {
+    if (!legendEl) return;
+    legendEl.innerHTML = '<div class="cl-title">' + (state.lang === 'en' ? 'Categories (click to toggle)' : '品类（点击切换）') + '</div>' + CAT_KEYS.map(k => {
       const c = CATEGORIES[k];
-      return '<div class="cl" data-key="' + k + '"><span class="d" style="background:' + c.color + '"></span>' + c.short + '</div>';
+      return '<div class="cl" data-key="' + k + '" tabindex="0" role="button"><span class="d" style="background:' + c.color + '"></span>' + catShort(k) + '</div>';
     }).join('');
     legendEl.querySelectorAll('.cl').forEach(el => el.addEventListener('click', () => toggleCat(el.dataset.key)));
+    syncCatUI();
   }
+  buildCatLegend();
+
+  /* ---------- 🔥 热力分面：聚焦单一品类（仅热力模式显示；随语言重建）---------- */
+  const heatFacetsEl = document.getElementById('heat-facets');
+  function syncHeatFacets() {
+    if (!heatFacetsEl) return;
+    heatFacetsEl.querySelectorAll('.hf').forEach(el =>
+      el.classList.toggle('on', (el.dataset.cat || '') === (state.heatCat || '')));
+  }
+  function buildHeatFacets() {
+    if (!heatFacetsEl) return;
+    heatFacetsEl.innerHTML = '<div class="hf' + (state.heatCat ? '' : ' on') + '" data-cat="" tabindex="0" role="button">' + (state.lang === 'en' ? 'All' : '全部') + '</div>' +
+      CAT_KEYS.map(k => '<div class="hf" data-cat="' + k + '" tabindex="0" role="button"><span class="d" style="background:' + CATEGORIES[k].color + '"></span>' + catShort(k) + '</div>').join('');
+    heatFacetsEl.querySelectorAll('.hf').forEach(el => el.addEventListener('click', () => {
+      state.heatCat = el.dataset.cat || null;
+      syncHeatFacets(); render();
+    }));
+  }
+  buildHeatFacets();
 
   /* ---------- 点统计即筛选（右侧分类条 / 区域格 双向联动）---------- */
   document.getElementById('cat-bars').addEventListener('click', e => {
@@ -850,8 +852,13 @@
     if (state.heat) p.set('heat', '1');
     if (state.weight === 'cap') p.set('w', 'cap');
     if (state.sort === 'cap') p.set('sort', 'cap');
+    if (state.lang === 'en') p.set('lang', 'en');
+    if (!state.lines) p.set('lines', '0');
+    if (state.heatCat) p.set('hcat', state.heatCat);
+    if (state.compare.length) p.set('cmp', state.compare.join('~'));
     return p.toString();
   }
+  let pendingProjectId = null;  // 深链接 #project=<id>：首屏渲染后打开该项目
   function applyHash() {
     const h = (location.hash || '').replace(/^#/, '');
     if (!h) return;
@@ -871,6 +878,11 @@
     if (p.has('heat')) state.heat = true;
     if (p.get('w') === 'cap') state.weight = 'cap';
     if (p.get('sort') === 'cap') state.sort = 'cap';
+    if (p.get('lang') === 'en') state.lang = 'en';
+    if (p.get('lines') === '0') state.lines = false;
+    if (p.has('hcat') && CATEGORIES[p.get('hcat')]) state.heatCat = p.get('hcat');
+    if (p.has('cmp')) state.compare = p.get('cmp').split('~').filter(Boolean).slice(0, 4);
+    if (p.has('project')) pendingProjectId = p.get('project');
   }
   document.getElementById('btn-share').addEventListener('click', () => {
     const hash = stateToHash();
@@ -896,6 +908,108 @@
     toast('⤓ 已导出 ' + items.length + ' 个项目 (CSV)');
   });
 
+  /* ---------- 📸 当前视图快照（信息图 SVG，可分享/插入文档）----------
+   * 地图瓦片跨域无法截图，这里把"当前筛选"的统计与 TOP 做成一张矢量信息图海报。 */
+  function buildSnapshotSVG() {
+    const items = filtered();
+    const clientOnly = state.cats.size === 1 && state.cats.has('client');
+    const statItems = clientOnly ? items : items.filter(p => p.cat !== 'client');
+    const totalInv = statItems.reduce((s, p) => s + (p.inv || 0), 0);
+    const countries = new Set(items.map(p => p.country)).size;
+    const recentN = items.filter(isRecent).length;
+    const catCount = {}; CAT_KEYS.forEach(k => catCount[k] = 0); items.forEach(p => catCount[p.cat]++);
+    const topCats = CAT_KEYS.filter(k => catCount[k]).sort((a, b) => catCount[b] - catCount[a]).slice(0, 6);
+    const maxCat = Math.max(1, ...topCats.map(k => catCount[k]));
+    const sortCap = state.sort === 'cap';
+    const top = items.slice().sort((a, b) => sortCap ? ((b.capMW || 0) - (a.capMW || 0)) : (b.inv - a.inv)).slice(0, 6);
+    const en = state.lang === 'en';
+    const parts = [];
+    if (state.cats.size && state.cats.size < CAT_KEYS.length) parts.push((en ? 'Categories: ' : '品类: ') + [...state.cats].map(catShort).join('/'));
+    if (state.regions.size) parts.push((en ? 'Regions: ' : '大区: ') + [...state.regions].map(regionName).join('/'));
+    if (state.statuses.size) parts.push((en ? 'Status: ' : '状态: ') + [...state.statuses].map(statusName).join('/'));
+    if (state.minYear > MIN_YEAR || state.maxYear < MAX_YEAR) parts.push(state.minYear + '–' + state.maxYear);
+    if (state.recentOnly) parts.push(en ? 'Recent 12mo' : '近一年');
+    if (state.q) parts.push('“' + state.q + '”');
+    const filterDesc = parts.length ? parts.join('   ·   ') : (en ? 'All projects' : '全部项目');
+    const clip = (s, n) => { s = String(s == null ? '' : s); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
+    const X = esc;
+
+    const kpiCard = (i, val, lab, color) => {
+      const x = 60 + i * 273;
+      return '<g transform="translate(' + x + ',196)">' +
+        '<rect width="255" height="96" rx="12" fill="#101a30" stroke="#2a3a5c"/>' +
+        '<text x="18" y="50" font-size="30" font-weight="800" fill="' + color + '">' + X(val) + '</text>' +
+        '<text x="18" y="76" font-size="14" fill="#93a4c4">' + X(lab) + '</text></g>';
+    };
+    const catRows = topCats.map((k, i) => {
+      const y = 392 + i * 39, c = CATEGORIES[k], w = 520 * catCount[k] / maxCat;
+      return '<g transform="translate(60,' + y + ')">' +
+        '<circle cx="6" cy="-4" r="6" fill="' + c.color + '"/>' +
+        '<text x="22" y="0" font-size="16" fill="#cdd7ea">' + X(catShort(k)) + '</text>' +
+        '<text x="520" y="0" font-size="15" font-weight="700" fill="#e8eefb" text-anchor="end">' + catCount[k] + '</text>' +
+        '<rect x="0" y="9" width="520" height="6" rx="3" fill="#1b2742"/>' +
+        '<rect x="0" y="9" width="' + w.toFixed(1) + '" height="6" rx="3" fill="' + c.color + '"/></g>';
+    }).join('');
+    const topRows = top.map((p, i) => {
+      const y = 392 + i * 39, c = CATEGORIES[p.cat];
+      const val = sortCap ? capFmt(p.capMW) : usd(p);
+      return '<g transform="translate(620,' + y + ')">' +
+        '<rect x="0" y="-16" width="3" height="22" rx="1.5" fill="' + c.color + '"/>' +
+        '<text x="14" y="-2" font-size="13" font-weight="800" fill="#5f718f">' + (i + 1) + '</text>' +
+        '<text x="36" y="0" font-size="15" fill="#e8eefb">' + X(clip(nm(p), 22)) + '</text>' +
+        '<text x="520" y="0" font-size="14" font-weight="700" fill="#2ee6a6" text-anchor="end">' + X(val) + '</text></g>';
+    }).join('');
+
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" width="1200" height="675" ' +
+      'font-family="\'PingFang SC\',\'Microsoft YaHei\',\'Segoe UI\',system-ui,sans-serif">' +
+      '<defs><radialGradient id="g1" cx="78%" cy="-10%" r="70%"><stop offset="0" stop-color="#21c7ff" stop-opacity="0.14"/><stop offset="1" stop-color="#21c7ff" stop-opacity="0"/></radialGradient>' +
+      '<radialGradient id="g2" cx="6%" cy="112%" r="70%"><stop offset="0" stop-color="#2ee6a6" stop-opacity="0.12"/><stop offset="1" stop-color="#2ee6a6" stop-opacity="0"/></radialGradient></defs>' +
+      '<rect width="1200" height="675" fill="#060b18"/><rect width="1200" height="675" fill="url(#g1)"/><rect width="1200" height="675" fill="url(#g2)"/>' +
+      '<text x="60" y="78" font-size="36" font-weight="800" fill="#e8eefb">🌐 ' + (en ? 'Global Energy Projects Map' : '全球能源项目世界地图') + '</text>' +
+      '<text x="60" y="108" font-size="15" letter-spacing="1.5" fill="#93a4c4">GLOBAL ENERGY PROJECTS · ' + X((en ? 'Updated ' : '数据更新 ') + META.lastUpdated) + '</text>' +
+      '<rect x="60" y="130" width="1080" height="40" rx="9" fill="#0d1730" stroke="#1f2c4a"/>' +
+      '<text x="78" y="156" font-size="16" fill="#7fd4ff">▸ ' + X(clip(filterDesc, 92)) + '</text>' +
+      kpiCard(0, items.length, en ? 'Projects' : '项目总数', '#21c7ff') +
+      kpiCard(1, countries, en ? 'Countries' : '覆盖国家', '#e8eefb') +
+      kpiCard(2, '≈$' + fmtInv(totalInv), en ? 'Investment' : '总投资(美元)', '#2ee6a6') +
+      kpiCard(3, recentN, en ? 'Recent 12mo' : '🆕 近一年', '#ffb02e') +
+      '<text x="60" y="360" font-size="14" letter-spacing="1" fill="#5f718f">' + (en ? 'BY CATEGORY (count)' : '分品类（项目数）') + '</text>' +
+      '<text x="620" y="360" font-size="14" letter-spacing="1" fill="#5f718f">' + (en ? (sortCap ? 'TOP (by capacity)' : 'TOP (by investment)') : (sortCap ? '重点项目 TOP（按装机）' : '重点项目 TOP（按投资）')) + '</text>' +
+      catRows + topRows +
+      '<text x="60" y="652" font-size="13" fill="#5f718f">' + items.length + (en ? ' projects · ' : ' 个项目 · ') + countries + (en ? ' countries' : ' 国') + '  ·  ' + X(en ? 'Generated from Global Energy Projects Map' : '由「全球能源项目世界地图」生成') + '</text>' +
+      '</svg>';
+  }
+  function saveBlob(blob, name) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  // 优先导 PNG（SVG→canvas 光栅化，纯矢量无外部资源不会污染 canvas）；失败回退 SVG
+  function exportSnapshot() {
+    const n = filtered().length, svg = buildSnapshotSVG();
+    const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+    let fellBack = false;
+    const fallback = () => { if (fellBack) return; fellBack = true; saveBlob(svgBlob, 'energy-snapshot-' + n + '.svg'); toast('📸 已导出快照 (SVG)'); };
+    try {
+      const url = URL.createObjectURL(svgBlob);
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const scale = 2, cv = document.createElement('canvas');
+          cv.width = 1200 * scale; cv.height = 675 * scale;
+          const ctx = cv.getContext('2d'); ctx.scale(scale, scale); ctx.drawImage(img, 0, 0, 1200, 675);
+          URL.revokeObjectURL(url);
+          cv.toBlob(b => { if (b) { saveBlob(b, 'energy-snapshot-' + n + '.png'); toast('📸 已导出当前视图快照 (PNG)'); } else fallback(); }, 'image/png');
+        } catch (e) { URL.revokeObjectURL(url); fallback(); }
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); fallback(); };
+      img.src = url;
+    } catch (e) { fallback(); }
+  }
+  const snapBtn = document.getElementById('btn-snapshot');
+  if (snapBtn) snapBtn.addEventListener('click', exportSnapshot);
+
   /* ---------- 由 state 同步所有筛选 UI（用于 URL 载入与重置）---------- */
   function applyUIFromState() {
     syncCatUI();
@@ -906,6 +1020,7 @@
     if (btnHeat) { btnHeat.classList.toggle('on', state.heat); document.body.classList.toggle('heat-on', state.heat); }
     if (btnWeight) { btnWeight.classList.toggle('on', state.weight === 'cap'); btnWeight.textContent = state.weight === 'cap' ? '⚖️ 容量权重' : '⚖️ 投资权重'; }
     if (sortToggle) sortToggle.textContent = state.sort === 'cap' ? '按装机容量 ⇄' : '按投资额 ⇄';
+    if (btnFlow) btnFlow.classList.toggle('on', state.lines);
     const sEl = document.getElementById('search'); if (sEl) sEl.value = state.q;
     if (yearMin) { yearMin.value = state.minYear; yearMax.value = state.maxYear; syncYearUI(); }
   }
@@ -917,12 +1032,74 @@
   const lu = document.getElementById('last-updated');
   if (lu) lu.textContent = '数据更新 ' + META.lastUpdated;
 
+  /* ---------- 移动端抽屉：窄屏由 🔍/📊 浮动按钮调出左右面板 ---------- */
+  const drawerBackdrop = document.getElementById('drawer-backdrop');
+  const sideLeft = document.querySelector('.side.left');
+  const sideRight = document.querySelector('.side.right');
+  function closeDrawers() {
+    if (sideLeft) sideLeft.classList.remove('open');
+    if (sideRight) sideRight.classList.remove('open');
+    if (drawerBackdrop) drawerBackdrop.classList.remove('show');
+  }
+  function toggleDrawer(side) {
+    const el = side === 'left' ? sideLeft : sideRight;
+    const other = side === 'left' ? sideRight : sideLeft;
+    if (!el) return;
+    const willOpen = !el.classList.contains('open');
+    if (other) other.classList.remove('open');
+    el.classList.toggle('open', willOpen);
+    if (drawerBackdrop) drawerBackdrop.classList.toggle('show', willOpen);
+  }
+  const fabFilters = document.getElementById('fab-filters');
+  const fabStats = document.getElementById('fab-stats');
+  if (fabFilters) fabFilters.addEventListener('click', () => toggleDrawer('left'));
+  if (fabStats) fabStats.addEventListener('click', () => toggleDrawer('right'));
+  if (drawerBackdrop) drawerBackdrop.addEventListener('click', closeDrawers);
+  document.querySelectorAll('.drawer-close').forEach(b => b.addEventListener('click', closeDrawers));
+
+  /* ---------- Esc 关闭浮层（详情卡 / 国别面板·企业榜 / 移动端抽屉）---------- */
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (detailEl.classList.contains('show')) hideDetail();
+    if (countryPanel.classList.contains('show')) hideCountry();
+    closeDrawers();
+  });
+
+  /* ---------- 键盘可达性：role=button 的自定义控件支持 Enter/Space 触发 ---------- */
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+    const t = e.target;
+    if (t && t.matches && t.matches('.cat-chip,.sub-chip,.pill,.cl,.hf,.region-cell,.bar-row[role],.cmp-pick,.lg-row,.region-cell[role]')) {
+      e.preventDefault(); t.click();
+    }
+  });
+
   // 应用 URL 分享状态（如有），同步 UI 后首次渲染
   applyHash();
   applyUIFromState();
   applyLang();
+  syncHeatFacets();
   render();
 
+  // 深链接：#project=<id> 打开该项目详情并定位；#cmp=… 直接打开国别对比
+  if (pendingProjectId != null) {
+    const pp = PROJECTS.find(x => String(x.id) === String(pendingProjectId));
+    if (pp) { showDetail(pp); map.flyTo(toLatLng(pp.coord), 7, { duration: 0.8 }); }
+  } else if (state.compare.length >= 2) {
+    showCompare();
+  }
+
+  /* ---------- 首屏加载态：地图瓦片就绪（或超时兜底）后淡出 ---------- */
+  (function () {
+    const loaderEl = document.getElementById('app-loader');
+    if (!loaderEl) return;
+    let done = false;
+    const hide = () => { if (done) return; done = true; loaderEl.classList.add('hidden'); setTimeout(() => loaderEl.remove(), 480); };
+    esriDarkBase.once('load', hide);     // 首批暗色瓦片绘制完成
+    map.whenReady(() => setTimeout(hide, 400)); // 视图就绪后短暂保留，避免闪烁
+    setTimeout(hide, 2600);              // 离线/瓦片失败兜底，确保不卡 loading
+  })();
+
   // 调试 / 程序化控制句柄
-  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash };
+  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG };
 })();

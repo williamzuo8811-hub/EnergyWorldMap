@@ -24,12 +24,20 @@ There is no build, test, or lint tooling. To see changes:
 Map tiles require network access; project markers and all logic work offline. After editing,
 verify in a browser — there is no build step.
 
-**Data integrity check** (the one piece of automated tooling, zero-dep): after editing any
-`js/data*.js`, run `node scripts/validate-data.js`. It loads the data in `index.html`'s real
-`<script>` order and checks required fields, enum validity (`cat`/`region`/`status`), coordinate
-↔ region consistency (catches sign errors like positive longitude in the Americas), duplicate
-`name`s (which `app.js` silently drops) and `id`s, per-file id-range overlaps, and orphan
-`ENERGY_PROGRESS` entries. Exit code is non-zero on any ERROR (CI-friendly); warnings don't fail.
+**Automated checks** (zero-dep, also wired into CI via `.github/workflows/validate.yml` on push/PR):
+
+- `node scripts/validate-data.js` — after editing any `js/data*.js`. Loads the data in
+  `index.html`'s real `<script>` order and checks required fields, enum validity
+  (`cat`/`region`/`status`), coordinate ↔ region consistency (catches sign errors like positive
+  longitude in the Americas), duplicate `name`s (which `app.js` silently drops) and `id`s,
+  per-file id-range overlaps, and orphan `ENERGY_PROGRESS` entries. Also reports data-health
+  warnings: reused/placeholder coordinates, `inv` outliers, malformed `route` coords (ERROR),
+  and capacity-parse blind spots. Non-zero exit on any ERROR; warnings don't fail.
+- `node scripts/test-units.js` — after editing `js/util.js`. Asserts `parseCapacity`,
+  `classifySub` (matcher order/catch-all), `wgs2gcj`/`outOfChina`, and `normalizeOwner`.
+- `node scripts/test-smoke.js` — after editing `js/app.js`. Loads util + data + `app.js` under a
+  minimal DOM/Leaflet stub and asserts the IIFE init, `render()`, `buildSnapshotSVG()` and
+  `stateToHash()` run without throwing (catches runtime reference errors with no browser).
 
 ## Architecture
 
@@ -38,8 +46,13 @@ Two layers loaded as ordinary `<script>` tags in `index.html` (order is load-bea
 1. **Vendored libraries** (`lib/`): `leaflet.js`, `leaflet.markercluster.js`, `leaflet-heat.js`
    plus their CSS and marker images. Do not edit these.
 2. **Data files** (`js/data*.js`, `js/progress.js`): each attaches data to globals on `window`.
-3. **`js/app.js`**: the only application logic — map setup, basemap switching, filtering,
-   stats, detail cards, heatmap. Runs inside one IIFE.
+3. **`js/util.js`**: DOM-free pure logic shared by the app and the unit tests — `SUB_DEFS` +
+   `classifySub`, `parseCapacity`, and the WGS-84→GCJ-02 conversion (`wgs2gcj`/`outOfChina`).
+   Dual-export: attaches `window.ENERGY_UTIL` in the browser, `module.exports` under Node (so
+   `scripts/test-units.js` can `require` it). Must load **before** `app.js`.
+4. **`js/app.js`**: the application/UI logic — map setup, basemap switching, filtering,
+   stats, detail cards, heatmap, mobile drawers. Runs inside one IIFE; pulls the pure helpers
+   from `window.ENERGY_UTIL`.
 
 ### Data globals and merge model
 
@@ -60,19 +73,20 @@ When adding a new data file: add its `<script>` to `index.html` in the right pos
 the `.concat()` append pattern so you don't clobber earlier data. Each file owns a distinct `id`
 range (noted in its header comment) to keep progress mapping and dedup stable.
 
-### Subcategory auto-classification (`SUB_DEFS` in `app.js`)
+### Subcategory auto-classification (`SUB_DEFS` in `js/util.js`)
 
 Subcategories are **not stored** on projects — they are derived. `SUB_DEFS` maps each category to
 an *ordered* list of subcategory rules matched against the project's `name/en/cap/desc` (some use a
 custom `fn` matching `owner`, `region`, etc.). `classifySub` returns the first matching rule's key;
 the **last entry in each list has no rule and is the catch-all bucket**. Order matters — more
 specific rules must come before broader ones. New projects are categorized automatically with no
-manual tagging. To change subcategories, edit `SUB_DEFS` (labels, `zh`/`en` keywords, or order).
+manual tagging. To change subcategories, edit `SUB_DEFS` in `js/util.js` (labels, `zh`/`en`
+keywords, or order); `scripts/test-units.js` has assertions guarding the matcher order.
 
 ### Coordinate handling
 
 Project `coord` is always `[lng, lat]` in **WGS-84**. `toLatLng()` returns Leaflet's `[lat, lng]`.
-`app.js` contains a full WGS-84→GCJ-02 conversion (`wgs2gcj`, applied only when a basemap's
+`js/util.js` contains a full WGS-84→GCJ-02 conversion (`wgs2gcj`, applied only when a basemap's
 `crs` is `gcj02`). The two active basemaps (`dark` Esri, `osm`) are both WGS-84, so no shift is
 currently applied — but keep coordinates in WGS-84 so the conversion stays correct if a Chinese
 basemap is re-added.
@@ -81,7 +95,7 @@ basemap is re-added.
 
 `CATEGORIES` in `data.js` (key → `{name, short, color, icon}`) is the single source for the legend,
 filters, marker colors, cluster colors, and stat bars. Adding a category there makes it flow through
-the whole UI automatically — but you must also add a matching `SUB_DEFS[<key>]` entry in `app.js`,
+the whole UI automatically — but you must also add a matching `SUB_DEFS[<key>]` entry in `js/util.js`,
 or that category's projects get no subcategory chips.
 
 ### Render pipeline
@@ -89,8 +103,10 @@ or that category's projects get no subcategory chips.
 `render()` → `filtered()` (applies category/subcategory/region/status/year/search/recent filters) →
 `updateMap` + `updateStats` + `updateList`. Markers go into a `markerClusterGroup`; `route`
 polylines ("flowlines" for grids/HSR/pipelines) are always shown and never clustered. Heatmap mode
-(`state.heat`) hides markers and renders a `√inv`-weighted `L.heatLayer` instead. A debug handle is
-exposed at `window.__APP__`.
+(`state.heat`) hides markers and renders a `√inv`-weighted `L.heatLayer` instead; an on-map facet strip
+(`#heat-facets`) lets you focus a single category via `state.heatCat` without disturbing the main filters.
+A first-paint loader (`#app-loader`) fades out once the base tiles load (or a timeout fallback fires).
+A debug handle is exposed at `window.__APP__`.
 
 Year filtering is an interval `[state.minYear, state.maxYear]` driven by a dual-handle range slider
 (bounds set dynamically from data min/max year) plus presets (全部 / 🆕近一年 / 未来管线2027+) and a
@@ -101,12 +117,20 @@ the left filter chips, the on-map category legend (`#cat-legend`), and the right
 region cells (click-to-filter, two-way). Filter state round-trips through the URL hash via
 `stateToHash`/`applyHash` (only non-default fields encoded) — the 🔗 share button copies the link and
 `applyHash`+`applyUIFromState` restore it on load; `applyUIFromState` is the single place that syncs
-every toggle's visual from `state` (also used by reset). ⤓ export dumps `filtered()` to a BOM-prefixed CSV.
+every toggle's visual from `state` (also used by reset). The hash also carries `lang`, `lines`, the heat
+facet (`hcat`), the comparison set (`cmp`), and a one-shot `project=<id>` **deep link** (the detail card's
+🔗 button copies it; on load the project's detail opens and the map flies to it). ⤓ export dumps
+`filtered()` to a BOM-prefixed CSV; 📸 snapshot (`buildSnapshotSVG`) renders the current view's KPIs / top
+categories / top projects as an infographic and exports **PNG** (rasterized via SVG→canvas; falls back to
+SVG) — map tiles can't be screenshotted (cross-origin canvas taint), so the poster summarizes the filtered
+stats instead. Money everywhere flows through `invMag` which is **language-aware** (亿/万亿 in ZH, $B/$T in
+EN). Detail-card body is bilingual-aware: in EN mode it prefers `detailEn`/`descEn`, else falls back to the
+Chinese text with a note. On-map overlays (`#cat-legend`, `#heat-facets`) rebuild on language switch.
 
 ### Derived capacity & metrics
 
-`parseCapacity(cap)` turns the free-text `cap` into structured numbers attached to each project at build
-time: `capMW` (electrical power), `capMWh` (storage energy), `capKm` (line/route length), `capKbd`
+`parseCapacity(cap)` (in `js/util.js`) turns the free-text `cap` into structured numbers attached to each
+project at build time: `capMW` (electrical power), `capMWh` (storage energy), `capKm` (line/route length), `capKbd`
 (oil 万桶/日), `capWty` (mass 万吨/年) — `null` when not parseable. It takes the first match per unit,
 sums `A+B` lists, multiplies `N×M`, and uses lookaheads so `MW`/`GW` don't swallow `MWh`/`GWh`.
 These power the right-panel **硬指标** block (`updateCapStats`, sums per the current filter) and a
@@ -121,7 +145,13 @@ tooltips, list, KPIs, country panel, and the detail card all lead with USD; the 
 `showCountry(country)` (opened from the detail card's clickable 国家 link) renders a centered modal
 dashboard for one country — KPIs, per-category bars, status split, year-distribution sparkline, and a
 clickable TOP list — computed over **all** `PROJECTS` in that country (independent of the active filter);
-its 投资/装机 totals apply the same client-exclusion rule.
+its 投资/装机 totals apply the same client-exclusion rule. The per-country aggregation is factored into
+`computeCountry(country)`, shared by both the country dashboard and the **🆚 country comparison**
+(`showCompare`, the `🆚 对比` map-tools button): up to 4 countries are rendered as side-by-side
+small-multiple columns (`state.compare`), each with its own KPIs / category bars / TOP-3, plus a
+searchable country picker and an `⊕ 加入对比` shortcut on the single-country panel. The **🏢 company
+league** (`showLeague`) groups by `normalizeOwner` (in `js/util.js`), which strips legal-entity suffixes
+so "中国电建" and "中国电建集团" aggregate as one owner.
 
 ## Project data conventions
 

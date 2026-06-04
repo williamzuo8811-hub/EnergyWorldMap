@@ -3,13 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>全球能源项目世界地图</title>
+  <title>全球能源项目世界地图 · Global Energy Projects Map</title>
+  <meta name="description" content="可缩放的全球能源项目世界地图：2600+ 个能源与基建项目，按品类 / 大区 / 状态 / 年份筛选，含投资 KPI、容量硬指标、投资热力图、时间轴回放与国别下钻。An interactive world map of 2,600+ global energy &amp; infrastructure projects.">
+  <meta name="theme-color" content="#060b18">
+  <meta name="author" content="EnergyWorldMap">
+  <!-- 社交分享卡（Open Graph / Twitter）：让 🔗 分享视图 的链接在微信/Slack/Twitter 中带标题与预览 -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="全球能源项目世界地图 · Global Energy Projects Map">
+  <meta property="og:description" content="2600+ 个全球能源与基建项目的交互世界地图：品类 / 大区 / 状态 / 年份筛选，投资 KPI、容量硬指标、热力图、时间轴回放与国别下钻。">
+  <meta property="og:image" content="assets/og-cover.svg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="全球能源项目世界地图 · Global Energy Projects Map">
+  <meta name="twitter:description" content="2600+ 个全球能源与基建项目的交互世界地图：筛选、KPI、热力图、时间轴回放与国别下钻。">
+  <meta name="twitter:image" content="assets/og-cover.svg">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="lib/leaflet.css">
   <link rel="stylesheet" href="lib/MarkerCluster.css">
   <link rel="stylesheet" href="lib/MarkerCluster.Default.css">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+  <!-- 首屏加载态：地图瓦片就绪后淡出 -->
+  <div class="app-loader" id="app-loader">
+    <div class="al-logo">🌐</div>
+    <div class="al-spin"></div>
+    <div class="al-text">全球能源项目世界地图<span>加载中 · Loading…</span></div>
+  </div>
   <div class="app">
     <!-- 顶栏 -->
     <header class="topbar">
@@ -30,10 +49,11 @@
 
     <div class="main">
       <!-- 左侧：筛选 -->
-      <aside class="side left">
+      <aside class="side left" aria-label="筛选面板">
+        <button class="drawer-close" data-i18n="✕ Close" aria-label="关闭筛选面板">✕ 收起筛选</button>
         <div class="search">
           <span class="ico">🔍</span>
-          <input id="search" type="text" placeholder="搜索项目 / 国家 / 业主…">
+          <input id="search" type="text" placeholder="搜索项目 / 国家 / 业主…" aria-label="搜索项目 / 国家 / 业主">
         </div>
 
         <button class="recent-toggle" id="recent-toggle" data-i18n="🆕 Recent 12 months only">🆕 仅看最近一年动态</button>
@@ -73,29 +93,32 @@
         </div>
 
         <div class="action-row">
-          <button class="btn-act" id="btn-share" title="复制当前筛选视图的分享链接" data-i18n="🔗 Share view">🔗 分享视图</button>
-          <button class="btn-act" id="btn-export" title="导出当前筛选结果为 CSV" data-i18n="⤓ Export CSV">⤓ 导出CSV</button>
+          <button class="btn-act" id="btn-share" title="复制当前筛选视图的分享链接" data-i18n="🔗 Share">🔗 分享</button>
+          <button class="btn-act" id="btn-export" title="导出当前筛选结果为 CSV" data-i18n="⤓ CSV">⤓ CSV</button>
+          <button class="btn-act" id="btn-snapshot" title="导出当前视图为信息图快照 (SVG)" data-i18n="📸 Snapshot">📸 快照</button>
         </div>
         <button class="btn-reset" id="btn-reset" data-i18n="↺ Reset all filters">↺ 重置全部筛选</button>
       </aside>
 
       <!-- 中间：地图 -->
       <section class="map-wrap">
-        <div id="map"></div>
+        <div id="map" role="region" aria-label="全球能源项目地图"></div>
         <div class="year-ticker" id="year-ticker"></div>
         <div class="cat-legend" id="cat-legend"></div>
         <div class="detail" id="detail"></div>
         <div class="country-backdrop" id="country-backdrop"></div>
         <div class="country-panel" id="country-panel"></div>
-        <div class="map-tools">
-          <div class="basemap-switch" id="basemap-switch"></div>
-          <button class="btn-heat" id="btn-heat" title="按当前权重显示宏观热力格局" data-i18n="🔥 Heatmap">🔥 热力图</button>
-          <button class="btn-weight" id="btn-weight" title="圆点大小与热力按 投资额 或 装机容量(MW) 加权">⚖️ 投资权重</button>
-          <button class="btn-flow on" id="btn-flow" title="显隐输变电/高铁/管道飞线" data-i18n="⚡ Flowlines">⚡ 飞线</button>
-          <button class="btn-league" id="btn-league" title="企业 / 业主全球排行榜" data-i18n="🏢 Companies">🏢 企业榜</button>
-          <button class="btn-lang" id="btn-lang" title="中文 / English">EN</button>
-          <button class="btn-home" id="btn-home" title="复位视图" data-i18n="⤢ Reset">⤢ 复位</button>
+        <div class="map-tools" role="toolbar" aria-label="地图工具">
+          <div class="basemap-switch" id="basemap-switch" role="group" aria-label="底图切换"></div>
+          <button class="btn-heat" id="btn-heat" title="按当前权重显示宏观热力格局" aria-label="切换投资热力图" data-i18n="🔥 Heatmap">🔥 热力图</button>
+          <button class="btn-weight" id="btn-weight" title="圆点大小与热力按 投资额 或 装机容量(MW) 加权" aria-label="切换加权口径：投资额或装机容量">⚖️ 投资权重</button>
+          <button class="btn-flow on" id="btn-flow" title="显隐输变电/高铁/管道飞线" aria-label="显隐飞线" data-i18n="⚡ Flowlines">⚡ 飞线</button>
+          <button class="btn-league" id="btn-league" title="企业 / 业主全球排行榜" aria-label="打开企业排行榜" data-i18n="🏢 Companies">🏢 企业榜</button>
+          <button class="btn-compare" id="btn-compare" title="多国能源组合并排对比" aria-label="打开国别对比" data-i18n="🆚 Compare">🆚 对比</button>
+          <button class="btn-lang" id="btn-lang" title="中文 / English" aria-label="切换中文 / English">EN</button>
+          <button class="btn-home" id="btn-home" title="复位视图" aria-label="复位地图视图" data-i18n="⤢ Reset">⤢ 复位</button>
         </div>
+        <div class="heat-facets" id="heat-facets"></div>
         <div class="heat-legend" id="heat-legend">
           <span class="hl-cap">投资热力</span>
           <i class="hl-bar"></i>
@@ -105,7 +128,8 @@
       </section>
 
       <!-- 右侧：统计 -->
-      <aside class="side right">
+      <aside class="side right" aria-label="统计面板">
+        <button class="drawer-close" data-i18n="✕ Close" aria-label="关闭统计面板">✕ 收起统计</button>
         <div class="block">
           <div class="block-title"><span data-i18n="Hard metrics">硬指标</span> <span class="count" data-i18n="current filter · from capacity">按当前筛选 · 解析自容量</span></div>
           <div class="cap-stats" id="cap-stats"></div>
@@ -124,6 +148,11 @@
         </div>
       </aside>
     </div>
+
+    <!-- 移动端：调出左右面板的浮动按钮 + 抽屉遮罩（仅窄屏显示）-->
+    <button class="mobile-fab fab-left" id="fab-filters" aria-label="打开筛选面板" data-i18n="🔍 Filters">🔍 筛选</button>
+    <button class="mobile-fab fab-right" id="fab-stats" aria-label="打开统计面板" data-i18n="📊 Stats">📊 统计</button>
+    <div class="drawer-backdrop" id="drawer-backdrop"></div>
   </div>
 
   <script src="lib/leaflet.js"></script>
@@ -146,6 +175,7 @@
   <script src="js/data-southasia.js"></script>
   <script src="js/data-china-future.js"></script>
   <script src="js/progress.js"></script>
+  <script src="js/util.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
