@@ -54,23 +54,43 @@
         </div>
 
         <div class="block">
-          <div class="block-title">起始年份 <span class="count" id="year-label">全部</span></div>
-          <div class="year-wrap">
-            <div class="year-val"><span>更早</span><b id="year-cur"></b><span>至今</span></div>
-            <input id="year-slider" type="range" min="2020" max="2026" step="1" value="2020">
+          <div class="block-title">年份区间 <span class="count" id="year-label">全部</span></div>
+          <div class="year-presets">
+            <button class="yp on" data-preset="all">全部</button>
+            <button class="yp" data-preset="recent">🆕 近一年</button>
+            <button class="yp" data-preset="future">未来管线 2027+</button>
           </div>
+          <div class="year-wrap">
+            <div class="year-val"><b id="year-min-lab">2012</b><span>—</span><b id="year-max-lab">2035</b></div>
+            <div class="range-dual">
+              <div class="rd-track"></div>
+              <div class="rd-fill" id="rd-fill"></div>
+              <input id="year-min" type="range" min="2012" max="2035" step="1" value="2012">
+              <input id="year-max" type="range" min="2012" max="2035" step="1" value="2035">
+            </div>
+          </div>
+          <button class="btn-play" id="btn-play" title="逐年累计揭示，看能源版图如何'长'出来">▶ 播放时间轴</button>
         </div>
 
+        <div class="action-row">
+          <button class="btn-act" id="btn-share" title="复制当前筛选视图的分享链接">🔗 分享视图</button>
+          <button class="btn-act" id="btn-export" title="导出当前筛选结果为 CSV">⤓ 导出CSV</button>
+        </div>
         <button class="btn-reset" id="btn-reset">↺ 重置全部筛选</button>
       </aside>
 
       <!-- 中间：地图 -->
       <section class="map-wrap">
         <div id="map"></div>
+        <div class="year-ticker" id="year-ticker"></div>
+        <div class="cat-legend" id="cat-legend"></div>
         <div class="detail" id="detail"></div>
+        <div class="country-backdrop" id="country-backdrop"></div>
+        <div class="country-panel" id="country-panel"></div>
         <div class="map-tools">
           <div class="basemap-switch" id="basemap-switch"></div>
-          <button class="btn-heat" id="btn-heat" title="按投资额显示宏观热力格局">🔥 投资热力</button>
+          <button class="btn-heat" id="btn-heat" title="按当前权重显示宏观热力格局">🔥 热力图</button>
+          <button class="btn-weight" id="btn-weight" title="圆点大小与热力按 投资额 或 装机容量(MW) 加权">⚖️ 投资权重</button>
           <button class="btn-home" id="btn-home" title="复位视图">⤢ 复位</button>
         </div>
         <div class="heat-legend" id="heat-legend">
@@ -84,6 +104,10 @@
       <!-- 右侧：统计 -->
       <aside class="side right">
         <div class="block">
+          <div class="block-title">硬指标 <span class="count">按当前筛选 · 解析自容量</span></div>
+          <div class="cap-stats" id="cap-stats"></div>
+        </div>
+        <div class="block">
           <div class="block-title">分类分布</div>
           <div id="cat-bars"></div>
         </div>
@@ -92,7 +116,7 @@
           <div class="region-grid" id="region-grid"></div>
         </div>
         <div class="block">
-          <div class="block-title">重点项目 TOP <span class="count">按投资额</span></div>
+          <div class="block-title">重点项目 TOP <span class="count sort-toggle" id="sort-toggle" title="点击切换排序口径">按投资额 ⇄</span></div>
           <div class="proj-list" id="proj-list"></div>
         </div>
       </aside>

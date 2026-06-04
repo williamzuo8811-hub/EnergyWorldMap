@@ -398,3 +398,189 @@ body.heat-on .heat-legend { display: flex; }
   display: inline-block; font-weight: 800; color: var(--accent);
   margin-right: 8px; font-size: 11px; letter-spacing: 0.3px; white-space: nowrap;
 }
+
+/* ============================================================
+ * 交互增强：年份区间双手柄 / 预设 / 分享导出 / 品类图例 / 提示条
+ * ============================================================ */
+
+/* 年份区间：快捷预设 */
+.year-presets { display: flex; gap: 6px; margin-bottom: 12px; }
+.year-presets .yp {
+  flex: 1; min-width: 0; padding: 6px 4px; font-size: 11px; white-space: nowrap;
+  color: var(--txt-dim); background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all .15s;
+}
+.year-presets .yp:hover { color: var(--txt); border-color: var(--border-strong); }
+.year-presets .yp.on { background: rgba(33, 199, 255, 0.16); border-color: var(--accent); color: #cdeeff; }
+
+/* 年份区间：双手柄滑块（两个 range 叠放，仅滑块可点）*/
+.range-dual { position: relative; height: 26px; }
+.range-dual .rd-track { position: absolute; top: 11px; left: 0; right: 0; height: 4px; border-radius: 4px; background: rgba(255, 255, 255, 0.10); }
+.range-dual .rd-fill { position: absolute; top: 11px; height: 4px; border-radius: 4px; background: linear-gradient(90deg, var(--accent), var(--good)); }
+.range-dual input[type=range] {
+  position: absolute; top: 0; left: 0; width: 100%; height: 26px; margin: 0;
+  background: none; pointer-events: none; -webkit-appearance: none; appearance: none;
+}
+.range-dual input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; pointer-events: all; position: relative; z-index: 3;
+  width: 16px; height: 16px; border-radius: 50%; background: #fff;
+  border: 2px solid var(--accent); cursor: pointer; box-shadow: 0 0 10px rgba(33, 199, 255, 0.7);
+}
+.range-dual input[type=range]::-moz-range-thumb {
+  pointer-events: all; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+  border: 2px solid var(--accent); cursor: pointer;
+}
+.range-dual input[type=range]::-moz-range-track { background: none; border: none; }
+
+/* 分享 / 导出按钮 */
+.action-row { display: flex; gap: 8px; margin-top: 4px; margin-bottom: 8px; }
+.btn-act {
+  flex: 1; padding: 9px 6px; font-size: 12px; color: var(--txt-dim);
+  background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border);
+  border-radius: 10px; cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.btn-act:hover { color: var(--txt); border-color: var(--border-strong); }
+
+/* 品类色图例（地图左上，点击切换品类）*/
+.cat-legend {
+  position: absolute; top: 14px; left: 14px; z-index: 1100; max-width: 212px;
+  display: flex; flex-wrap: wrap; gap: 5px 10px; padding: 9px 11px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  backdrop-filter: blur(8px); box-shadow: var(--shadow);
+}
+.cat-legend .cl-title { width: 100%; font-size: 10px; letter-spacing: .5px; color: var(--txt-faint); margin-bottom: 2px; }
+.cat-legend .cl { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--txt-dim); cursor: pointer; user-select: none; transition: opacity .15s, color .15s; }
+.cat-legend .cl .d { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.cat-legend .cl:hover { color: var(--txt); }
+.cat-legend .cl.off { opacity: .38; text-decoration: line-through; }
+@media (max-width: 920px) { .cat-legend { display: none; } }
+
+/* 可点击的区域格（与左侧大区筛选双向联动）*/
+.region-cell { cursor: pointer; transition: all .15s; }
+.region-cell:hover { border-color: var(--border-strong); }
+.region-cell.on { border-color: var(--accent); background: rgba(33, 199, 255, 0.12); }
+
+/* 轻量提示条 */
+.toast {
+  position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%) translateY(12px);
+  z-index: 3000; padding: 10px 18px; background: rgba(6, 11, 24, 0.94);
+  border: 1px solid var(--border-strong); border-radius: 10px; color: var(--txt);
+  font-size: 13px; box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: all .25s;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ============================================================
+ * 容量硬指标 / 加权口径 / 排序切换
+ * ============================================================ */
+
+/* 硬指标卡片网格（按当前筛选汇总解析自 cap 的结构化容量）*/
+.cap-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.cap-chip {
+  display: flex; align-items: center; gap: 8px; padding: 8px 9px;
+  border-radius: 10px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border);
+}
+.cap-chip .cc-ico { font-size: 16px; line-height: 1; flex: none; }
+.cap-chip .cc-v { font-size: 15px; font-weight: 700; color: var(--txt); font-variant-numeric: tabular-nums; line-height: 1.2; }
+.cap-chip .cc-l { font-size: 11px; color: var(--txt-dim); margin-top: 1px; }
+.cap-empty { grid-column: 1 / -1; font-size: 12px; color: var(--txt-faint); padding: 6px 2px; }
+
+/* ⚖️ 加权口径按钮（沿用地图工具按钮风格）*/
+.btn-weight {
+  padding: 7px 12px; font-size: 12px; color: var(--txt-dim); background: var(--panel);
+  border: 1px solid var(--border); border-radius: 10px; cursor: pointer;
+  backdrop-filter: blur(8px); box-shadow: var(--shadow); white-space: nowrap;
+}
+.btn-weight:hover { color: var(--txt); border-color: var(--border-strong); }
+.btn-weight.on { color: #fff; border-color: var(--good); background: linear-gradient(90deg, rgba(46, 230, 166, 0.28), rgba(33, 199, 255, 0.22)); box-shadow: 0 0 0 1px rgba(46, 230, 166, 0.4), var(--shadow); }
+
+/* TOP 排序切换（标题里的可点击 chip）*/
+.sort-toggle { cursor: pointer; user-select: none; transition: color .15s; }
+.sort-toggle:hover { color: var(--accent); }
+
+/* 详情卡：投资额的美元折算说明 */
+.detail .d-usd { color: #8fb0e0; font-size: 12px; }
+
+/* ============================================================
+ * 时间轴播放：播放按钮 / 年份大字 / 当年新项目高亮
+ * ============================================================ */
+.btn-play {
+  width: 100%; margin-top: 10px; padding: 9px; border-radius: 10px; cursor: pointer;
+  font-size: 13px; font-weight: 600; transition: all .15s;
+  color: #cdeeff; background: rgba(33, 199, 255, 0.12); border: 1px solid rgba(33, 199, 255, 0.35);
+}
+.btn-play:hover { border-color: var(--accent); }
+.btn-play.on { background: linear-gradient(135deg, rgba(33, 199, 255, 0.30), rgba(46, 230, 166, 0.24)); color: #fff; border-color: var(--accent); box-shadow: 0 0 14px rgba(33, 199, 255, 0.3); }
+
+/* 播放时地图上的年份大字 */
+.year-ticker {
+  position: absolute; right: 26px; top: 50%; transform: translateY(-50%);
+  z-index: 1100; display: none; pointer-events: none;
+  font-size: 132px; font-weight: 800; line-height: 1; letter-spacing: 2px;
+  font-variant-numeric: tabular-nums; color: rgba(205, 238, 255, 0.12);
+  text-shadow: 0 0 46px rgba(33, 199, 255, 0.28);
+}
+.year-ticker.show { display: block; animation: tickerIn .4s ease-out; }
+@keyframes tickerIn { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 920px) { .year-ticker { font-size: 64px; right: 14px; } }
+
+/* 播放中"当年新增"项目的弹入高亮（覆盖旗舰脉冲，一次性）*/
+.dot.is-year-new { animation: yearPop .85s cubic-bezier(.2,.9,.2,1); transform-origin: center; }
+@keyframes yearPop {
+  0% { transform: scale(2.4); filter: brightness(1.9) drop-shadow(0 0 8px currentColor); }
+  55% { transform: scale(1); }
+  100% { transform: scale(1); filter: none; }
+}
+
+/* ============================================================
+ * 国别下钻面板（点详情卡的国家打开的能源组合仪表盘）
+ * ============================================================ */
+.d-country-link { color: var(--accent); cursor: pointer; border-bottom: 1px dashed rgba(33,199,255,0.5); }
+.d-country-link:hover { color: #cdeeff; }
+
+.country-backdrop {
+  position: absolute; inset: 0; z-index: 2400; background: rgba(4, 8, 18, 0.55);
+  backdrop-filter: blur(2px); opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.country-backdrop.show { opacity: 1; pointer-events: auto; }
+
+.country-panel {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -46%);
+  width: min(540px, 92%); max-height: 84vh; z-index: 2450;
+  background: var(--panel-solid); border: 1px solid var(--border-strong);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  display: flex; flex-direction: column; overflow: hidden;
+  opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+}
+.country-panel.show { opacity: 1; transform: translate(-50%, -50%); pointer-events: auto; }
+
+.cp-head { display: flex; align-items: center; gap: 10px; padding: 15px 18px; border-bottom: 1px solid var(--border); flex: none; }
+.cp-head .cp-name { flex: 1; font-size: 19px; font-weight: 800; }
+.cp-close {
+  width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border);
+  background: rgba(255,255,255,0.04); color: var(--txt-dim); font-size: 18px; line-height: 1; cursor: pointer;
+}
+.cp-close:hover { color: #fff; border-color: var(--border-strong); }
+
+.cp-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); flex: none; }
+.cp-kpi { background: var(--panel-solid); padding: 11px 6px; text-align: center; }
+.cp-kpi .v { font-size: 16px; font-weight: 800; color: var(--txt); font-variant-numeric: tabular-nums; }
+.cp-kpi .l { font-size: 10px; color: var(--txt-dim); margin-top: 3px; }
+
+.cp-body { padding: 14px 18px; overflow-y: auto; flex: 1 1 auto; }
+.cp-body::-webkit-scrollbar { width: 7px; }
+.cp-body::-webkit-scrollbar-thumb { background: rgba(120,160,220,0.28); border-radius: 6px; }
+.cp-sec-title { font-size: 11px; color: var(--txt-faint); letter-spacing: .5px; margin: 14px 0 8px; }
+.cp-sec-title:first-child { margin-top: 0; }
+
+.cp-status { display: flex; gap: 8px; }
+.cp-status .s { flex: 1; text-align: center; padding: 9px 6px; border-radius: 9px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); }
+.cp-status .s b { display: block; font-size: 17px; font-variant-numeric: tabular-nums; }
+.cp-status .s span { font-size: 11px; color: var(--txt-dim); }
+
+.cp-years { display: flex; align-items: flex-end; gap: 2px; height: 48px; }
+.cp-years .yb { flex: 1; min-height: 2px; background: linear-gradient(180deg, var(--accent), rgba(33,199,255,0.18)); border-radius: 2px 2px 0 0; }
+.cp-years-ax { display: flex; justify-content: space-between; font-size: 10px; color: var(--txt-faint); margin-top: 4px; }
+
+.cp-proj { display: flex; flex-direction: column; gap: 6px; }
+.cp-note { font-size: 10px; color: var(--txt-faint); margin-top: 12px; line-height: 1.5; }
+@media (max-width: 920px) { .country-panel { width: 94%; } .cp-kpis { grid-template-columns: repeat(2, 1fr); } }
