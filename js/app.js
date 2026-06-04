@@ -22,6 +22,13 @@
       { key: 'wind', label: '陆上风电', zh: ['风电', '风力'], en: ['wind'] },
       { key: 'base', label: '综合基地·其他' },
     ],
+    nuclear: [
+      { key: 'fusion', label: '核聚变', zh: ['聚变', '托卡马克', '人造太阳'], en: ['fusion', 'tokamak', 'iter'] },
+      { key: 'smr', label: '小型模块化堆', zh: ['小型模块化', '模块化堆', '小堆', '玲龙'], en: ['smr', 'small modular'] },
+      { key: 'gen4', label: '四代·特种堆', zh: ['高温气冷', '快堆', '第四代', '钍', '熔盐堆'], en: ['htgr', 'fast reactor', 'thorium', 'molten salt'] },
+      { key: 'fuel', label: '核燃料·后端', zh: ['核燃料', '浓缩', '铀浓缩', '后处理', '乏燃料'], en: ['enrichment', 'fuel cycle', 'reprocessing'] },
+      { key: 'pwr', label: '大型反应堆' },
+    ],
     grid: [
       { key: 'uhv', label: '特高压', zh: ['特高压', '±800', '±1100', '1000千伏', '1100千伏'], en: ['uhv'] },
       { key: 'subsea', label: '海底电缆', zh: ['海缆', '海底电缆', '海底线', '跨海'], en: ['submarine', 'subsea'] },
