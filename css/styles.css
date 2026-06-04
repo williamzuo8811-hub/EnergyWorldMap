@@ -448,6 +448,23 @@ body.heat-on .heat-legend { display: flex; }
 .heat-legend .hl-bar { width: 124px; height: 9px; border-radius: 5px; background: linear-gradient(90deg, #0b1f4d, #1e63ff, #15c2c2, #34d058, #ffd000, #ff7a18, #ff2d2d); }
 .heat-legend .hl-lo, .heat-legend .hl-hi { letter-spacing: .5px; }
 
+/* 制作者署名（地图右下角小药丸；热力模式让位给热力图例）*/
+.map-credit {
+  position: absolute; right: 14px; bottom: 14px; z-index: 1150;
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 20px;
+  background: rgba(6, 11, 24, 0.62); border: 1px solid var(--border);
+  backdrop-filter: blur(6px); box-shadow: var(--shadow);
+  font-size: 11px; letter-spacing: .5px; color: var(--txt-dim);
+  pointer-events: none; user-select: none; white-space: nowrap;
+}
+.map-credit .mc-by { color: var(--txt-faint); }
+body.heat-on .map-credit { display: none; }
+@media (max-width: 920px) {
+  /* 窄屏右下角是浮动按钮 → 署名移到底部居中 */
+  .map-credit { right: auto; left: 50%; transform: translateX(-50%); bottom: 14px; }
+}
+
 /* 🔥 热力分面（聚焦单一品类，仅热力模式显示）*/
 .heat-facets { position: absolute; left: 14px; bottom: 14px; z-index: 1100; display: none; flex-wrap: wrap; gap: 5px; max-width: 60%; padding: 7px 9px; background: rgba(6, 11, 24, 0.78); border: 1px solid var(--border); border-radius: 12px; backdrop-filter: blur(6px); box-shadow: var(--shadow); }
 body.heat-on .heat-facets { display: flex; }
