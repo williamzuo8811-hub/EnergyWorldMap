@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>全球能源项目世界地图 · Global Energy Projects Map</title>
   <meta name="description" content="可缩放的全球能源项目世界地图：2600+ 个能源与基建项目，按品类 / 大区 / 状态 / 年份筛选，含投资 KPI、容量硬指标、投资热力图、时间轴回放与国别下钻。An interactive world map of 2,600+ global energy &amp; infrastructure projects.">
   <meta name="theme-color" content="#060b18">
@@ -109,6 +109,7 @@
         <div class="country-backdrop" id="country-backdrop"></div>
         <div class="country-panel" id="country-panel"></div>
         <div class="map-tools" role="toolbar" aria-label="地图工具">
+          <button class="tools-toggle" id="tools-toggle" aria-label="展开 / 收起地图工具" title="地图工具">⋯</button>
           <div class="basemap-switch" id="basemap-switch" role="group" aria-label="底图切换"></div>
           <button class="btn-heat" id="btn-heat" title="按当前权重显示宏观热力格局" aria-label="切换投资热力图" data-i18n="🔥 Heatmap">🔥 热力图</button>
           <button class="btn-weight" id="btn-weight" title="圆点大小与热力按 投资额 或 装机容量(MW) 加权" aria-label="切换加权口径：投资额或装机容量">⚖️ 投资权重</button>

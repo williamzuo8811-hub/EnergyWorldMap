@@ -566,8 +566,10 @@
     if (km > 0) chips.push(['🔌', '线路', Math.round(km).toLocaleString('en-US') + ' km']);
     if (kbd > 0) chips.push(['🛢️', '油气产能', Math.round(kbd).toLocaleString('en-US') + ' 万桶/日']);
     if (wty > 0) chips.push(['🏭', '产能', Math.round(wty).toLocaleString('en-US') + ' 万吨/年']);
+    // 数值与单位拆开渲染，避免窄屏上"27,468 万吨/年"在单位中间硬折行
+    const splitVal = v => { const i = v.indexOf(' '); return i < 0 ? [v, ''] : [v.slice(0, i), v.slice(i + 1)]; };
     el.innerHTML = chips.length
-      ? chips.map(c => '<div class="cap-chip"><div class="cc-ico">' + c[0] + '</div><div class="cc-body"><div class="cc-v">' + c[2] + '</div><div class="cc-l">' + tr(c[1]) + '</div></div></div>').join('')
+      ? chips.map(c => { const nu = splitVal(c[2]); return '<div class="cap-chip"><div class="cc-ico">' + c[0] + '</div><div class="cc-body"><div class="cc-v"><span class="cc-n">' + nu[0] + '</span><span class="cc-u">' + nu[1] + '</span></div><div class="cc-l">' + tr(c[1]) + '</div></div></div>'; }).join('')
       : '<div class="cap-empty">' + tr('当前筛选无可解析的容量指标') + '</div>';
   }
 
@@ -1152,6 +1154,18 @@
   if (fabStats) fabStats.addEventListener('click', () => toggleDrawer('right'));
   if (drawerBackdrop) drawerBackdrop.addEventListener('click', closeDrawers);
   document.querySelectorAll('.drawer-close').forEach(b => b.addEventListener('click', closeDrawers));
+
+  /* ---------- 移动端：右上角工具栏折叠成「⋯ 工具」菜单，避免 8 个按钮竖排占满屏 ---------- */
+  const mapTools = document.querySelector('.map-tools');
+  const toolsToggle = document.getElementById('tools-toggle');
+  if (toolsToggle && mapTools) {
+    toolsToggle.addEventListener('click', () => mapTools.classList.toggle('tools-open'));
+    // 点击任一工具按钮后自动收起菜单（底图切换条除外，便于连续切换）
+    mapTools.addEventListener('click', e => {
+      const b = e.target.closest('button');
+      if (b && b !== toolsToggle && !e.target.closest('.basemap-switch')) mapTools.classList.remove('tools-open');
+    });
+  }
 
   /* ---------- Esc 关闭浮层（详情卡 / 国别面板·企业榜 / 移动端抽屉）---------- */
   document.addEventListener('keydown', e => {
