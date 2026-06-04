@@ -94,6 +94,20 @@ region cells (click-to-filter, two-way). Filter state round-trips through the UR
 `applyHash`+`applyUIFromState` restore it on load; `applyUIFromState` is the single place that syncs
 every toggle's visual from `state` (also used by reset). ⤓ export dumps `filtered()` to a BOM-prefixed CSV.
 
+### Derived capacity & metrics
+
+`parseCapacity(cap)` turns the free-text `cap` into structured numbers attached to each project at build
+time: `capMW` (electrical power), `capMWh` (storage energy), `capKm` (line/route length), `capKbd`
+(oil 万桶/日), `capWty` (mass 万吨/年) — `null` when not parseable. It takes the first match per unit,
+sums `A+B` lists, multiplies `N×M`, and uses lookaheads so `MW`/`GW` don't swallow `MWh`/`GWh`.
+These power the right-panel **硬指标** block (`updateCapStats`, sums per the current filter) and a
+**weight toggle** (`state.weight` `inv`|`cap`): marker size (`sizeFn(weightVal(p))`) and the heatmap
+weight both switch between investment and `capMW`. The TOP list sorts by `state.sort` (`inv`|`cap`).
+Two correctness rules in `updateStats`: investment + 硬指标 totals exclude `cat==='client'` (the 国际大客户
+cross-view double-counts physical projects) unless client is the only selected category; and money is
+shown in a unified USD form via `usd(p)` (from the numeric `inv`, 亿美元) in tooltips/list, with the
+original-currency `invText` kept in the detail card.
+
 ## Project data conventions
 
 A project object (see `data.js` header comment for the full field reference):

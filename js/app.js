@@ -118,6 +118,39 @@
   }
   const subLabel = p => (SUB_LABEL[p.cat] && SUB_LABEL[p.cat][p.sub]) || '';
 
+  /* ---------- 容量解析：把自由文本 cap 抽成结构化数值 ----------
+   * 返回 { mw, mwh, km, kbd, wty }：电功率MW / 储能MWh / 线路km / 油气万桶日 / 产能万吨年。
+   * 取首个匹配为准；遇 "A+B" 加和；"N×M 单位" 相乘；MW/GW 用前瞻避免误吞 MWh/GWh。无则 null。 */
+  function parseCapacity(cap) {
+    const out = { mw: null, mwh: null, km: null, kbd: null, wty: null };
+    if (!cap) return out;
+    const s = String(cap).replace(/[，、]/g, ',').replace(/＋/g, '+').replace(/／/g, '/').replace(/[×✕⨯]/g, 'x').replace(/～/g, '~');
+    const NUM = '(\\d+(?:\\.\\d+)?)', MUL = '(?:\\s*x\\s*(\\d+(?:\\.\\d+)?))?';
+    function collect(unitAlt, factor) {
+      const rg = new RegExp(NUM + MUL + '\\s*(?:' + unitAlt + ')', 'gi'), vals = []; let m;
+      while ((m = rg.exec(s))) { let v = parseFloat(m[1]); if (m[2]) v *= parseFloat(m[2]); if (!isNaN(v)) vals.push({ v: v * factor, i: m.index }); }
+      return vals;
+    }
+    function pick(vals) {
+      if (!vals.length) return null;
+      if (vals.length >= 2) {
+        let additive = true;
+        for (let k = 1; k < vals.length; k++) if (s.slice(vals[k - 1].i, vals[k].i).indexOf('+') < 0) { additive = false; break; }
+        if (additive) return vals.reduce((a, b) => a + b.v, 0);
+      }
+      return vals[0].v;
+    }
+    const r = n => (n == null ? null : Math.round(n * 100) / 100);
+    const power = [].concat(collect('GWp|GW(?!h)|吉瓦', 1000)).concat(collect('万千瓦(?!时)', 10)).concat(collect('MWp|MW(?!h)|兆瓦', 1)).concat(collect('kW(?!h)|千瓦(?!时)', 0.001));
+    power.sort((a, b) => a.i - b.i); out.mw = r(pick(power));
+    const energy = [].concat(collect('GWh', 1000)).concat(collect('MWh', 1)).concat(collect('万千瓦时', 10)).concat(collect('kWh', 0.001));
+    energy.sort((a, b) => a.i - b.i); out.mwh = r(pick(energy));
+    const len = collect('公里|km', 1); len.sort((a, b) => a.i - b.i); out.km = len.length ? r(len[0].v) : null;
+    let oil = collect('万桶', 1); if (!oil.length) oil = collect('桶', 1 / 10000); oil.sort((a, b) => a.i - b.i); out.kbd = oil.length ? r(oil[0].v) : null;
+    const mass = [].concat(collect('万吨', 1)).concat(collect('Mtpa|Mt', 100)); mass.sort((a, b) => a.i - b.i); out.wty = mass.length ? r(mass[0].v) : null;
+    return out;
+  }
+
   // 合并核心数据与扩充数据（data-extra.js），按名称去重
   const PROJECTS = (function () {
     const all = window.ENERGY.PROJECTS.concat(window.ENERGY_EXTRA || []);
@@ -127,6 +160,8 @@
       if (p && p.name && !seen.has(p.name)) {
         if (!p.progress && PROG[p.id]) p.progress = PROG[p.id];
         p.sub = classifySub(p);
+        const cc = parseCapacity(p.cap);
+        p.capMW = cc.mw; p.capMWh = cc.mwh; p.capKm = cc.km; p.capKbd = cc.kbd; p.capWty = cc.wty;
         seen.add(p.name); out.push(p);
       }
     });
@@ -213,11 +248,17 @@
   const state = {
     cats: new Set(CAT_KEYS), subOff: new Set(), regions: new Set(), statuses: new Set(),
     minYear: MIN_YEAR, maxYear: MAX_YEAR, q: '', recentOnly: false, heat: false,
+    weight: 'inv', sort: 'inv', // weight: 圆点/热力按 inv 投资 或 cap 装机容量；sort: TOP 排序
   };
 
-  const sizeFn = inv => Math.max(8, Math.min(34, 7 + Math.sqrt(Math.max(inv, 1)) * 0.95));
+  const sizeFn = v => Math.max(8, Math.min(34, 7 + Math.sqrt(Math.max(v, 1)) * 0.95));
   const fmtNum = n => Math.round(n).toLocaleString('en-US');
   const fmtInv = n => n >= 10000 ? (n / 10000).toFixed(1) + ' 万亿' : fmtNum(n) + ' 亿';
+  // 圆点/热力权重值：投资额 或 装机容量(MW)
+  const weightVal = p => state.weight === 'cap' ? (p.capMW || 0) : (p.inv || 0);
+  // 统一美元口径展示（小额保留 1 位小数）
+  const usd = p => { const n = p.inv || 0; return '≈$' + (n >= 10000 ? (n / 10000).toFixed(1) + ' 万亿' : (n < 10 ? (Math.round(n * 10) / 10) : Math.round(n)).toLocaleString('en-US') + ' 亿'); };
+  const capFmt = mw => mw == null ? '—' : (mw >= 1000 ? (mw / 1000).toFixed(mw < 10000 ? 1 : 0) + ' GW' : Math.round(mw) + ' MW');
   const esc = s => String(s == null ? '' : s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
   function matchQ(p, q) {
@@ -286,11 +327,13 @@
       }
     });
     if (state.heat) {
-      // —— 投资热力图模式：按 √inv 加权显示宏观资本格局，隐藏聚合标记 ——
+      // —— 热力图模式：按 √(投资 或 装机容量) 加权显示宏观格局，隐藏聚合标记 ——
       if (map.hasLayer(markerCluster)) map.removeLayer(markerCluster);
+      const hlCap = document.querySelector('.heat-legend .hl-cap');
+      if (hlCap) hlCap.textContent = state.weight === 'cap' ? '装机热力' : '投资热力';
       const pts = items.map(p => {
         const ll = toLatLng(p.coord);
-        const v = (+p.inv > 0) ? +p.inv : 1;   // inv 单位亿美元；开方压缩量级，避免超大项目独占
+        const w = weightVal(p); const v = (w > 0) ? w : 1;   // 开方压缩量级，避免超大项目独占
         return [ll[0], ll[1], Math.sqrt(v)];
       });
       const ws = pts.map(a => a[2]).sort((a, b) => a - b);
@@ -307,7 +350,7 @@
     // 项目标记（批量加入聚合组）
     const markers = [];
     items.forEach(p => {
-      const c = CATEGORIES[p.cat], d = Math.round(sizeFn(p.inv));
+      const c = CATEGORIES[p.cat], d = Math.round(sizeFn(weightVal(p)));
       const cls = 'dot' + (p.flagship ? ' is-flag' : '') + (isRecent(p) ? ' is-new' : '');
       const icon = L.divIcon({
         className: 'mk', iconSize: [d, d], iconAnchor: [d / 2, d / 2],
@@ -318,7 +361,7 @@
       m.bindTooltip(
         '<b>' + (isRecent(p) ? '🆕 ' : '') + esc(p.name) + '</b><br>' +
         '<span style="color:' + c.color + '">' + c.short + (subLabel(p) ? ' / ' + subLabel(p) : '') + '</span> · ' + esc(p.country) +
-        ' · ' + esc(p.invText) +
+        ' · ' + esc(usd(p)) + (p.capMW ? ' · ' + capFmt(p.capMW) : '') +
         (p.progress ? '<br><span style="color:#8fb0e0">📍 ' + esc(p.progress) + '</span>' : ''),
         { direction: 'top', offset: [0, -d / 2 - 2], className: 'mk-tip', sticky: true }
       );
@@ -432,6 +475,7 @@
   document.getElementById('btn-reset').addEventListener('click', () => {
     state.cats = new Set(CAT_KEYS); state.subOff.clear(); state.regions.clear(); state.statuses.clear();
     state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.q = ''; state.recentOnly = false;
+    state.weight = 'inv'; state.sort = 'inv';
     clearPresetActive(); document.querySelector('.year-presets .yp[data-preset="all"]').classList.add('on');
     applyUIFromState(); render();
   });
@@ -456,15 +500,54 @@
     render();
   });
 
+  // ⚖️ 加权口径切换：投资额 ↔ 装机容量（影响圆点大小与热力）
+  const btnWeight = document.getElementById('btn-weight');
+  btnWeight.addEventListener('click', () => {
+    state.weight = state.weight === 'cap' ? 'inv' : 'cap';
+    btnWeight.classList.toggle('on', state.weight === 'cap');
+    btnWeight.textContent = state.weight === 'cap' ? '⚖️ 容量权重' : '⚖️ 投资权重';
+    render();
+  });
+
+  // 重点项目 TOP 排序切换：投资额 ↔ 装机容量
+  const sortToggle = document.getElementById('sort-toggle');
+  if (sortToggle) sortToggle.addEventListener('click', () => {
+    state.sort = state.sort === 'cap' ? 'inv' : 'cap';
+    sortToggle.textContent = state.sort === 'cap' ? '按装机容量 ⇄' : '按投资额 ⇄';
+    render();
+  });
+
   /* ---------- 右侧统计 ---------- */
+  // 硬指标：把结构化容量按当前筛选汇总（仅显示有数值的口径）
+  function updateCapStats(items) {
+    const el = document.getElementById('cap-stats'); if (!el) return;
+    const sum = f => items.reduce((s, p) => s + (f(p) || 0), 0);
+    const gw = sum(p => p.capMW) / 1000, gwh = sum(p => p.capMWh) / 1000;
+    const km = sum(p => p.capKm), kbd = sum(p => p.capKbd), wty = sum(p => p.capWty);
+    const n1 = x => (x < 10 ? (Math.round(x * 10) / 10) : Math.round(x)).toLocaleString('en-US');
+    const chips = [];
+    if (gw > 0) chips.push(['⚡', '装机', gw >= 1000 ? (gw / 1000).toFixed(1) + ' TW' : n1(gw) + ' GW']);
+    if (gwh > 0) chips.push(['🔋', '储能', n1(gwh) + ' GWh']);
+    if (km > 0) chips.push(['🔌', '线路', Math.round(km).toLocaleString('en-US') + ' km']);
+    if (kbd > 0) chips.push(['🛢️', '油气产能', Math.round(kbd).toLocaleString('en-US') + ' 万桶/日']);
+    if (wty > 0) chips.push(['🏭', '产能', Math.round(wty).toLocaleString('en-US') + ' 万吨/年']);
+    el.innerHTML = chips.length
+      ? chips.map(c => '<div class="cap-chip"><div class="cc-ico">' + c[0] + '</div><div class="cc-body"><div class="cc-v">' + c[2] + '</div><div class="cc-l">' + c[1] + '</div></div></div>').join('')
+      : '<div class="cap-empty">当前筛选无可解析的容量指标</div>';
+  }
+
   function updateStats(items) {
-    const totalInv = items.reduce((s, p) => s + (p.inv || 0), 0);
+    // 投资/容量默认排除"国际大客户"，避免与能源品类对同一物理项目重复计；仅看 client 时照常计入
+    const clientOnly = state.cats.size === 1 && state.cats.has('client');
+    const statItems = clientOnly ? items : items.filter(p => p.cat !== 'client');
+    const totalInv = statItems.reduce((s, p) => s + (p.inv || 0), 0);
     const countries = new Set(items.map(p => p.country)).size;
     const recentN = items.filter(isRecent).length;
     document.getElementById('kpi-proj').textContent = items.length;
     document.getElementById('kpi-country').textContent = countries;
     document.getElementById('kpi-inv').textContent = fmtInv(totalInv);
     document.getElementById('kpi-recent').textContent = recentN;
+    updateCapStats(statItems);
 
     const base = PROJECTS.filter(passBase);
     const catCount = {}; CAT_KEYS.forEach(k => catCount[k] = 0);
@@ -494,13 +577,14 @@
   function updateList(items) {
     const listEl = document.getElementById('proj-list');
     if (!items.length) { listEl.innerHTML = '<div class="empty">无匹配项目，请调整筛选条件</div>'; return; }
-    const sorted = items.slice().sort((a, b) => b.inv - a.inv).slice(0, 14);
+    const sortCap = state.sort === 'cap';
+    const sorted = items.slice().sort((a, b) => sortCap ? ((b.capMW || 0) - (a.capMW || 0)) : (b.inv - a.inv)).slice(0, 14);
     listEl.innerHTML = sorted.map(p => {
       const c = CATEGORIES[p.cat];
       return '<div class="proj-item" data-id="' + p.id + '" style="border-left-color:' + c.color + '">' +
         '<div class="pn">' + (p.flagship ? '<span class="star">★</span>' : '') + esc(p.name) +
         (isRecent(p) ? '<span class="newtag">🆕</span>' : '') + '</div>' +
-        '<div class="pm"><span>' + esc(p.country) + '</span><span>' + c.short + '</span><span>' + esc(p.invText) + '</span></div></div>';
+        '<div class="pm"><span>' + esc(p.country) + '</span><span>' + c.short + '</span><span>' + (sortCap ? esc(capFmt(p.capMW)) : esc(usd(p))) + '</span></div></div>';
     }).join('');
     listEl.querySelectorAll('.proj-item').forEach(el => {
       el.addEventListener('click', () => {
@@ -525,7 +609,7 @@
       cell('国家 / 地区', esc(p.country)) +
       cell('状态', '<span class="tag-status st-' + p.status + '">' + p.status + '</span>') +
       cell('规模 / 容量', esc(p.cap)) +
-      cell('投资额', esc(p.invText)) +
+      cell('投资额', esc(p.invText) + (/美元|\$/.test(p.invText || '') ? '' : ' <span class="d-usd">（' + usd(p) + '）</span>')) +
       cell('业主 / 参与方', esc(p.owner || '—')) +
       cell('最近动态', esc(p.updated || '—')) +
       '</div><div class="d-desc">' + esc(p.detail || p.desc) + '</div>';
@@ -574,6 +658,8 @@
     if (state.q) p.set('q', state.q);
     if (state.recentOnly) p.set('recent', '1');
     if (state.heat) p.set('heat', '1');
+    if (state.weight === 'cap') p.set('w', 'cap');
+    if (state.sort === 'cap') p.set('sort', 'cap');
     return p.toString();
   }
   function applyHash() {
@@ -593,6 +679,8 @@
     if (p.has('q')) state.q = p.get('q');
     if (p.has('recent')) state.recentOnly = true;
     if (p.has('heat')) state.heat = true;
+    if (p.get('w') === 'cap') state.weight = 'cap';
+    if (p.get('sort') === 'cap') state.sort = 'cap';
   }
   document.getElementById('btn-share').addEventListener('click', () => {
     const hash = stateToHash();
@@ -626,6 +714,8 @@
     document.querySelectorAll('#status-chips .pill').forEach(el => el.classList.toggle('on', state.statuses.has(el.dataset.v)));
     if (recentBtn) recentBtn.classList.toggle('on', state.recentOnly);
     if (btnHeat) { btnHeat.classList.toggle('on', state.heat); document.body.classList.toggle('heat-on', state.heat); }
+    if (btnWeight) { btnWeight.classList.toggle('on', state.weight === 'cap'); btnWeight.textContent = state.weight === 'cap' ? '⚖️ 容量权重' : '⚖️ 投资权重'; }
+    if (sortToggle) sortToggle.textContent = state.sort === 'cap' ? '按装机容量 ⇄' : '按投资额 ⇄';
     const sEl = document.getElementById('search'); if (sEl) sEl.value = state.q;
     if (yearMin) { yearMin.value = state.minYear; yearMax.value = state.maxYear; syncYearUI(); }
   }

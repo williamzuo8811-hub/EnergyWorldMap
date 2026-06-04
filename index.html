@@ -85,7 +85,8 @@
         <div class="detail" id="detail"></div>
         <div class="map-tools">
           <div class="basemap-switch" id="basemap-switch"></div>
-          <button class="btn-heat" id="btn-heat" title="按投资额显示宏观热力格局">🔥 投资热力</button>
+          <button class="btn-heat" id="btn-heat" title="按当前权重显示宏观热力格局">🔥 热力图</button>
+          <button class="btn-weight" id="btn-weight" title="圆点大小与热力按 投资额 或 装机容量(MW) 加权">⚖️ 投资权重</button>
           <button class="btn-home" id="btn-home" title="复位视图">⤢ 复位</button>
         </div>
         <div class="heat-legend" id="heat-legend">
@@ -99,6 +100,10 @@
       <!-- 右侧：统计 -->
       <aside class="side right">
         <div class="block">
+          <div class="block-title">硬指标 <span class="count">按当前筛选 · 解析自容量</span></div>
+          <div class="cap-stats" id="cap-stats"></div>
+        </div>
+        <div class="block">
           <div class="block-title">分类分布</div>
           <div id="cat-bars"></div>
         </div>
@@ -107,7 +112,7 @@
           <div class="region-grid" id="region-grid"></div>
         </div>
         <div class="block">
-          <div class="block-title">重点项目 TOP <span class="count">按投资额</span></div>
+          <div class="block-title">重点项目 TOP <span class="count sort-toggle" id="sort-toggle" title="点击切换排序口径">按投资额 ⇄</span></div>
           <div class="proj-list" id="proj-list"></div>
         </div>
       </aside>
