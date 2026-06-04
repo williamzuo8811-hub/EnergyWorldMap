@@ -53,6 +53,9 @@ const { CATEGORIES, REGIONS, STATUS } = ENERGY;
 const CAT_KEYS = Object.keys(CATEGORIES);
 const PROJECTS = ENERGY.PROJECTS.concat(global.window.ENERGY_EXTRA || []);
 const PROGRESS = global.window.ENERGY_PROGRESS || {};
+// 复用与 app.js 相同的容量解析（检测"有 cap 文本却解析不出任何数值"的盲区）
+let UTIL = null;
+try { UTIL = require(path.join(ROOT, 'js/util.js')); } catch (e) { W(`无法加载 js/util.js（跳过容量解析盲区检测）：${e.message}`); }
 
 /* ---------- 大区合理坐标范围（启发式，越界=可能符号/归属错误）----------
  * [lngMin, lngMax, latMin, latMax]；大洋洲跨 ±180 单独处理 */
@@ -133,6 +136,42 @@ for (let i = 1; i < sorted.length; i++) {
 const idSet = new Set(PROJECTS.map(p => p && p.id));
 const orphan = Object.keys(PROGRESS).map(Number).filter(id => !idSet.has(id));
 if (orphan.length) W(`ENERGY_PROGRESS 有 ${orphan.length} 条 id 对不上任何项目（孤儿）：${orphan.slice(0, 15).join(', ')}${orphan.length > 15 ? ' …' : ''}`);
+
+/* ---------- 5b) 数据健康度（异常值 / 重复坐标 / route 合法性 / 容量解析盲区）---------- */
+// 重复坐标：同一精确 [lng,lat] 被 ≥4 个项目复用，多半是占位坐标
+const coordMap = new Map();
+PROJECTS.forEach(p => {
+  if (Array.isArray(p.coord) && typeof p.coord[0] === 'number' && typeof p.coord[1] === 'number') {
+    const k = p.coord[0] + ',' + p.coord[1];
+    (coordMap.get(k) || coordMap.set(k, []).get(k)).push(p);
+  }
+});
+[...coordMap.entries()].filter(([, ps]) => ps.length >= 4).sort((a, b) => b[1].length - a[1].length)
+  .forEach(([k, ps]) => W(`坐标 [${k}] 被 ${ps.length} 个项目复用（疑似占位坐标）：${ps.slice(0, 3).map(p => p.name).join(' / ')}${ps.length > 3 ? ' …' : ''}`));
+
+// 投资额离群：inv ≥ 5000 亿美元（≈$500B），确认非录入错误（少量超级工程可能合法）
+PROJECTS.filter(p => typeof p.inv === 'number' && p.inv >= 5000)
+  .sort((a, b) => b.inv - a.inv)
+  .forEach(p => W(`投资额异常大 inv=${p.inv}（≈$${(p.inv / 10).toFixed(0)}B）确认非录入错误：#${p.id} ${p.name}`));
+
+// route 连线坐标合法性（malformed 会导致渲染异常）
+PROJECTS.forEach(p => {
+  if (p.route === undefined) return;
+  if (!Array.isArray(p.route)) { E(`#${p.id} route 必须为坐标数组（${p.name}）`); return; }
+  p.route.forEach((pt, i) => {
+    if (!Array.isArray(pt) || pt.length !== 2 || typeof pt[0] !== 'number' || typeof pt[1] !== 'number'
+      || pt[0] < -180 || pt[0] > 180 || pt[1] < -90 || pt[1] > 90)
+      E(`#${p.id} route[${i}] 非法坐标 ${JSON.stringify(pt)}（应为 [lng,lat]，${p.name}）`);
+  });
+});
+
+// 容量解析盲区：cap 含数字但 parseCapacity 五个口径全 null（解析规则可能漏了单位）
+if (UTIL && UTIL.parseCapacity) {
+  const blind = PROJECTS.filter(p => p.cap && /\d/.test(p.cap))
+    .filter(p => { const c = UTIL.parseCapacity(p.cap); return c.mw == null && c.mwh == null && c.km == null && c.kbd == null && c.wty == null; });
+  if (blind.length) W(`容量解析盲区 ${blind.length} 个（cap 有数字但解析不出任何口径，可补 SUB/解析规则）：` +
+    blind.slice(0, 8).map(p => `#${p.id}"${p.cap}"`).join(' · ') + (blind.length > 8 ? ' …' : ''));
+}
 
 /* ---------- 6) 概览 ---------- */
 const by = (key) => PROJECTS.reduce((m, p) => { const k = p[key]; m[k] = (m[k] || 0) + 1; return m; }, {});

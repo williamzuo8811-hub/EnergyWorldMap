@@ -30,10 +30,14 @@ verify in a browser — there is no build step.
   `index.html`'s real `<script>` order and checks required fields, enum validity
   (`cat`/`region`/`status`), coordinate ↔ region consistency (catches sign errors like positive
   longitude in the Americas), duplicate `name`s (which `app.js` silently drops) and `id`s,
-  per-file id-range overlaps, and orphan `ENERGY_PROGRESS` entries. Non-zero exit on any ERROR;
-  warnings don't fail.
+  per-file id-range overlaps, and orphan `ENERGY_PROGRESS` entries. Also reports data-health
+  warnings: reused/placeholder coordinates, `inv` outliers, malformed `route` coords (ERROR),
+  and capacity-parse blind spots. Non-zero exit on any ERROR; warnings don't fail.
 - `node scripts/test-units.js` — after editing `js/util.js`. Asserts `parseCapacity`,
-  `classifySub` (matcher order/catch-all), and `wgs2gcj`/`outOfChina` behave as expected.
+  `classifySub` (matcher order/catch-all), `wgs2gcj`/`outOfChina`, and `normalizeOwner`.
+- `node scripts/test-smoke.js` — after editing `js/app.js`. Loads util + data + `app.js` under a
+  minimal DOM/Leaflet stub and asserts the IIFE init, `render()`, `buildSnapshotSVG()` and
+  `stateToHash()` run without throwing (catches runtime reference errors with no browser).
 
 ## Architecture
 
@@ -113,11 +117,15 @@ the left filter chips, the on-map category legend (`#cat-legend`), and the right
 region cells (click-to-filter, two-way). Filter state round-trips through the URL hash via
 `stateToHash`/`applyHash` (only non-default fields encoded) — the 🔗 share button copies the link and
 `applyHash`+`applyUIFromState` restore it on load; `applyUIFromState` is the single place that syncs
-every toggle's visual from `state` (also used by reset). ⤓ export dumps `filtered()` to a BOM-prefixed CSV;
-📸 snapshot (`buildSnapshotSVG`) renders the current view's KPIs / top categories / top projects as a
-downloadable **SVG infographic** (map tiles can't be screenshotted — cross-origin canvas taint — so the
-poster summarizes the filtered stats instead). Detail-card body is bilingual-aware: in EN mode it prefers
-`detailEn`/`descEn` and otherwise falls back to the Chinese text with a small note.
+every toggle's visual from `state` (also used by reset). The hash also carries `lang`, `lines`, the heat
+facet (`hcat`), the comparison set (`cmp`), and a one-shot `project=<id>` **deep link** (the detail card's
+🔗 button copies it; on load the project's detail opens and the map flies to it). ⤓ export dumps
+`filtered()` to a BOM-prefixed CSV; 📸 snapshot (`buildSnapshotSVG`) renders the current view's KPIs / top
+categories / top projects as an infographic and exports **PNG** (rasterized via SVG→canvas; falls back to
+SVG) — map tiles can't be screenshotted (cross-origin canvas taint), so the poster summarizes the filtered
+stats instead. Money everywhere flows through `invMag` which is **language-aware** (亿/万亿 in ZH, $B/$T in
+EN). Detail-card body is bilingual-aware: in EN mode it prefers `detailEn`/`descEn`, else falls back to the
+Chinese text with a note. On-map overlays (`#cat-legend`, `#heat-facets`) rebuild on language switch.
 
 ### Derived capacity & metrics
 

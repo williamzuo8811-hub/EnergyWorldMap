@@ -244,6 +244,13 @@ input[type=range]::-webkit-slider-thumb {
   display: grid; place-items: center;
 }
 .detail .d-close:hover { color: #fff; border-color: var(--border-strong); }
+.detail .d-share {
+  position: absolute; right: 42px; top: 12px; height: 24px; padding: 0 8px;
+  border-radius: 7px; border: 1px solid var(--border); background: rgba(255,255,255,0.04);
+  color: var(--txt-dim); cursor: pointer; font-size: 12px; line-height: 1;
+  display: grid; place-items: center;
+}
+.detail .d-share:hover { color: var(--accent); border-color: var(--border-strong); }
 .detail .d-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); }
 .detail .d-cell { background: var(--panel-solid); padding: 10px 14px; }
 .detail .d-cell .k { font-size: 10px; color: var(--txt-faint); letter-spacing: .5px; }
@@ -306,6 +313,8 @@ input[type=range]::-webkit-slider-thumb {
   .side.right.open { transform: translateX(0); }
   .side.right .drawer-close { display: block; }
   .fab-right { display: block; }
+  /* 📊 浮钮在右下 → 热力图例上移让位 */
+  .heat-legend { bottom: 70px; }
 }
 
 /* ≤820px：左侧筛选栏 → 左抽屉（🔍 浮钮调出），地图全宽 */
@@ -326,6 +335,8 @@ input[type=range]::-webkit-slider-thumb {
   /* 让 Leaflet 左下缩放 / 右下归属让位给浮动按钮，避免重叠 */
   .leaflet-bottom.leaflet-left { margin-bottom: 60px; }
   .leaflet-bottom.leaflet-right { margin-bottom: 54px; }
+  /* 🔍 浮钮在左下 → 热力分面条上移让位 */
+  .heat-facets { bottom: 70px; }
 }
 
 /* ============================================================
@@ -748,3 +759,30 @@ body.heat-on .heat-facets { display: flex; }
 .cmp-pick:hover { color: var(--txt); border-color: var(--accent); background: rgba(33, 199, 255, 0.1); }
 .cmp-pick span { font-size: 10px; color: var(--txt-faint); font-variant-numeric: tabular-nums; }
 @media (max-width: 920px) { .country-panel.wide { width: 96%; } .cmp-col { flex-basis: 78%; } }
+
+/* ============================================================
+ * 无障碍：键盘焦点可见 + 降低动态偏好
+ * ============================================================ */
+/* 键盘聚焦时给清晰焦点环（鼠标点击不显示，靠 :focus-visible）*/
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+.cat-chip:focus-visible, .sub-chip:focus-visible, .pill:focus-visible,
+.region-cell:focus-visible, .bar-row:focus-visible, .cl:focus-visible,
+.hf:focus-visible, .lg-row:focus-visible { outline-offset: 1px; }
+/* 鼠标点击不残留焦点环 */
+:focus:not(:focus-visible) { outline: none; }
+
+/* 尊重「减少动态效果」系统偏好：关停脉冲/飞线/旋转/年份大字等动画与长过渡 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .mk .dot.is-flag::after, .mk .dot.is-new::before, .flowline,
+  .app-loader .al-spin, .year-ticker, .dot.is-year-new { animation: none !important; }
+}

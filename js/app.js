@@ -116,11 +116,21 @@
 
   const sizeFn = v => Math.max(8, Math.min(34, 7 + Math.sqrt(Math.max(v, 1)) * 0.95));
   const fmtNum = n => Math.round(n).toLocaleString('en-US');
-  const fmtInv = n => n >= 10000 ? (n / 10000).toFixed(1) + ' 万亿' : fmtNum(n) + ' 亿';
+  // 投资额量级（inv 单位为亿美元）：中文 亿/万亿；英文 $B/$T（÷10 得 billion，÷10000 得 trillion）
+  const invMag = n => {
+    n = n || 0;
+    if (state.lang === 'en') {
+      if (n >= 10000) return (n / 10000).toFixed(1) + 'T';
+      const b = n / 10;
+      return (b >= 100 ? Math.round(b) : Math.round(b * 10) / 10).toLocaleString('en-US') + 'B';
+    }
+    return n >= 10000 ? (n / 10000).toFixed(1) + ' 万亿' : (n < 10 ? (Math.round(n * 10) / 10) : Math.round(n)).toLocaleString('en-US') + ' 亿';
+  };
+  const fmtInv = invMag;
   // 圆点/热力权重值：投资额 或 装机容量(MW)
   const weightVal = p => state.weight === 'cap' ? (p.capMW || 0) : (p.inv || 0);
-  // 统一美元口径展示（小额保留 1 位小数）
-  const usd = p => { const n = p.inv || 0; return '≈$' + (n >= 10000 ? (n / 10000).toFixed(1) + ' 万亿' : (n < 10 ? (Math.round(n * 10) / 10) : Math.round(n)).toLocaleString('en-US') + ' 亿'); };
+  // 统一美元口径展示
+  const usd = p => '≈$' + invMag(p.inv || 0);
   const capFmt = mw => mw == null ? '—' : (mw >= 1000 ? (mw / 1000).toFixed(mw < 10000 ? 1 : 0) + ' GW' : Math.round(mw) + ' MW');
   const esc = s => String(s == null ? '' : s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
@@ -243,7 +253,7 @@
     const group = document.createElement('div');
     group.className = 'cat-group'; group.dataset.key = key;
     const chip = document.createElement('div');
-    chip.className = 'cat-chip'; chip.dataset.key = key;
+    chip.className = 'cat-chip'; chip.dataset.key = key; chip.tabIndex = 0; chip.setAttribute('role', 'button');
     chip.innerHTML = '<span class="dot" style="background:' + c.color + ';color:' + c.color + '"></span>' +
       '<span class="nm">' + c.icon + ' ' + c.name + '</span><span class="ct">0</span>' +
       '<span class="caret" title="展开子分类">▸</span>';
@@ -256,7 +266,7 @@
     subWrap.className = 'sub-list';
     SUB_DEFS[key].forEach(d => {
       const s = document.createElement('div');
-      s.className = 'sub-chip'; s.dataset.key = key; s.dataset.sub = d.key;
+      s.className = 'sub-chip'; s.dataset.key = key; s.dataset.sub = d.key; s.tabIndex = 0; s.setAttribute('role', 'button');
       s.innerHTML = '<span class="sdot" style="background:' + c.color + '"></span><span class="snm">' + d.label + '</span><span class="sct">0</span>';
       s.addEventListener('click', () => {
         const id = key + ':' + d.key;
@@ -273,7 +283,7 @@
   const regionEl = document.getElementById('region-chips');
   REGIONS.forEach(r => {
     const el = document.createElement('div');
-    el.className = 'pill'; el.textContent = r; el.dataset.v = r;
+    el.className = 'pill'; el.textContent = r; el.dataset.v = r; el.tabIndex = 0; el.setAttribute('role', 'button');
     el.addEventListener('click', () => toggleRegion(r));
     regionEl.appendChild(el);
   });
@@ -281,7 +291,7 @@
   const statusEl = document.getElementById('status-chips');
   STATUS.forEach(s => {
     const el = document.createElement('div');
-    el.className = 'pill status'; el.textContent = s; el.dataset.v = s;
+    el.className = 'pill status'; el.textContent = s; el.dataset.v = s; el.tabIndex = 0; el.setAttribute('role', 'button');
     el.addEventListener('click', () => {
       if (state.statuses.has(s)) state.statuses.delete(s); else state.statuses.add(s);
       el.classList.toggle('on', state.statuses.has(s)); render();
@@ -453,6 +463,8 @@
     if (sEl) sEl.placeholder = state.lang === 'en' ? 'Search project / country / owner…' : '搜索项目 / 国家 / 业主…';
     if (btnLang) btnLang.textContent = state.lang === 'en' ? '中' : 'EN';
     if (sortToggle) sortToggle.textContent = state.lang === 'en' ? (state.sort === 'cap' ? 'by capacity ⇄' : 'by investment ⇄') : (state.sort === 'cap' ? '按装机容量 ⇄' : '按投资额 ⇄');
+    buildCatLegend();   // 地图浮层文案随语言重建
+    buildHeatFacets();
   }
   if (btnLang) btnLang.addEventListener('click', () => {
     state.lang = state.lang === 'en' ? 'zh' : 'en';
@@ -497,7 +509,7 @@
     const maxC = Math.max(1, ...Object.values(catCount));
     document.getElementById('cat-bars').innerHTML = CAT_KEYS.map(k => {
       const c = CATEGORIES[k], n = catCount[k], dim = state.cats.has(k) ? '' : 'opacity:.35';
-      return '<div class="bar-row" data-key="' + k + '" style="cursor:pointer;' + dim + '"><div class="bar-head"><span class="dot" style="background:' + c.color + '"></span>' +
+      return '<div class="bar-row" data-key="' + k + '" tabindex="0" role="button" style="cursor:pointer;' + dim + '"><div class="bar-head"><span class="dot" style="background:' + c.color + '"></span>' +
         '<span class="nm">' + catShort(k) + '</span><span class="vv">' + n + '</span></div>' +
         '<div class="bar-track"><div class="bar-fill" style="width:' + (n / maxC * 100) + '%;background:' + c.color + '"></div></div></div>';
     }).join('');
@@ -512,7 +524,7 @@
     const regCount = {}; REGIONS.forEach(r => regCount[r] = 0);
     items.forEach(p => { if (regCount[p.region] != null) regCount[p.region]++; });
     document.getElementById('region-grid').innerHTML = REGIONS.map(r =>
-      '<div class="region-cell' + (state.regions.has(r) ? ' on' : '') + '" data-region="' + r + '"><div class="rv">' + regCount[r] + '</div><div class="rl">' + regionName(r) + '</div></div>').join('');
+      '<div class="region-cell' + (state.regions.has(r) ? ' on' : '') + '" data-region="' + r + '" tabindex="0" role="button"><div class="rv">' + regCount[r] + '</div><div class="rl">' + regionName(r) + '</div></div>').join('');
   }
 
   /* ---------- 项目列表（投资额排序） ---------- */
@@ -546,11 +558,19 @@
     }
     return esc(p.detail || p.desc);
   }
+  // 模态焦点管理：打开时记录并把焦点移入，关闭时还原（无障碍）
+  let _lastFocus = null;
+  const captureFocus = () => { _lastFocus = document.activeElement; };
+  const restoreFocus = () => { try { if (_lastFocus && _lastFocus.focus) _lastFocus.focus(); } catch (e) { /* ignore */ } _lastFocus = null; };
+  const focusEl = id => { const el = document.getElementById(id); if (el && el.focus) try { el.focus(); } catch (e) { /* ignore */ } };
+
   const detailEl = document.getElementById('detail');
   function showDetail(p) {
     const c = CATEGORIES[p.cat];
+    captureFocus();
     detailEl.innerHTML =
       '<div class="d-top"><button class="d-close" id="d-close" aria-label="关闭详情卡" title="关闭">×</button>' +
+      '<button class="d-share" id="d-share" aria-label="复制该项目的分享链接" title="复制项目链接">🔗</button>' +
       '<span class="d-cat" style="background:' + c.color + '22;color:' + c.color + '">' + c.icon + ' ' + catName(p.cat) + (subLabel(p) ? ' · ' + subLabel(p) : '') + '</span>' +
       (isRecent(p) ? '<span class="d-new">' + tr('🆕 近一年') + '</span>' : '') +
       '<div class="d-name">' + (p.flagship ? '★ ' : '') + esc(nm(p)) + '</div>' +
@@ -566,17 +586,26 @@
       '</div><div class="d-desc">' + descBody(p) + '</div>';
     detailEl.classList.add('show');
     document.getElementById('d-close').addEventListener('click', hideDetail);
+    const ds = document.getElementById('d-share');
+    if (ds) ds.addEventListener('click', () => {
+      const params = new URLSearchParams(stateToHash());
+      params.set('project', p.id);
+      const url = location.href.split('#')[0] + '#' + params.toString();
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(() => toast('🔗 项目链接已复制'), () => toast('🔗 链接已生成'));
+      else toast('🔗 链接已生成');
+    });
     const cl = detailEl.querySelector('.d-country-link');
     if (cl) cl.addEventListener('click', () => showCountry(cl.dataset.country));
+    focusEl('d-close');
   }
   const cell = (k, v) => '<div class="d-cell"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
-  const hideDetail = () => detailEl.classList.remove('show');
+  const hideDetail = () => { const was = detailEl.classList.contains('show'); detailEl.classList.remove('show'); if (was) restoreFocus(); };
   map.on('click', hideDetail);
 
   /* ---------- 国别下钻面板（点详情卡的国家打开）---------- */
   const countryPanel = document.getElementById('country-panel');
   const countryBackdrop = document.getElementById('country-backdrop');
-  function hideCountry() { countryPanel.classList.remove('show'); countryBackdrop.classList.remove('show'); }
+  function hideCountry() { const was = countryPanel.classList.contains('show'); countryPanel.classList.remove('show'); countryBackdrop.classList.remove('show'); if (was) restoreFocus(); }
   // 单国能源组合聚合（showCountry 与 🆚 国别对比 共用；投资/装机口径排除国际大客户）
   function computeCountry(country) {
     const ps = PROJECTS.filter(p => p.country === country);
@@ -639,6 +668,7 @@
     countryBackdrop.classList.add('show');
     countryPanel.classList.add('show');
     document.getElementById('cp-close').addEventListener('click', hideCountry);
+    focusEl('cp-close');
     const addBtn = document.getElementById('cp-add');
     if (addBtn) addBtn.addEventListener('click', () => addCompare(country));
     countryPanel.querySelectorAll('.proj-item').forEach(el => el.addEventListener('click', () => {
@@ -707,6 +737,7 @@
       '</div>';
     countryBackdrop.classList.add('show'); countryPanel.classList.add('show');
     document.getElementById('cp-close').addEventListener('click', hideCountry);
+    focusEl('cp-close');
     const addtile = document.getElementById('cmp-addtile');
     if (addtile) addtile.addEventListener('click', () => { comparePickerOpen = !comparePickerOpen; showCompare(); });
     countryPanel.querySelectorAll('.cmp-rm').forEach(el => el.addEventListener('click', () => removeCompare(el.dataset.rm)));
@@ -739,13 +770,14 @@
       const o = r[0], d = r[1];
       const domCats = Object.keys(d.cats).sort((a, b) => d.cats[b] - d.cats[a]).slice(0, 5)
         .map(k => '<span class="lg-dot" title="' + catShort(k) + '" style="background:' + (CATEGORIES[k] || {}).color + '"></span>').join('');
-      return '<div class="lg-row" data-owner="' + esc(o) + '">' +
+      return '<div class="lg-row" data-owner="' + esc(o) + '" tabindex="0" role="button">' +
         '<div class="lg-rank">' + (i + 1) + '</div>' +
         '<div class="lg-main"><div class="lg-name">' + esc(o) + ' ' + domCats + '</div>' +
         '<div class="lg-track"><div class="lg-fill" style="width:' + (d.n / maxN * 100) + '%"></div></div></div>' +
         '<div class="lg-meta"><b>' + d.n + '</b><span>' + tr('项目数') + '</span></div>' +
         '<div class="lg-meta"><b>≈$' + fmtInv(d.inv) + '</b><span>' + d.countries.size + ' ' + (state.lang === 'en' ? 'countries' : '国') + '</span></div></div>';
     }).join('');
+    countryPanel.classList.remove('wide');
     countryPanel.innerHTML =
       '<div class="cp-head"><span style="font-size:20px">🏢</span><div class="cp-name">' + tr('企业 / 业主排行榜') + '</div>' +
       '<button class="cp-close" id="cp-close" aria-label="关闭面板" title="关闭">×</button></div>' +
@@ -753,36 +785,42 @@
       '<div class="lg-list">' + body + '</div></div>';
     countryBackdrop.classList.add('show'); countryPanel.classList.add('show');
     document.getElementById('cp-close').addEventListener('click', hideCountry);
+    focusEl('cp-close');
     countryPanel.querySelectorAll('.lg-row').forEach(el => el.addEventListener('click', () => {
       hideCountry(); state.q = el.dataset.owner; const sEl = document.getElementById('search'); if (sEl) sEl.value = state.q; render();
     }));
   }
 
-  /* ---------- 品类色图例（地图左上，点击=切换该品类）---------- */
+  /* ---------- 品类色图例（地图左上，点击=切换该品类；随语言重建）---------- */
   const legendEl = document.getElementById('cat-legend');
-  if (legendEl) {
-    legendEl.innerHTML = '<div class="cl-title">品类（点击切换）</div>' + CAT_KEYS.map(k => {
+  function buildCatLegend() {
+    if (!legendEl) return;
+    legendEl.innerHTML = '<div class="cl-title">' + (state.lang === 'en' ? 'Categories (click to toggle)' : '品类（点击切换）') + '</div>' + CAT_KEYS.map(k => {
       const c = CATEGORIES[k];
-      return '<div class="cl" data-key="' + k + '"><span class="d" style="background:' + c.color + '"></span>' + c.short + '</div>';
+      return '<div class="cl" data-key="' + k + '" tabindex="0" role="button"><span class="d" style="background:' + c.color + '"></span>' + catShort(k) + '</div>';
     }).join('');
     legendEl.querySelectorAll('.cl').forEach(el => el.addEventListener('click', () => toggleCat(el.dataset.key)));
+    syncCatUI();
   }
+  buildCatLegend();
 
-  /* ---------- 🔥 热力分面：聚焦单一品类（仅热力模式显示）---------- */
+  /* ---------- 🔥 热力分面：聚焦单一品类（仅热力模式显示；随语言重建）---------- */
   const heatFacetsEl = document.getElementById('heat-facets');
   function syncHeatFacets() {
     if (!heatFacetsEl) return;
     heatFacetsEl.querySelectorAll('.hf').forEach(el =>
       el.classList.toggle('on', (el.dataset.cat || '') === (state.heatCat || '')));
   }
-  if (heatFacetsEl) {
-    heatFacetsEl.innerHTML = '<div class="hf' + (state.heatCat ? '' : ' on') + '" data-cat="">' + (state.lang === 'en' ? 'All' : '全部') + '</div>' +
-      CAT_KEYS.map(k => '<div class="hf" data-cat="' + k + '"><span class="d" style="background:' + CATEGORIES[k].color + '"></span>' + CATEGORIES[k].short + '</div>').join('');
+  function buildHeatFacets() {
+    if (!heatFacetsEl) return;
+    heatFacetsEl.innerHTML = '<div class="hf' + (state.heatCat ? '' : ' on') + '" data-cat="" tabindex="0" role="button">' + (state.lang === 'en' ? 'All' : '全部') + '</div>' +
+      CAT_KEYS.map(k => '<div class="hf" data-cat="' + k + '" tabindex="0" role="button"><span class="d" style="background:' + CATEGORIES[k].color + '"></span>' + catShort(k) + '</div>').join('');
     heatFacetsEl.querySelectorAll('.hf').forEach(el => el.addEventListener('click', () => {
       state.heatCat = el.dataset.cat || null;
       syncHeatFacets(); render();
     }));
   }
+  buildHeatFacets();
 
   /* ---------- 点统计即筛选（右侧分类条 / 区域格 双向联动）---------- */
   document.getElementById('cat-bars').addEventListener('click', e => {
@@ -816,8 +854,11 @@
     if (state.sort === 'cap') p.set('sort', 'cap');
     if (state.lang === 'en') p.set('lang', 'en');
     if (!state.lines) p.set('lines', '0');
+    if (state.heatCat) p.set('hcat', state.heatCat);
+    if (state.compare.length) p.set('cmp', state.compare.join('~'));
     return p.toString();
   }
+  let pendingProjectId = null;  // 深链接 #project=<id>：首屏渲染后打开该项目
   function applyHash() {
     const h = (location.hash || '').replace(/^#/, '');
     if (!h) return;
@@ -839,6 +880,9 @@
     if (p.get('sort') === 'cap') state.sort = 'cap';
     if (p.get('lang') === 'en') state.lang = 'en';
     if (p.get('lines') === '0') state.lines = false;
+    if (p.has('hcat') && CATEGORIES[p.get('hcat')]) state.heatCat = p.get('hcat');
+    if (p.has('cmp')) state.compare = p.get('cmp').split('~').filter(Boolean).slice(0, 4);
+    if (p.has('project')) pendingProjectId = p.get('project');
   }
   document.getElementById('btn-share').addEventListener('click', () => {
     const hash = stateToHash();
@@ -935,16 +979,36 @@
       '<text x="60" y="652" font-size="13" fill="#5f718f">' + items.length + (en ? ' projects · ' : ' 个项目 · ') + countries + (en ? ' countries' : ' 国') + '  ·  ' + X(en ? 'Generated from Global Energy Projects Map' : '由「全球能源项目世界地图」生成') + '</text>' +
       '</svg>';
   }
-  const snapBtn = document.getElementById('btn-snapshot');
-  if (snapBtn) snapBtn.addEventListener('click', () => {
-    const n = filtered().length;
+  function saveBlob(blob, name) {
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([buildSnapshotSVG()], { type: 'image/svg+xml;charset=utf-8' }));
-    a.download = 'energy-snapshot-' + n + '.svg';
+    a.href = URL.createObjectURL(blob); a.download = name;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    toast('📸 已导出当前视图快照 (SVG)');
-  });
+  }
+  // 优先导 PNG（SVG→canvas 光栅化，纯矢量无外部资源不会污染 canvas）；失败回退 SVG
+  function exportSnapshot() {
+    const n = filtered().length, svg = buildSnapshotSVG();
+    const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+    let fellBack = false;
+    const fallback = () => { if (fellBack) return; fellBack = true; saveBlob(svgBlob, 'energy-snapshot-' + n + '.svg'); toast('📸 已导出快照 (SVG)'); };
+    try {
+      const url = URL.createObjectURL(svgBlob);
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const scale = 2, cv = document.createElement('canvas');
+          cv.width = 1200 * scale; cv.height = 675 * scale;
+          const ctx = cv.getContext('2d'); ctx.scale(scale, scale); ctx.drawImage(img, 0, 0, 1200, 675);
+          URL.revokeObjectURL(url);
+          cv.toBlob(b => { if (b) { saveBlob(b, 'energy-snapshot-' + n + '.png'); toast('📸 已导出当前视图快照 (PNG)'); } else fallback(); }, 'image/png');
+        } catch (e) { URL.revokeObjectURL(url); fallback(); }
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); fallback(); };
+      img.src = url;
+    } catch (e) { fallback(); }
+  }
+  const snapBtn = document.getElementById('btn-snapshot');
+  if (snapBtn) snapBtn.addEventListener('click', exportSnapshot);
 
   /* ---------- 由 state 同步所有筛选 UI（用于 URL 载入与重置）---------- */
   function applyUIFromState() {
@@ -1001,12 +1065,29 @@
     closeDrawers();
   });
 
+  /* ---------- 键盘可达性：role=button 的自定义控件支持 Enter/Space 触发 ---------- */
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+    const t = e.target;
+    if (t && t.matches && t.matches('.cat-chip,.sub-chip,.pill,.cl,.hf,.region-cell,.bar-row[role],.cmp-pick,.lg-row,.region-cell[role]')) {
+      e.preventDefault(); t.click();
+    }
+  });
+
   // 应用 URL 分享状态（如有），同步 UI 后首次渲染
   applyHash();
   applyUIFromState();
   applyLang();
   syncHeatFacets();
   render();
+
+  // 深链接：#project=<id> 打开该项目详情并定位；#cmp=… 直接打开国别对比
+  if (pendingProjectId != null) {
+    const pp = PROJECTS.find(x => String(x.id) === String(pendingProjectId));
+    if (pp) { showDetail(pp); map.flyTo(toLatLng(pp.coord), 7, { duration: 0.8 }); }
+  } else if (state.compare.length >= 2) {
+    showCompare();
+  }
 
   /* ---------- 首屏加载态：地图瓦片就绪（或超时兜底）后淡出 ---------- */
   (function () {
