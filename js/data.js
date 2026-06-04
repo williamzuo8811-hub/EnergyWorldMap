@@ -31,6 +31,7 @@ window.ENERGY = (function () {
 
   const CATEGORIES = {
     renewable:  { name: '可再生能源发电', short: '新能源发电', color: '#2ee6a6', icon: '☀️' },
+    nuclear:    { name: '核电',            short: '核电',       color: '#facc15', icon: '☢️' },
     grid:       { name: '输变电 · 电网',   short: '输变电',     color: '#21c7ff', icon: '⚡' },
     storage:    { name: '储能',            short: '储能',       color: '#b388ff', icon: '🔋' },
     ci:         { name: '工商业 · 配网大客户', short: '工商业',  color: '#ffb02e', icon: '🏭' },
