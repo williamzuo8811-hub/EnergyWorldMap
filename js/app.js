@@ -1165,6 +1165,11 @@
 
   // 应用 URL 分享状态（如有），同步 UI 后首次渲染
   applyHash();
+  // 初始进入（无分享链接时）只点亮南美的项目，其他大区默认不亮，并把视图定位到南美
+  if (!location.hash) {
+    state.regions = new Set(['南美']);
+    map.setView([-20, -60], 3);
+  }
   applyUIFromState();
   applyLang();
   syncHeatFacets();
