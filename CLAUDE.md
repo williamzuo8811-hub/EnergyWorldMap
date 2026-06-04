@@ -99,8 +99,10 @@ or that category's projects get no subcategory chips.
 `render()` → `filtered()` (applies category/subcategory/region/status/year/search/recent filters) →
 `updateMap` + `updateStats` + `updateList`. Markers go into a `markerClusterGroup`; `route`
 polylines ("flowlines" for grids/HSR/pipelines) are always shown and never clustered. Heatmap mode
-(`state.heat`) hides markers and renders a `√inv`-weighted `L.heatLayer` instead. A debug handle is
-exposed at `window.__APP__`.
+(`state.heat`) hides markers and renders a `√inv`-weighted `L.heatLayer` instead; an on-map facet strip
+(`#heat-facets`) lets you focus a single category via `state.heatCat` without disturbing the main filters.
+A first-paint loader (`#app-loader`) fades out once the base tiles load (or a timeout fallback fires).
+A debug handle is exposed at `window.__APP__`.
 
 Year filtering is an interval `[state.minYear, state.maxYear]` driven by a dual-handle range slider
 (bounds set dynamically from data min/max year) plus presets (全部 / 🆕近一年 / 未来管线2027+) and a
@@ -111,7 +113,11 @@ the left filter chips, the on-map category legend (`#cat-legend`), and the right
 region cells (click-to-filter, two-way). Filter state round-trips through the URL hash via
 `stateToHash`/`applyHash` (only non-default fields encoded) — the 🔗 share button copies the link and
 `applyHash`+`applyUIFromState` restore it on load; `applyUIFromState` is the single place that syncs
-every toggle's visual from `state` (also used by reset). ⤓ export dumps `filtered()` to a BOM-prefixed CSV.
+every toggle's visual from `state` (also used by reset). ⤓ export dumps `filtered()` to a BOM-prefixed CSV;
+📸 snapshot (`buildSnapshotSVG`) renders the current view's KPIs / top categories / top projects as a
+downloadable **SVG infographic** (map tiles can't be screenshotted — cross-origin canvas taint — so the
+poster summarizes the filtered stats instead). Detail-card body is bilingual-aware: in EN mode it prefers
+`detailEn`/`descEn` and otherwise falls back to the Chinese text with a small note.
 
 ### Derived capacity & metrics
 

@@ -24,6 +24,8 @@
  *   flagship  是否旗舰项目（地图上有高亮脉冲）
  *   desc      一句话摘要（用于悬浮提示 / 列表）
  *   detail    详细项目介绍（点击项目后在详情卡展示，一段话）
+ *   descEn    可选：desc 的英文（EN 模式优先用；缺失则回退中文并加注）
+ *   detailEn  可选：detail 的英文（EN 模式优先用；缺失则回退中文并加注）
  *   route     可选：[[经度,纬度], ...] 连线（输变电走廊 / 高铁等）
  * ============================================================= */
 window.ENERGY = (function () {
@@ -48,11 +50,17 @@ window.ENERGY = (function () {
   const PROJECTS = [
     /* ============ 可再生能源发电 ============ */
     { id: 1, name: '墨脱（雅鲁藏布江下游）水电工程', en: 'Medog / Yarlung Tsangpo Hydropower', country: '中国', region: '中国', cat: 'renewable', coord: [95.3, 29.3], cap: '规划装机约 60 GW', inv: 1670, invText: '约 1.2 万亿元', status: '在建', year: 2025, updated: '2025-07', owner: '中国雅江集团', flagship: true, desc: '全球规模最大水电工程，2025 年 7 月开工。',
-      detail: '工程位于雅鲁藏布江下游"大拐弯"，利用约 2000 米的天然落差建设引水式梯级电站。2025 年 7 月 19 日由国务院总理李强出席仪式宣布开工，总投资约 1.2 万亿元，规划总装机约 60 GW、年发电量约 3000 亿千瓦时，约为三峡的三倍。建成后将成为全球规模最大的水电工程，并计划通过特高压外送、就地发展绿氢与高载能产业，预计 2033 年前后投产。' },
+      detail: '工程位于雅鲁藏布江下游"大拐弯"，利用约 2000 米的天然落差建设引水式梯级电站。2025 年 7 月 19 日由国务院总理李强出席仪式宣布开工，总投资约 1.2 万亿元，规划总装机约 60 GW、年发电量约 3000 亿千瓦时，约为三峡的三倍。建成后将成为全球规模最大的水电工程，并计划通过特高压外送、就地发展绿氢与高载能产业，预计 2033 年前后投产。',
+      descEn: 'World\'s largest hydropower project; construction began in July 2025.',
+      detailEn: 'On the "Great Bend" of the lower Yarlung Tsangpo in Tibet, this run-of-river cascade harnesses a ~2,000 m natural drop. Construction was announced on 19 July 2025 with total investment of about RMB 1.2 trillion, a planned capacity of ~60 GW and annual output of ~300 TWh — roughly three times the Three Gorges. Once complete it will be the world\'s largest hydropower project, with power exported via UHV lines and local green-hydrogen and energy-intensive industries; commissioning is expected around 2033.' },
     { id: 2, name: '白鹤滩水电站', en: 'Baihetan Hydropower', country: '中国', region: '中国', cat: 'renewable', coord: [102.9, 27.2], cap: '16 GW（16×100万千瓦）', inv: 310, invText: '约 2200 亿元', status: '投运', year: 2022, updated: '2022-12', owner: '三峡集团', flagship: true, desc: '全球单机容量最大水电站。',
-      detail: '位于金沙江下游川滇交界处，总装机 16 GW，安装 16 台单机容量 100 万千瓦的水轮发电机组，单机容量为世界第一。2021 年首批机组投产、2022 年全部并网，年均发电量约 624 亿千瓦时，是"西电东送"骨干清洁电源，配套白鹤滩—浙江、白鹤滩—江苏两条 ±800kV 特高压直流送往长三角。' },
+      detail: '位于金沙江下游川滇交界处，总装机 16 GW，安装 16 台单机容量 100 万千瓦的水轮发电机组，单机容量为世界第一。2021 年首批机组投产、2022 年全部并网，年均发电量约 624 亿千瓦时，是"西电东送"骨干清洁电源，配套白鹤滩—浙江、白鹤滩—江苏两条 ±800kV 特高压直流送往长三角。',
+      descEn: 'Hydropower station with the world\'s largest single-unit capacity.',
+      detailEn: 'On the Jinsha River at the Sichuan–Yunnan border, Baihetan has a total capacity of 16 GW from 16 units of 1,000 MW each — the largest single-unit turbines in the world. First units came online in 2021 and all were grid-connected by 2022, averaging ~62.4 TWh a year. A backbone clean-power source for "West-to-East Power Transmission," it feeds the Yangtze Delta via two ±800 kV UHV DC links.' },
     { id: 3, name: '三峡水电站', en: 'Three Gorges Dam', country: '中国', region: '中国', cat: 'renewable', coord: [111.0, 30.82], cap: '22.5 GW', inv: 350, invText: '约 2500 亿元', status: '投运', year: 2012, updated: '2020-12', owner: '三峡集团', flagship: true, desc: '全球装机最大的水电站。',
-      detail: '位于湖北宜昌长江干流，总装机 22.5 GW（32 台机组），是全球装机容量最大的水电站，2012 年全部机组投产、2020 年完成整体竣工验收。集防洪、发电、航运、水资源调配于一体，年发电量峰值超 1100 亿千瓦时，是中国电力系统的标志性骨干工程。' },
+      detail: '位于湖北宜昌长江干流，总装机 22.5 GW（32 台机组），是全球装机容量最大的水电站，2012 年全部机组投产、2020 年完成整体竣工验收。集防洪、发电、航运、水资源调配于一体，年发电量峰值超 1100 亿千瓦时，是中国电力系统的标志性骨干工程。',
+      descEn: 'World\'s largest hydropower station by installed capacity.',
+      detailEn: 'On the Yangtze main stem at Yichang, Hubei, the Three Gorges Dam has a total capacity of 22.5 GW (32 units) — the largest hydropower station in the world. All units were operating by 2012 and overall acceptance was completed in 2020. Integrating flood control, power generation, navigation and water management, its peak annual output exceeds 110 TWh, a landmark backbone of China\'s power system.' },
     { id: 4, name: '两河口水电站', en: 'Lianghekou Hydropower', country: '中国', region: '中国', cat: 'renewable', coord: [101.0, 30.8], cap: '3 GW', inv: 95, invText: '约 665 亿元', status: '投运', year: 2022, updated: '2022-09', owner: '雅砻江流域水电', flagship: false, desc: '雅砻江上的高海拔大型水电站。',
       detail: '位于四川甘孜雅砻江干流，总装机 3 GW，坝高 295 米，是雅砻江流域的"龙头"调节水库电站。2021—2022 年机组陆续投产，凭借巨大库容增强了下游梯级电站及四川电网的调峰与抗旱能力，并支撑"水风光"互补清洁能源基地。' },
     { id: 5, name: '库布其沙漠"光伏长城"大基地', en: 'Kubuqi Desert PV Base', country: '中国', region: '中国', cat: 'renewable', coord: [109.0, 39.6], cap: '风光约 100 GW', inv: 450, invText: '约 3000 亿元', status: '在建', year: 2023, updated: '2025-09', owner: '三峡 / 亿利等', flagship: true, desc: '内蒙古"沙戈荒"大型风光基地。',
@@ -64,7 +72,9 @@ window.ENERGY = (function () {
     { id: 8, name: '台湾海峡（潮州）海上风电基地', en: 'Taiwan Strait (Chaozhou) Offshore Wind', country: '中国', region: '中国', cat: 'renewable', coord: [117.2, 22.4], cap: '规划约 43.3 GW', inv: 700, invText: '约 5000 亿元', status: '规划', year: 2025, updated: '2025-08', owner: '广东 / 待定', flagship: true, desc: '规划中全球最大海上风电基地。',
       detail: '广东潮州规划在台湾海峡西侧风能富集海域建设约 43.3 GW 的超大型海上风电基地，若落地将成为全球规模最大的海上风电项目。台湾海峡"狭管效应"带来全球少有的优质海上风资源，但需突破深远海施工、长距离送出与生态协调等挑战。' },
     { id: 9, name: 'NEOM 绿氢项目（NGHC）', en: 'NEOM Green Hydrogen (NGHC)', country: '沙特', region: '中东', cat: 'renewable', coord: [35.2, 28.0], cap: '4 GW 风光 + 绿氢 600t/日', inv: 84, invText: '约 84 亿美元', status: '在建', year: 2023, updated: '2026-01', owner: 'NEOM / ACWA / 空气化工', flagship: true, desc: '全球最大在建绿氢工厂。',
-      detail: '位于沙特西北"新未来城"NEOM，由 ACWA Power、沙特 NEOM 与美国空气化工各持股建设，配套约 4 GW 风电与光伏，日产约 600 吨绿氢并就地合成绿氨。项目 2023 年完成融资、计划 2026 年投产，绿氨将主要出口欧洲，是全球最大的在建绿氢工厂之一。' },
+      detail: '位于沙特西北"新未来城"NEOM，由 ACWA Power、沙特 NEOM 与美国空气化工各持股建设，配套约 4 GW 风电与光伏，日产约 600 吨绿氢并就地合成绿氨。项目 2023 年完成融资、计划 2026 年投产，绿氨将主要出口欧洲，是全球最大的在建绿氢工厂之一。',
+      descEn: 'World\'s largest green-hydrogen plant under construction.',
+      detailEn: 'At NEOM in north-west Saudi Arabia, this plant is built by ACWA Power, Saudi NEOM and U.S. Air Products. Backed by ~4 GW of wind and solar, it will produce ~600 t/day of green hydrogen, converted on-site into green ammonia. Financing closed in 2023 and start-up is planned for 2026, with ammonia mainly exported to Europe — among the largest green-hydrogen plants under construction worldwide.' },
     { id: 10, name: 'Sudair 光伏电站', en: 'Sudair Solar PV', country: '沙特', region: '中东', cat: 'renewable', coord: [45.6, 25.6], cap: '1.5 GW', inv: 9, invText: '约 9 亿美元', status: '投运', year: 2023, updated: '2023-12', owner: 'ACWA / 阿美', flagship: false, desc: '沙特最大单体光伏之一。',
       detail: '位于沙特中部苏代尔工业城，装机 1.5 GW，是沙特"2030 愿景"国家可再生能源计划的首批旗舰项目之一，由 ACWA Power、沙特阿美与水电控股公司共同投资。2023 年并网，曾以极低的中标电价刷新区域纪录，年减碳约 290 万吨。' },
     { id: 11, name: 'Al Dhafra 光伏电站', en: 'Al Dhafra Solar PV', country: '阿联酋', region: '中东', cat: 'renewable', coord: [54.0, 24.0], cap: '2 GW', inv: 12, invText: '约 12 亿美元', status: '投运', year: 2023, updated: '2023-11', owner: 'EWEC / 马斯达尔', flagship: false, desc: '曾创全球最低光伏电价纪录。',
@@ -74,13 +84,17 @@ window.ENERGY = (function () {
     { id: 13, name: 'Benban 光伏园区', en: 'Benban Solar Park', country: '埃及', region: '非洲', cat: 'renewable', coord: [32.7, 24.4], cap: '1.65 GW', inv: 40, invText: '约 40 亿美元', status: '投运', year: 2024, updated: '2024-01', owner: '多家开发商', flagship: false, desc: '非洲最大光伏园区之一。',
       detail: '位于埃及阿斯旺省本班，由约 40 座独立电站组成、总装机约 1.65 GW，是非洲最大的光伏园区之一。园区在世界银行等多边机构支持下建成，吸引全球开发商投资，显著提升了埃及电力供应并带动当地就业。' },
     { id: 14, name: 'Dogger Bank 海上风电', en: 'Dogger Bank Wind Farm', country: '英国', region: '欧洲', cat: 'renewable', coord: [1.8, 54.7], cap: '3.6 GW', inv: 110, invText: '约 90 亿英镑', status: '在建', year: 2024, updated: '2026-01', owner: 'SSE / Equinor', flagship: true, desc: '世界最大在建海上风电场。',
-      detail: '位于英国东北海岸约 130 公里外的北海多格滩，分 A/B/C 三期、总装机 3.6 GW，采用 GE Haliade-X 大兆瓦机组，是目前世界最大的在建海上风电场。由 SSE、挪威 Equinor 与 Vårgrønn 合建，截至 2025 年底基础桩全部安装完成，各阶段 2026 年陆续并网，建成后可为约 600 万英国家庭供电。' },
+      detail: '位于英国东北海岸约 130 公里外的北海多格滩，分 A/B/C 三期、总装机 3.6 GW，采用 GE Haliade-X 大兆瓦机组，是目前世界最大的在建海上风电场。由 SSE、挪威 Equinor 与 Vårgrønn 合建，截至 2025 年底基础桩全部安装完成，各阶段 2026 年陆续并网，建成后可为约 600 万英国家庭供电。',
+      descEn: 'World\'s largest offshore wind farm under construction.',
+      detailEn: 'On Dogger Bank in the North Sea, ~130 km off north-east England, this 3.6 GW project is built in three phases (A/B/C) using GE Haliade-X turbines — currently the world\'s largest offshore wind farm under construction. Developed by SSE, Norway\'s Equinor and Vårgrønn, all foundation piles were installed by end-2025 and the phases connect through 2026, ultimately powering about 6 million UK homes.' },
     { id: 15, name: 'Gemini 光伏+储能', en: 'Gemini Solar + Storage', country: '美国', region: '北美', cat: 'renewable', coord: [-114.8, 35.7], cap: '690 MW PV + 380 MW 储能', inv: 12, invText: '约 12 亿美元', status: '投运', year: 2024, updated: '2024-05', owner: 'Primergy', flagship: false, desc: '内华达州大型光储一体项目。',
       detail: '位于美国内华达州拉斯维加斯东北的联邦土地上，690 MW 光伏配套 380 MW/1.4 GWh 电池储能，2024 年全面投运。它是美国当时最大的光储一体化项目之一，向拉斯维加斯都会区供应清洁电力并提供夜间出力支撑。' },
     { id: 16, name: 'Vineyard Wind 1', en: 'Vineyard Wind 1', country: '美国', region: '北美', cat: 'renewable', coord: [-70.5, 41.1], cap: '806 MW', inv: 40, invText: '约 40 亿美元', status: '在建', year: 2024, updated: '2025-06', owner: 'Avangrid / CIP', flagship: false, desc: '美国首个商业规模海上风电场。',
       detail: '位于马萨诸塞州玛莎葡萄园岛以南海域，装机 806 MW，是美国首个商业规模的海上风电场，由 Avangrid 与哥本哈根基础设施基金（CIP）合建。项目自 2023 年底首台机组发电后分批并网，为新英格兰地区约 40 万户家庭供电，是美国海上风电产业起步的标志。' },
     { id: 17, name: 'Khavda 可再生能源园区', en: 'Khavda RE Park', country: '印度', region: '亚洲', cat: 'renewable', coord: [68.9, 23.9], cap: '规划 30 GW', inv: 200, invText: '约 200 亿美元', status: '在建', year: 2024, updated: '2025-10', owner: 'Adani', flagship: true, desc: '全球最大在建可再生能源园区。',
-      detail: '位于印度古吉拉特邦卡奇地区接近巴基斯坦边境的盐碱荒地，规划风光总装机约 30 GW、占地约 538 平方公里，建成后将是全球最大的可再生能源园区。由阿达尼集团主导开发，并配套大规模储能与外送线路，是印度能源转型的旗舰工程。' },
+      detail: '位于印度古吉拉特邦卡奇地区接近巴基斯坦边境的盐碱荒地，规划风光总装机约 30 GW、占地约 538 平方公里，建成后将是全球最大的可再生能源园区。由阿达尼集团主导开发，并配套大规模储能与外送线路，是印度能源转型的旗舰工程。',
+      descEn: 'World\'s largest renewable-energy park under construction.',
+      detailEn: 'On salt flats in Kutch, Gujarat near the Pakistan border, the Khavda park plans ~30 GW of combined wind and solar over ~538 km², set to become the world\'s largest renewable-energy park. Led by the Adani Group with large-scale storage and transmission, it is a flagship of India\'s energy transition.' },
     { id: 18, name: 'Cerro Dominador 光热+光伏', en: 'Cerro Dominador', country: '智利', region: '南美', cat: 'renewable', coord: [-69.3, -23.5], cap: 'CSP 110 MW + PV 100 MW', inv: 13, invText: '约 13 亿美元', status: '投运', year: 2021, updated: '2021-06', owner: 'Cerro Dominador', flagship: false, desc: '拉美首座光热电站。',
       detail: '位于智利阿塔卡马沙漠，由 110 MW 塔式光热（配 17.5 小时熔盐储热）与 100 MW 光伏组成，是拉丁美洲首座聚光太阳能光热电站。凭借全球最佳的光照资源，它可实现近乎全天候的清洁出力，为智利北部矿业负荷提供绿色电力。' },
     { id: 19, name: 'Belo Monte 水电站', en: 'Belo Monte Dam', country: '巴西', region: '南美', cat: 'renewable', coord: [-51.95, -3.1], cap: '11.2 GW', inv: 190, invText: '约 190 亿美元', status: '投运', year: 2021, updated: '2021-11', owner: 'Norte Energia', flagship: false, desc: '巴西第二大水电站。',

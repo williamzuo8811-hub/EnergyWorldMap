@@ -42,9 +42,10 @@
   L.control.zoom({ position: 'bottomleft' }).addTo(map);
   map.attributionControl.setPrefix('');
 
+  const esriDarkBase = L.tileLayer('https://{s}.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    { subdomains: ['server', 'services'], maxZoom: 16, attribution: '© Esri' });
   const esriDark = L.layerGroup([
-    L.tileLayer('https://{s}.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-      { subdomains: ['server', 'services'], maxZoom: 16, attribution: '© Esri' }),
+    esriDarkBase,
     L.tileLayer('https://{s}.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
       { subdomains: ['server', 'services'], maxZoom: 16 }),
   ]);
@@ -88,6 +89,7 @@
     lang: 'zh',                 // 'zh' | 'en'：项目名称与分析标签的中英切换
     lines: true,                // 飞线（输变电/高铁/管道连线）显隐开关
     compare: [],                // 🆚 国别对比已选国家（最多 4 个）
+    heatCat: null,              // 🔥 热力分面：聚焦单一品类（null=全部）
   };
 
   /* ---------- 中 / EN 语言（项目名走 en 字段；分类/大区/状态/界面标签走映射） ---------- */
@@ -190,9 +192,11 @@
     if (state.heat) {
       // —— 热力图模式：按 √(投资 或 装机容量) 加权显示宏观格局，隐藏聚合标记 ——
       if (map.hasLayer(markerCluster)) map.removeLayer(markerCluster);
+      // 分面：聚焦单一品类时，只让该品类项目贡献热力
+      const hitems = state.heatCat ? items.filter(p => p.cat === state.heatCat) : items;
       const hlCap = document.querySelector('.heat-legend .hl-cap');
-      if (hlCap) hlCap.textContent = state.weight === 'cap' ? '装机热力' : '投资热力';
-      const pts = items.map(p => {
+      if (hlCap) hlCap.textContent = (state.weight === 'cap' ? '装机热力' : '投资热力') + (state.heatCat ? ' · ' + catShort(state.heatCat) : '');
+      const pts = hitems.map(p => {
         const ll = toLatLng(p.coord);
         const w = weightVal(p); const v = (w > 0) ? w : 1;   // 开方压缩量级，避免超大项目独占
         return [ll[0], ll[1], Math.sqrt(v)];
@@ -377,8 +381,9 @@
     pausePlay();
     state.cats = new Set(CAT_KEYS); state.subOff.clear(); state.regions.clear(); state.statuses.clear();
     state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.q = ''; state.recentOnly = false;
-    state.weight = 'inv'; state.sort = 'inv';
+    state.weight = 'inv'; state.sort = 'inv'; state.heatCat = null;
     clearPresetActive(); document.querySelector('.year-presets .yp[data-preset="all"]').classList.add('on');
+    if (typeof syncHeatFacets === 'function') syncHeatFacets();
     applyUIFromState(); render();
   });
 
@@ -532,6 +537,15 @@
   }
 
   /* ---------- 详情卡 ---------- */
+  // 正文双语：EN 模式优先用 detailEn/descEn；缺失则回退中文并加一行说明（避免大规模机翻失真）
+  function descBody(p) {
+    if (state.lang === 'en') {
+      const enTxt = p.detailEn || p.descEn;
+      if (enTxt) return esc(enTxt);
+      return esc(p.detail || p.desc) + '<div class="d-zh-note">— description in Chinese (English summary pending) —</div>';
+    }
+    return esc(p.detail || p.desc);
+  }
   const detailEl = document.getElementById('detail');
   function showDetail(p) {
     const c = CATEGORIES[p.cat];
@@ -549,7 +563,7 @@
       cell(tr('投资额'), usd(p) + (/美元|\$/.test(p.invText || '') || !p.invText ? '' : ' <span class="d-usd">（原币种：' + esc(p.invText) + '）</span>')) +
       cell(tr('业主 / 参与方'), esc(p.owner || '—')) +
       cell(tr('最近动态'), esc(p.updated || '—')) +
-      '</div><div class="d-desc">' + esc(p.detail || p.desc) + '</div>';
+      '</div><div class="d-desc">' + descBody(p) + '</div>';
     detailEl.classList.add('show');
     document.getElementById('d-close').addEventListener('click', hideDetail);
     const cl = detailEl.querySelector('.d-country-link');
@@ -754,6 +768,22 @@
     legendEl.querySelectorAll('.cl').forEach(el => el.addEventListener('click', () => toggleCat(el.dataset.key)));
   }
 
+  /* ---------- 🔥 热力分面：聚焦单一品类（仅热力模式显示）---------- */
+  const heatFacetsEl = document.getElementById('heat-facets');
+  function syncHeatFacets() {
+    if (!heatFacetsEl) return;
+    heatFacetsEl.querySelectorAll('.hf').forEach(el =>
+      el.classList.toggle('on', (el.dataset.cat || '') === (state.heatCat || '')));
+  }
+  if (heatFacetsEl) {
+    heatFacetsEl.innerHTML = '<div class="hf' + (state.heatCat ? '' : ' on') + '" data-cat="">' + (state.lang === 'en' ? 'All' : '全部') + '</div>' +
+      CAT_KEYS.map(k => '<div class="hf" data-cat="' + k + '"><span class="d" style="background:' + CATEGORIES[k].color + '"></span>' + CATEGORIES[k].short + '</div>').join('');
+    heatFacetsEl.querySelectorAll('.hf').forEach(el => el.addEventListener('click', () => {
+      state.heatCat = el.dataset.cat || null;
+      syncHeatFacets(); render();
+    }));
+  }
+
   /* ---------- 点统计即筛选（右侧分类条 / 区域格 双向联动）---------- */
   document.getElementById('cat-bars').addEventListener('click', e => {
     const row = e.target.closest('.bar-row'); if (row && row.dataset.key) toggleCat(row.dataset.key);
@@ -834,6 +864,88 @@
     toast('⤓ 已导出 ' + items.length + ' 个项目 (CSV)');
   });
 
+  /* ---------- 📸 当前视图快照（信息图 SVG，可分享/插入文档）----------
+   * 地图瓦片跨域无法截图，这里把"当前筛选"的统计与 TOP 做成一张矢量信息图海报。 */
+  function buildSnapshotSVG() {
+    const items = filtered();
+    const clientOnly = state.cats.size === 1 && state.cats.has('client');
+    const statItems = clientOnly ? items : items.filter(p => p.cat !== 'client');
+    const totalInv = statItems.reduce((s, p) => s + (p.inv || 0), 0);
+    const countries = new Set(items.map(p => p.country)).size;
+    const recentN = items.filter(isRecent).length;
+    const catCount = {}; CAT_KEYS.forEach(k => catCount[k] = 0); items.forEach(p => catCount[p.cat]++);
+    const topCats = CAT_KEYS.filter(k => catCount[k]).sort((a, b) => catCount[b] - catCount[a]).slice(0, 6);
+    const maxCat = Math.max(1, ...topCats.map(k => catCount[k]));
+    const sortCap = state.sort === 'cap';
+    const top = items.slice().sort((a, b) => sortCap ? ((b.capMW || 0) - (a.capMW || 0)) : (b.inv - a.inv)).slice(0, 6);
+    const en = state.lang === 'en';
+    const parts = [];
+    if (state.cats.size && state.cats.size < CAT_KEYS.length) parts.push((en ? 'Categories: ' : '品类: ') + [...state.cats].map(catShort).join('/'));
+    if (state.regions.size) parts.push((en ? 'Regions: ' : '大区: ') + [...state.regions].map(regionName).join('/'));
+    if (state.statuses.size) parts.push((en ? 'Status: ' : '状态: ') + [...state.statuses].map(statusName).join('/'));
+    if (state.minYear > MIN_YEAR || state.maxYear < MAX_YEAR) parts.push(state.minYear + '–' + state.maxYear);
+    if (state.recentOnly) parts.push(en ? 'Recent 12mo' : '近一年');
+    if (state.q) parts.push('“' + state.q + '”');
+    const filterDesc = parts.length ? parts.join('   ·   ') : (en ? 'All projects' : '全部项目');
+    const clip = (s, n) => { s = String(s == null ? '' : s); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
+    const X = esc;
+
+    const kpiCard = (i, val, lab, color) => {
+      const x = 60 + i * 273;
+      return '<g transform="translate(' + x + ',196)">' +
+        '<rect width="255" height="96" rx="12" fill="#101a30" stroke="#2a3a5c"/>' +
+        '<text x="18" y="50" font-size="30" font-weight="800" fill="' + color + '">' + X(val) + '</text>' +
+        '<text x="18" y="76" font-size="14" fill="#93a4c4">' + X(lab) + '</text></g>';
+    };
+    const catRows = topCats.map((k, i) => {
+      const y = 392 + i * 39, c = CATEGORIES[k], w = 520 * catCount[k] / maxCat;
+      return '<g transform="translate(60,' + y + ')">' +
+        '<circle cx="6" cy="-4" r="6" fill="' + c.color + '"/>' +
+        '<text x="22" y="0" font-size="16" fill="#cdd7ea">' + X(catShort(k)) + '</text>' +
+        '<text x="520" y="0" font-size="15" font-weight="700" fill="#e8eefb" text-anchor="end">' + catCount[k] + '</text>' +
+        '<rect x="0" y="9" width="520" height="6" rx="3" fill="#1b2742"/>' +
+        '<rect x="0" y="9" width="' + w.toFixed(1) + '" height="6" rx="3" fill="' + c.color + '"/></g>';
+    }).join('');
+    const topRows = top.map((p, i) => {
+      const y = 392 + i * 39, c = CATEGORIES[p.cat];
+      const val = sortCap ? capFmt(p.capMW) : usd(p);
+      return '<g transform="translate(620,' + y + ')">' +
+        '<rect x="0" y="-16" width="3" height="22" rx="1.5" fill="' + c.color + '"/>' +
+        '<text x="14" y="-2" font-size="13" font-weight="800" fill="#5f718f">' + (i + 1) + '</text>' +
+        '<text x="36" y="0" font-size="15" fill="#e8eefb">' + X(clip(nm(p), 22)) + '</text>' +
+        '<text x="520" y="0" font-size="14" font-weight="700" fill="#2ee6a6" text-anchor="end">' + X(val) + '</text></g>';
+    }).join('');
+
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" width="1200" height="675" ' +
+      'font-family="\'PingFang SC\',\'Microsoft YaHei\',\'Segoe UI\',system-ui,sans-serif">' +
+      '<defs><radialGradient id="g1" cx="78%" cy="-10%" r="70%"><stop offset="0" stop-color="#21c7ff" stop-opacity="0.14"/><stop offset="1" stop-color="#21c7ff" stop-opacity="0"/></radialGradient>' +
+      '<radialGradient id="g2" cx="6%" cy="112%" r="70%"><stop offset="0" stop-color="#2ee6a6" stop-opacity="0.12"/><stop offset="1" stop-color="#2ee6a6" stop-opacity="0"/></radialGradient></defs>' +
+      '<rect width="1200" height="675" fill="#060b18"/><rect width="1200" height="675" fill="url(#g1)"/><rect width="1200" height="675" fill="url(#g2)"/>' +
+      '<text x="60" y="78" font-size="36" font-weight="800" fill="#e8eefb">🌐 ' + (en ? 'Global Energy Projects Map' : '全球能源项目世界地图') + '</text>' +
+      '<text x="60" y="108" font-size="15" letter-spacing="1.5" fill="#93a4c4">GLOBAL ENERGY PROJECTS · ' + X((en ? 'Updated ' : '数据更新 ') + META.lastUpdated) + '</text>' +
+      '<rect x="60" y="130" width="1080" height="40" rx="9" fill="#0d1730" stroke="#1f2c4a"/>' +
+      '<text x="78" y="156" font-size="16" fill="#7fd4ff">▸ ' + X(clip(filterDesc, 92)) + '</text>' +
+      kpiCard(0, items.length, en ? 'Projects' : '项目总数', '#21c7ff') +
+      kpiCard(1, countries, en ? 'Countries' : '覆盖国家', '#e8eefb') +
+      kpiCard(2, '≈$' + fmtInv(totalInv), en ? 'Investment' : '总投资(美元)', '#2ee6a6') +
+      kpiCard(3, recentN, en ? 'Recent 12mo' : '🆕 近一年', '#ffb02e') +
+      '<text x="60" y="360" font-size="14" letter-spacing="1" fill="#5f718f">' + (en ? 'BY CATEGORY (count)' : '分品类（项目数）') + '</text>' +
+      '<text x="620" y="360" font-size="14" letter-spacing="1" fill="#5f718f">' + (en ? (sortCap ? 'TOP (by capacity)' : 'TOP (by investment)') : (sortCap ? '重点项目 TOP（按装机）' : '重点项目 TOP（按投资）')) + '</text>' +
+      catRows + topRows +
+      '<text x="60" y="652" font-size="13" fill="#5f718f">' + items.length + (en ? ' projects · ' : ' 个项目 · ') + countries + (en ? ' countries' : ' 国') + '  ·  ' + X(en ? 'Generated from Global Energy Projects Map' : '由「全球能源项目世界地图」生成') + '</text>' +
+      '</svg>';
+  }
+  const snapBtn = document.getElementById('btn-snapshot');
+  if (snapBtn) snapBtn.addEventListener('click', () => {
+    const n = filtered().length;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([buildSnapshotSVG()], { type: 'image/svg+xml;charset=utf-8' }));
+    a.download = 'energy-snapshot-' + n + '.svg';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    toast('📸 已导出当前视图快照 (SVG)');
+  });
+
   /* ---------- 由 state 同步所有筛选 UI（用于 URL 载入与重置）---------- */
   function applyUIFromState() {
     syncCatUI();
@@ -893,8 +1005,20 @@
   applyHash();
   applyUIFromState();
   applyLang();
+  syncHeatFacets();
   render();
 
+  /* ---------- 首屏加载态：地图瓦片就绪（或超时兜底）后淡出 ---------- */
+  (function () {
+    const loaderEl = document.getElementById('app-loader');
+    if (!loaderEl) return;
+    let done = false;
+    const hide = () => { if (done) return; done = true; loaderEl.classList.add('hidden'); setTimeout(() => loaderEl.remove(), 480); };
+    esriDarkBase.once('load', hide);     // 首批暗色瓦片绘制完成
+    map.whenReady(() => setTimeout(hide, 400)); // 视图就绪后短暂保留，避免闪烁
+    setTimeout(hide, 2600);              // 离线/瓦片失败兜底，确保不卡 loading
+  })();
+
   // 调试 / 程序化控制句柄
-  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash };
+  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG };
 })();

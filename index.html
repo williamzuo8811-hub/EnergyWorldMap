@@ -23,6 +23,12 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+  <!-- 首屏加载态：地图瓦片就绪后淡出 -->
+  <div class="app-loader" id="app-loader">
+    <div class="al-logo">🌐</div>
+    <div class="al-spin"></div>
+    <div class="al-text">全球能源项目世界地图<span>加载中 · Loading…</span></div>
+  </div>
   <div class="app">
     <!-- 顶栏 -->
     <header class="topbar">
@@ -87,8 +93,9 @@
         </div>
 
         <div class="action-row">
-          <button class="btn-act" id="btn-share" title="复制当前筛选视图的分享链接" data-i18n="🔗 Share view">🔗 分享视图</button>
-          <button class="btn-act" id="btn-export" title="导出当前筛选结果为 CSV" data-i18n="⤓ Export CSV">⤓ 导出CSV</button>
+          <button class="btn-act" id="btn-share" title="复制当前筛选视图的分享链接" data-i18n="🔗 Share">🔗 分享</button>
+          <button class="btn-act" id="btn-export" title="导出当前筛选结果为 CSV" data-i18n="⤓ CSV">⤓ CSV</button>
+          <button class="btn-act" id="btn-snapshot" title="导出当前视图为信息图快照 (SVG)" data-i18n="📸 Snapshot">📸 快照</button>
         </div>
         <button class="btn-reset" id="btn-reset" data-i18n="↺ Reset all filters">↺ 重置全部筛选</button>
       </aside>
@@ -111,6 +118,7 @@
           <button class="btn-lang" id="btn-lang" title="中文 / English" aria-label="切换中文 / English">EN</button>
           <button class="btn-home" id="btn-home" title="复位视图" aria-label="复位地图视图" data-i18n="⤢ Reset">⤢ 复位</button>
         </div>
+        <div class="heat-facets" id="heat-facets"></div>
         <div class="heat-legend" id="heat-legend">
           <span class="hl-cap">投资热力</span>
           <i class="hl-bar"></i>
