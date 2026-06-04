@@ -132,9 +132,17 @@ html, body {
 .cat-chip .ct { font-size: 12px; color: var(--txt-faint); font-variant-numeric: tabular-nums; }
 .cat-chip.off { opacity: 0.38; }
 .cat-chip.off .dot { box-shadow: none; }
-.cat-chip .caret { font-size: 10px; color: var(--txt-faint); padding: 3px 5px; margin: -3px -4px -3px 0; border-radius: 5px; transition: transform .15s, color .15s, background .15s; }
-.cat-chip .caret:hover { color: var(--accent); background: rgba(255,255,255,0.09); }
-.cat-group.open .cat-chip .caret { transform: rotate(90deg); color: var(--accent); }
+/* 展开子分类：独立的带边框小按钮，和计数分开，让"开关显示 vs 展开子类"一眼可分（方案 B）*/
+.cat-chip .caret {
+  flex: none; display: grid; place-items: center;
+  width: 26px; height: 26px; margin-left: 4px;
+  font-size: 12px; color: var(--txt-dim);
+  border: 1px solid var(--border); border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  transition: transform .15s, color .15s, background .15s, border-color .15s;
+}
+.cat-chip .caret:hover { color: var(--accent); border-color: var(--border-strong); background: rgba(255, 255, 255, 0.1); }
+.cat-group.open .cat-chip .caret { transform: rotate(90deg); color: var(--accent); border-color: var(--accent); background: rgba(33, 199, 255, 0.14); }
 .sub-list { display: none; flex-direction: column; gap: 2px; margin: 5px 0 3px 13px; padding-left: 11px; border-left: 1px dashed var(--border); }
 .cat-group.open .sub-list { display: flex; }
 .sub-chip { display: flex; align-items: center; gap: 7px; padding: 4px 8px; border-radius: 7px; cursor: pointer; font-size: 12px; color: var(--txt-dim); transition: background .15s; }
@@ -312,12 +320,13 @@ input[type=range]::-webkit-slider-thumb {
 
 /* 抽屉顶部「收起」条（仅抽屉模式显示）*/
 .drawer-close {
-  display: none; width: 100%; padding: 8px 10px; margin: 0 0 12px;
-  text-align: center; font-size: 13px; font-weight: 700; color: var(--txt-dim);
-  background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border);
-  border-radius: 9px; cursor: pointer;
+  display: none; position: sticky; top: -16px; z-index: 6;
+  margin: -16px -14px 12px; padding: 14px;
+  text-align: center; font-size: 14px; font-weight: 700; color: var(--txt);
+  background: rgba(10, 18, 36, 0.98); backdrop-filter: blur(8px);
+  border: none; border-bottom: 1px solid var(--border); cursor: pointer;
 }
-.drawer-close:hover { color: var(--txt); border-color: var(--border-strong); }
+.drawer-close:hover { color: var(--accent); }
 
 /* 抽屉遮罩 */
 .drawer-backdrop {
@@ -357,11 +366,33 @@ input[type=range]::-webkit-slider-thumb {
   .side.left.open { transform: translateX(0); }
   .side.left .drawer-close { display: block; }
   .fab-left { display: block; }
-  .kpis { gap: 16px; }
-  .kpi .num { font-size: 17px; }
+
+  /* 顶栏 KPI 不再被挤出屏幕：品牌占一行，4 个 KPI 在下方换成 2×2 全显示（修复手机上"覆盖/总投资/近一年"被截断）*/
+  .topbar { flex-wrap: wrap; gap: 10px 16px; padding: 10px 14px; padding-top: calc(10px + env(safe-area-inset-top)); }
+  .brand { flex: 1 1 auto; }
+  .kpis { margin-left: 0; width: 100%; flex-wrap: wrap; gap: 10px 16px; }
+  .kpi { text-align: left; flex: 1 0 40%; }
+  .kpi .num { font-size: 19px; }
+
+  /* 触控目标放大到更接近 44px：品类行/展开按钮/子类/国家/年份滑块 */
+  .cat-chip { padding: 11px 12px; }
+  .cat-chip .caret { width: 34px; height: 34px; font-size: 13px; }
+  .sub-chip { padding: 8px; min-height: 34px; }
+  .country-chip { padding: 7px 11px; }
+  .rg-caret { width: 34px; height: 34px; }
+  input[type=range]::-webkit-slider-thumb { width: 22px; height: 22px; }
+
+  /* 右上角工具栏折叠成「⋯」菜单，点开才展开 8 个按钮，避免竖排占满屏 */
+  .tools-toggle { display: grid; place-items: center; }
+  .map-tools > :not(.tools-toggle) { display: none; }
+  .map-tools.tools-open > :not(.tools-toggle) { display: flex; }
+  .map-tools.tools-open .tools-toggle { color: var(--accent); border-color: var(--accent); }
+
+  /* iPhone 安全区：底部浮动按钮上移让开 home 横条 / 浏览器底栏 */
+  .mobile-fab { bottom: calc(18px + env(safe-area-inset-bottom)); }
   /* 让 Leaflet 左下缩放 / 右下归属让位给浮动按钮，避免重叠 */
-  .leaflet-bottom.leaflet-left { margin-bottom: 60px; }
-  .leaflet-bottom.leaflet-right { margin-bottom: 54px; }
+  .leaflet-bottom.leaflet-left { margin-bottom: calc(60px + env(safe-area-inset-bottom)); }
+  .leaflet-bottom.leaflet-right { margin-bottom: calc(54px + env(safe-area-inset-bottom)); }
   /* 🔍 浮钮在左下 → 热力分面条上移让位 */
   .heat-facets { bottom: 70px; }
 }
@@ -430,6 +461,14 @@ input[type=range]::-webkit-slider-thumb {
 
 /* 地图工具：底图切换 + 复位 */
 .map-tools { position: absolute; top: 14px; right: 14px; z-index: 1200; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+/* ⋯ 工具开关：仅移动端可见（媒体查询点亮），桌面端隐藏 */
+.tools-toggle {
+  display: none; width: 38px; height: 38px; flex: none;
+  font-size: 18px; line-height: 1; color: var(--txt);
+  background: var(--panel-solid); border: 1px solid var(--border-strong);
+  border-radius: 10px; cursor: pointer; backdrop-filter: blur(8px); box-shadow: var(--shadow);
+}
+.tools-toggle:active { transform: scale(.95); }
 .basemap-switch { display: flex; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; backdrop-filter: blur(8px); box-shadow: var(--shadow); }
 .basemap-switch .bm { padding: 7px 11px; font-size: 12px; color: var(--txt-dim); cursor: pointer; border-right: 1px solid var(--border); transition: all 0.15s; user-select: none; }
 .basemap-switch .bm:last-child { border-right: none; }
@@ -623,7 +662,10 @@ body.heat-on .heat-facets { display: flex; }
   border-radius: 10px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border);
 }
 .cap-chip .cc-ico { font-size: 16px; line-height: 1; flex: none; }
-.cap-chip .cc-v { font-size: 15px; font-weight: 700; color: var(--txt); font-variant-numeric: tabular-nums; line-height: 1.2; }
+.cap-chip .cc-body { min-width: 0; }
+.cap-chip .cc-v { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 4px; font-size: 15px; font-weight: 700; color: var(--txt); font-variant-numeric: tabular-nums; line-height: 1.2; }
+.cap-chip .cc-n { white-space: nowrap; }
+.cap-chip .cc-u { white-space: nowrap; font-size: 12px; font-weight: 600; color: var(--txt-dim); }
 .cap-chip .cc-l { font-size: 11px; color: var(--txt-dim); margin-top: 1px; }
 .cap-empty { grid-column: 1 / -1; font-size: 12px; color: var(--txt-faint); padding: 6px 2px; }
 
