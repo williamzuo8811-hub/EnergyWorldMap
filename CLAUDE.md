@@ -22,7 +22,14 @@ There is no build, test, or lint tooling. To see changes:
 - On Linux/macOS any static server works, e.g. `python3 -m http.server 4173`.
 
 Map tiles require network access; project markers and all logic work offline. After editing,
-verify in a browser — there are no automated tests to run.
+verify in a browser — there is no build step.
+
+**Data integrity check** (the one piece of automated tooling, zero-dep): after editing any
+`js/data*.js`, run `node scripts/validate-data.js`. It loads the data in `index.html`'s real
+`<script>` order and checks required fields, enum validity (`cat`/`region`/`status`), coordinate
+↔ region consistency (catches sign errors like positive longitude in the Americas), duplicate
+`name`s (which `app.js` silently drops) and `id`s, per-file id-range overlaps, and orphan
+`ENERGY_PROGRESS` entries. Exit code is non-zero on any ERROR (CI-friendly); warnings don't fail.
 
 ## Architecture
 
@@ -144,4 +151,6 @@ The maintainer triggers refreshes by asking (in Chinese) "刷新能源地图数�
 expected response: web-search recent global energy project activity above the inclusion threshold,
 add new projects (with full `detail`), update changed projects' `status`/`cap`/`inv`/`updated`,
 extend `js/progress.js` by `id`, and set `META.lastUpdated` to the current month. All content is in
-Simplified Chinese, UTF-8 — match the existing tone and field style.
+Simplified Chinese, UTF-8 — match the existing tone and field style. A new regional batch goes in its
+own `js/data-*.js` with a distinct id range (append via `.concat`, register in `index.html`). Always
+finish by running `node scripts/validate-data.js` and confirming a clean exit before committing.
