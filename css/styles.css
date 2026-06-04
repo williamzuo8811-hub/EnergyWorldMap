@@ -461,12 +461,14 @@ input[type=range]::-webkit-slider-thumb {
 
 /* 地图工具：底图切换 + 复位 */
 .map-tools { position: absolute; top: 14px; right: 14px; z-index: 1200; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
-/* ⋯ 工具开关：仅移动端可见（媒体查询点亮），桌面端隐藏 */
+/* ⋯ 工具开关：仅移动端可见（媒体查询点亮），桌面端隐藏。
+   用青色描边 + 工具图标，避免深色按钮在深色地图上"隐身"找不到 */
 .tools-toggle {
-  display: none; width: 38px; height: 38px; flex: none;
-  font-size: 18px; line-height: 1; color: var(--txt);
-  background: var(--panel-solid); border: 1px solid var(--border-strong);
-  border-radius: 10px; cursor: pointer; backdrop-filter: blur(8px); box-shadow: var(--shadow);
+  display: none; width: 42px; height: 42px; flex: none;
+  font-size: 19px; line-height: 1; color: #cdeeff;
+  background: rgba(13, 22, 44, 0.94); border: 1px solid var(--accent);
+  border-radius: 12px; cursor: pointer; backdrop-filter: blur(8px);
+  box-shadow: 0 0 0 1px rgba(33, 199, 255, 0.25), var(--shadow);
 }
 .tools-toggle:active { transform: scale(.95); }
 .basemap-switch { display: flex; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; backdrop-filter: blur(8px); box-shadow: var(--shadow); }
