@@ -44,6 +44,13 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - name: 缓存击穿：给本地 CSS/JS 资源加版本号（提交哈希）
+        # GitHub Pages 会让浏览器缓存 css/js；不带版本号时普通标签页会一直用旧文件。
+        # 这里只改部署产物里的 index.html（不动仓库源码），给本地 css/ 与 js/ 资源追加 ?v=<短哈希>，
+        # 每次提交哈希都不同 → 自动击穿缓存，普通页刷新即见最新。lib/ 为稳定第三方库，不加。
+        run: |
+          V="${GITHUB_SHA::8}"
+          sed -i -E -e "s#(href=\"css/[^\"?]+\.css)\"#\1?v=${V}\"#g" -e "s#(src=\"js/[^\"?]+\.js)\"#\1?v=${V}\"#g" index.html
       - name: 配置 Pages
         uses: actions/configure-pages@v5
       - name: 上传站点（整个仓库根目录即站点）
