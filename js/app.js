@@ -613,10 +613,12 @@
     buildHeatFacets();
     buildRegionTree();  // 左侧大区/国家树随语言整树重建（含国名中英切换）
   }
-  if (btnLang) btnLang.addEventListener('click', () => {
+  function toggleLang() {
     state.lang = state.lang === 'en' ? 'zh' : 'en';
     applyLang(); render();
-  });
+    if (_detailP && detailEl.classList.contains('show')) showDetail(_detailP); // 详情卡随语言即时重渲染
+  }
+  if (btnLang) btnLang.addEventListener('click', toggleLang);
 
   /* ---------- 右侧统计 ---------- */
   // 硬指标：把结构化容量按当前筛选汇总（仅显示有数值的口径）
@@ -732,12 +734,15 @@
   const focusEl = id => { const el = document.getElementById(id); if (el && el.focus) try { el.focus(); } catch (e) { /* ignore */ } };
 
   const detailEl = document.getElementById('detail');
+  let _detailP = null; // 当前打开的项目（供语言切换时即时重渲染详情卡）
   function showDetail(p) {
     const c = CATEGORIES[p.cat];
+    _detailP = p;
     captureFocus();
     detailEl.innerHTML =
       '<div class="d-top"><button class="d-close" id="d-close" aria-label="关闭详情卡" title="关闭">×</button>' +
       '<button class="d-share" id="d-share" aria-label="复制该项目的分享链接" title="复制项目链接">🔗</button>' +
+      '<button class="d-lang" id="d-lang" title="中文 / English" aria-label="切换中文 / English">' + (state.lang === 'en' ? '中' : 'EN') + '</button>' +
       '<span class="d-cat" style="background:' + c.color + '22;color:' + c.color + '">' + c.icon + ' ' + catName(p.cat) + (subLabel(p) ? ' · ' + subLabel(p) : '') + '</span>' +
       (isRecent(p) ? '<span class="d-new">' + tr('🆕 最新') + '</span>' : '') +
       '<div class="d-name">' + (p.flagship ? '★ ' : '') + esc(nm(p)) + '</div>' +
@@ -761,12 +766,14 @@
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(() => toast('🔗 项目链接已复制'), () => toast('🔗 链接已生成'));
       else toast('🔗 链接已生成');
     });
+    const dlang = document.getElementById('d-lang');
+    if (dlang) dlang.addEventListener('click', toggleLang); // toggleLang 内部会重渲染当前详情卡
     const cl = detailEl.querySelector('.d-country-link');
     if (cl) cl.addEventListener('click', () => showCountry(cl.dataset.country));
     focusEl('d-close');
   }
   const cell = (k, v) => '<div class="d-cell"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
-  const hideDetail = () => { const was = detailEl.classList.contains('show'); detailEl.classList.remove('show'); if (was) restoreFocus(); };
+  const hideDetail = () => { const was = detailEl.classList.contains('show'); detailEl.classList.remove('show'); _detailP = null; if (was) restoreFocus(); };
   map.on('click', hideDetail);
 
   /* ---------- 国别下钻面板（点详情卡的国家打开）---------- */

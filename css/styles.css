@@ -304,6 +304,13 @@ input[type=range]::-webkit-slider-thumb {
   display: grid; place-items: center;
 }
 .detail .d-share:hover { color: var(--accent); border-color: var(--border-strong); }
+.detail .d-lang {
+  position: absolute; right: 74px; top: 12px; height: 24px; padding: 0 8px;
+  border-radius: 7px; border: 1px solid var(--border); background: rgba(255,255,255,0.04);
+  color: var(--txt-dim); cursor: pointer; font-size: 11px; font-weight: 800; letter-spacing: .04em; line-height: 1;
+  display: grid; place-items: center;
+}
+.detail .d-lang:hover { color: #fff; border-color: var(--border-strong); }
 .detail .d-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); }
 .detail .d-cell { background: var(--panel-solid); padding: 10px 14px; }
 .detail .d-cell .k { font-size: 10px; color: var(--txt-faint); letter-spacing: .5px; }
@@ -721,6 +728,8 @@ body.heat-on .heat-facets { display: flex; }
 .btn-flow:hover, .btn-league:hover, .btn-compare:hover, .btn-lang:hover { color: var(--txt); border-color: var(--border-strong); }
 .btn-flow.on { color: #fff; border-color: #21c7ff; background: linear-gradient(90deg, rgba(33,199,255,.28), rgba(46,230,166,.18)); box-shadow: 0 0 0 1px rgba(33,199,255,.42), var(--shadow); }
 .btn-lang { font-weight: 800; letter-spacing: .04em; min-width: 34px; text-align: center; }
+/* 顶栏语言切换：紧贴「数据」按钮右侧（桌面端贴近 KPI，移动端与「数据」并排）*/
+.btn-lang-top { margin-left: auto; flex: none; padding: 8px 12px; border-radius: 18px; backdrop-filter: none; box-shadow: none; }
 
 /* 🏢 企业 / 业主排行榜（复用 country-panel 弹层外壳）*/
 .lg-list { display: flex; flex-direction: column; gap: 6px; }
