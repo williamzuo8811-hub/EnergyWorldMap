@@ -152,6 +152,9 @@ html, body {
 .sub-chip .sct { color: var(--txt-faint); font-variant-numeric: tabular-nums; font-size: 11px; }
 .sub-chip.off { opacity: 0.4; }
 .sub-chip.off .snm { text-decoration: line-through; }
+/* 当前筛选下为 0 个项目的子类：弱化，让有内容的子类更突出（仍可点击）*/
+.sub-chip.is-zero { opacity: 0.4; }
+.sub-chip.is-zero .sdot { box-shadow: none; filter: grayscale(0.6); }
 
 .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
 .pill {
