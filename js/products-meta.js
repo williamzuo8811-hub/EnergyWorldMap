@@ -1,9 +1,9 @@
 /* ============================================================
  * 特锐德 / 特来电 核心产品 → 能源项目「适配匹配」层
  * ------------------------------------------------------------
- * 把特锐德 2 大核心产品线（模块化预制舱变电站 / 车载移动变电站）
- * 按「项目场景」映射到全量项目上，供 app.js 的「🔌 产品适配看板」
- * 与详情卡的产品适配块使用。
+ * 把特锐德 3 大核心产品线（模块化预制舱变电站 / 车载移动变电站 /
+ * 算电岛 AI PowerHouse 算力中心高压交直流预制舱供电站）按「项目场景」
+ * 映射到全量项目上，供 app.js 的「🔌 产品适配看板」与详情卡的产品适配块使用。
  *
  *   key       产品键
  *   zh / en   产品名（中 / 英）
@@ -55,6 +55,17 @@
       pitchEn: 'Lead with downtime-loss & fast-restore value; fits weak-grid & remote projects',
       cats: ['mining', 'transport'],
       kw: ['矿', '施工', '临时', '应急', '营地', '保供电', '抢修', '偏远', '微网'],
+    },
+    {
+      key: 'aipower', zh: '算电岛 AI PowerHouse', en: 'AI PowerHouse', icon: '🧠', color: '#2ee6a6', core: true,
+      blurb: '算力中心高压交直流预制舱供电站（特锐德全球首创）',
+      blurbEn: 'HV AC/DC prefab-cabin power station for compute centers (world-first)',
+      scenario: '数据中心 / 智算中心 / AI 算力园区供配电',
+      scenarioEn: 'Data centers, AI compute centers & intelligent-computing parks',
+      pitch: '以「220kV 高压接入 + 800V 直流直供机房 + 167 模块积木式建站」切入算力中心供电',
+      pitchEn: 'Lead with 220kV HV access + 800V DC direct-to-room + 167-module building-block builds',
+      cats: ['datacenter'],
+      kw: ['算力', '智算', '数据中心', '算电', '直流供电', '液冷', 'IDC', 'AI 数据中心'],
     },
   ];
 
