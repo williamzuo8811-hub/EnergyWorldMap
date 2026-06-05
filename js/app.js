@@ -7,29 +7,16 @@
 
   const { META, CATEGORIES, REGIONS, STATUS } = window.ENERGY;
   const CAT_KEYS = Object.keys(CATEGORIES);
-  // 纯逻辑（子分类规则 / 容量解析 / 坐标纠偏）抽至 js/util.js，与 scripts/test-units.js 共享同一实现
-  const { SUB_DEFS, classifySub, parseCapacity, wgs2gcj, normalizeOwner } = window.ENERGY_UTIL;
+  // 纯逻辑（子分类规则 / 容量解析 / 坐标纠偏 / 标签映射 / 量级 / 数据装配）抽至 js/util.js，
+  // 与 scripts/test-units.js 及 globe.js 共享同一实现
+  const { SUB_DEFS, wgs2gcj, normalizeOwner, LABELS_EN, capFmtMW, invMagnitude, buildProjects } = window.ENERGY_UTIL;
 
   const SUB_LABEL = {};
   Object.keys(SUB_DEFS).forEach(cat => { SUB_LABEL[cat] = {}; SUB_DEFS[cat].forEach(d => { SUB_LABEL[cat][d.key] = d.label; }); });
   const subLabel = p => (SUB_LABEL[p.cat] && SUB_LABEL[p.cat][p.sub]) || '';
 
-  // 合并核心数据与扩充数据（data-extra.js），按名称去重
-  const PROJECTS = (function () {
-    const all = window.ENERGY.PROJECTS.concat(window.ENERGY_EXTRA || []);
-    const PROG = window.ENERGY_PROGRESS || {};
-    const seen = new Set(), out = [];
-    all.forEach(p => {
-      if (p && p.name && !seen.has(p.name)) {
-        if (!p.progress && PROG[p.id]) p.progress = PROG[p.id];
-        p.sub = classifySub(p);
-        const cc = parseCapacity(p.cap);
-        p.capMW = cc.mw; p.capMWh = cc.mwh; p.capKm = cc.km; p.capKbd = cc.kbd; p.capWty = cc.wty; p.capPF = cc.pf;
-        seen.add(p.name); out.push(p);
-      }
-    });
-    return out;
-  })();
+  // 合并核心数据与扩充数据（data-extra.js），按名称去重 + 进展/子类/容量装配（与 globe.js 同口径）
+  const PROJECTS = buildProjects(window.ENERGY, window.ENERGY_EXTRA, window.ENERGY_PROGRESS);
 
   // 脉冲只给"各国旗舰"：每个国家按投资额取前 2 个 flagship，避免 1/3 标记都脉冲的视觉噪声。
   // （★ 仍按 p.flagship 在 TOP 列表 / 详情卡显示，不受影响。）
@@ -128,9 +115,7 @@
   });
 
   /* ---------- 中 / EN 语言（项目名走 en 字段；分类/大区/状态/界面标签走映射） ---------- */
-  const CAT_EN = { renewable: 'Renewables', nuclear: 'Nuclear', grid: 'Grid & T&D', storage: 'Storage', ci: 'Industry', datacenter: 'Data Center', transport: 'Transport', petro: 'Oil·Gas·Chem', mining: 'Mining', client: 'Key Clients' };
-  const REGION_EN = { '中国': 'China', '亚洲': 'Asia', '中东': 'Middle East', '欧洲': 'Europe', '北美': 'N. America', '南美': 'S. America', '非洲': 'Africa', '大洋洲': 'Oceania' };
-  const STATUS_EN = { '规划': 'Planned', '在建': 'Building', '投运': 'Operating' };
+  const CAT_EN = LABELS_EN.cat, REGION_EN = LABELS_EN.region, STATUS_EN = LABELS_EN.status;
   const I18N = {
     '国家 / 地区': 'Country / Region', '状态': 'Status', '规模 / 容量': 'Capacity', '投资额': 'Investment',
     '业主 / 参与方': 'Owner', '最近动态': 'Updated', '📍 最新进展': '📍 Latest', '🆕 最新': '🆕 Latest',
@@ -138,6 +123,7 @@
     '项目状态': 'Status', '里程碑年份分布': 'Milestone years', '重点项目 TOP（按投资额）': 'Top projects (by investment)',
     '无匹配项目，请调整筛选条件': 'No matching projects — adjust filters', '当前筛选无可解析的容量指标': 'No parseable capacity metrics in current filter',
     '装机': 'Power', '储能': 'Storage', '算力': 'AI Compute', '线路': 'Lines', '油气产能': 'Oil/Gas', '产能': 'Output',
+    '变电': 'Substation', '客运': 'Passengers', '吞吐': 'Containers', '晶圆': 'Wafers', '整车': 'Vehicles',
     '企业 / 业主排行榜': 'Company / Owner League Table', '项目数': 'Projects', '按项目数排名（投资额为该业主累计）': 'Ranked by project count (investment = owner total)',
     '点公司名筛选其全部项目': 'Click a company to filter its projects', '🏢 企业榜': '🏢 Companies',
   };
@@ -191,22 +177,14 @@
 
   const sizeFn = v => Math.max(8, Math.min(34, 7 + Math.sqrt(Math.max(v, 1)) * 0.95));
   const fmtNum = n => Math.round(n).toLocaleString('en-US');
-  // 投资额量级（inv 单位为亿美元）：中文 亿/万亿；英文 $B/$T（÷10 得 billion，÷10000 得 trillion）
-  const invMag = n => {
-    n = n || 0;
-    if (state.lang === 'en') {
-      if (n >= 10000) return (n / 10000).toFixed(1) + 'T';
-      const b = n / 10;
-      return (b >= 100 ? Math.round(b) : Math.round(b * 10) / 10).toLocaleString('en-US') + 'B';
-    }
-    return n >= 10000 ? (n / 10000).toFixed(1) + ' 万亿' : (n < 10 ? (Math.round(n * 10) / 10) : Math.round(n)).toLocaleString('en-US') + ' 亿';
-  };
+  // 投资额量级（inv 单位为亿美元，语言感知）：实现抽到 util.invMagnitude，与 globe.js 共用
+  const invMag = n => invMagnitude(n, state.lang);
   const fmtInv = invMag;
   // 圆点/热力权重值：投资额 或 装机容量(MW)
   const weightVal = p => state.weight === 'cap' ? (p.capMW || 0) : (p.inv || 0);
   // 统一美元口径展示
   const usd = p => '≈$' + invMag(p.inv || 0);
-  const capFmt = mw => mw == null ? '—' : (mw >= 1000 ? (mw / 1000).toFixed(mw < 10000 ? 1 : 0) + ' GW' : Math.round(mw) + ' MW');
+  const capFmt = capFmtMW;
   const esc = s => String(s == null ? '' : s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
   function matchQ(p, q) {
@@ -647,14 +625,20 @@
     const sum = f => items.reduce((s, p) => s + (f(p) || 0), 0);
     const gw = sum(p => p.capMW) / 1000, gwh = sum(p => p.capMWh) / 1000;
     const km = sum(p => p.capKm), kbd = sum(p => p.capKbd), wty = sum(p => p.capWty), pf = sum(p => p.capPF);
+    const pax = sum(p => p.capPax), teu = sum(p => p.capTeu), wafer = sum(p => p.capWafer), veh = sum(p => p.capVeh), mva = sum(p => p.capMva);
     const n1 = x => (x < 10 ? (Math.round(x * 10) / 10) : Math.round(x)).toLocaleString('en-US');
     const chips = [];
     if (gw > 0) chips.push(['⚡', '装机', gw >= 1000 ? (gw / 1000).toFixed(1) + ' TW' : n1(gw) + ' GW']);
     if (gwh > 0) chips.push(['🔋', '储能', n1(gwh) + ' GWh']);
     if (pf > 0) chips.push(['🧠', '算力', pf >= 1000 ? (pf / 1000).toFixed(pf < 10000 ? 1 : 0) + ' EFLOPS' : Math.round(pf).toLocaleString('en-US') + ' PFLOPS']);
+    if (mva > 0) chips.push(['🔻', '变电', mva >= 1000 ? (mva / 1000).toFixed(1) + ' GVA' : Math.round(mva).toLocaleString('en-US') + ' MVA']);
     if (km > 0) chips.push(['🔌', '线路', Math.round(km).toLocaleString('en-US') + ' km']);
     if (kbd > 0) chips.push(['🛢️', '油气产能', Math.round(kbd).toLocaleString('en-US') + ' 万桶/日']);
     if (wty > 0) chips.push(['🏭', '产能', Math.round(wty).toLocaleString('en-US') + ' 万吨/年']);
+    if (pax > 0) chips.push(['🚉', '客运', pax >= 10000 ? (pax / 10000).toFixed(1) + ' 亿人次/年' : n1(pax) + ' 万人次/年']);
+    if (teu > 0) chips.push(['📦', '吞吐', teu >= 10000 ? (teu / 10000).toFixed(1) + ' 亿TEU/年' : n1(teu) + ' 万TEU/年']);
+    if (wafer > 0) chips.push(['💽', '晶圆', n1(wafer) + ' 万片/月']);
+    if (veh > 0) chips.push(['🚗', '整车', n1(veh) + ' 万辆/年']);
     // 数值与单位拆开渲染，避免窄屏上"27,468 万吨/年"在单位中间硬折行
     const splitVal = v => { const i = v.indexOf(' '); return i < 0 ? [v, ''] : [v.slice(0, i), v.slice(i + 1)]; };
     el.innerHTML = chips.length

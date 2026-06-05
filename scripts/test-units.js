@@ -38,7 +38,8 @@ eq(pc('200万千瓦时').mwh, 2000, '万千瓦时→MWh');
 eq(pc('约 400 公里').km, 400, '线路 公里→km');
 eq(pc('16×100万千瓦').mw, 16000, 'N×M 相乘（16×100 万千瓦）');
 const empty = pc('');
-ok(empty.mw === null && empty.mwh === null && empty.km === null && empty.kbd === null && empty.wty === null && empty.pf === null, '空 cap → 全 null');
+ok(empty.mw === null && empty.mwh === null && empty.km === null && empty.kbd === null && empty.wty === null && empty.pf === null
+  && empty.pax === null && empty.teu === null && empty.wafer === null && empty.veh === null && empty.mva === null, '空 cap → 全 null');
 eq(pc('日产 60 万桶').kbd, 60, '油气 万桶/日');
 eq(pc('产能 200 万吨/年').wty, 200, '产能 万吨/年');
 eq(pc('±800kV直流/800万kW').mw, 8000, '万kW → MW（同万千瓦）');
@@ -49,6 +50,21 @@ eq(pc('4.4万PFlops，机架12.1万架').pf, 44000, '算力 万PFlops→PFLOPS')
 eq(pc('5万P，目标10万P').pf, 50000, '算力 万P→PFLOPS（取首个）');
 eq(pc('300 PFLOPS').pf, 300, '算力 PFLOPS 直读');
 eq(pc('光伏 500 MW').pf, null, '非算力 cap → pf 为 null');
+
+/* ---------- parseCapacity：新增口径（客运/吞吐/晶圆/整车/变电）---------- */
+eq(pc('远期年吞吐 1.85 亿人次').pax, 18500, '客运 亿人次→万人次');
+eq(pc('首期年 1000 万人次').pax, 1000, '客运 万人次直读');
+eq(pc('近期年 160 万旅客').pax, 160, '客运 万旅客 同 人次');
+eq(pc('一期年 2500 万→远期 1 亿人次').pax, 10000, '客运 "万→亿" 取亿人次(远期)，不误把 2500 当万人次');
+eq(pc('年吞吐 320 万 TEU').teu, 320, '吞吐 万TEU');
+eq(pc('一期 350 万标箱').teu, 350, '吞吐 万标箱 同 TEU');
+eq(pc('5.5 万片/月').wafer, 5.5, '晶圆 万片/月');
+eq(pc('G1 约 50 万颗/日封测').wafer, null, '晶圆：万颗/日(封测) 不计入');
+eq(pc('整车 15 万辆/年(远期 30 万辆)').veh, 15, '整车 万辆/年（取首个，不计远期）');
+eq(pc('44列地铁列车').veh, null, '整车：轨道车辆"列"不计入');
+eq(pc('500/138kV/600兆伏安').mva, 600, '变电 兆伏安（kV 电压等级不误读）');
+eq(pc('30 MVA，液冷').mva, 30, '变电 MVA 直读');
+eq(pc('±800kV直流/800万kW').mva, null, '变电：万kW 是功率，非 万千伏安');
 
 /* ---------- classifySub ---------- */
 const cs = U.classifySub;
@@ -85,6 +101,35 @@ eq(no('Adani Group'), 'Adani', '剥英文 Group');
 eq(no('ACWA Power'), 'ACWA Power', '英文无公司后缀→原样');
 eq(no('比亚迪'), '比亚迪', '中文无后缀→原样');
 eq(no(''), '', '空业主→空');
+
+/* ---------- invMagnitude（量级串，不含币种符号；app.js 与 globe.js 共用）---------- */
+const im = U.invMagnitude;
+eq(im(500, 'zh'), '500 亿', '量级 500→500 亿');
+eq(im(5, 'zh'), '5 亿', '量级 <10 保留小数位');
+eq(im(12000, 'zh'), '1.2 万亿', '量级 ≥1万亿→万亿');
+eq(im(5000, 'en'), '500B', '量级 EN：5000→500B（无 $）');
+eq(im(12000, 'en'), '1.2T', '量级 EN：≥1T→1.2T');
+
+/* ---------- capFmtMW（装机显示）---------- */
+const cf = U.capFmtMW;
+eq(cf(null), '—', '容量 null→—');
+eq(cf(500), '500 MW', '容量 <1GW→MW');
+eq(cf(1500), '1.5 GW', '容量 ≥1GW→GW 一位小数');
+eq(cf(20000), '20 GW', '容量 ≥10GW→GW 整数');
+
+/* ---------- buildProjects（数据装配：去重/进展/子类/容量；requireCoord）---------- */
+const bp = U.buildProjects;
+const ENERGY = { PROJECTS: [{ id: 1, name: 'A', cap: '1 GW', cat: 'renewable' }, { id: 2, name: 'A', cap: '2 GW', cat: 'renewable' }] };
+const EXTRA = [{ id: 3, name: 'B', cap: '', cat: 'grid', coord: [1, 2] }];
+const built = bp(ENERGY, EXTRA, { 1: 'prog1' });
+eq(built.length, 2, 'buildProjects：按 name 去重（A 只留首个）+ B');
+eq(built[0].id, 1, 'buildProjects：同名首个占位胜出');
+eq(built[0].progress, 'prog1', 'buildProjects：按 id 挂 progress');
+eq(built[0].capMW, 1000, 'buildProjects：装配 capMW（1 GW）');
+ok(typeof built[0].sub === 'string' && built[0].sub.length > 0, 'buildProjects：计算 sub 子分类');
+const builtCoord = bp(ENERGY, EXTRA, {}, { requireCoord: true });
+eq(builtCoord.length, 1, 'buildProjects(requireCoord)：只留有 coord 的项目');
+eq(builtCoord[0].name, 'B', 'buildProjects(requireCoord)：无 coord 的 A 被剔除');
 
 /* ---------- 汇总 ---------- */
 console.log('═══════════════════════════════════════════════');

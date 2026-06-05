@@ -25,7 +25,7 @@ const W = (msg) => warns.push(msg);
 
 /* ---------- 1) 解析 index.html 的脚本加载顺序 ---------- */
 const indexHtml = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-const scriptOrder = [...indexHtml.matchAll(/<script\s+src="(js\/[^"]+\.js)"><\/script>/g)].map(m => m[1]);
+const scriptOrder = [...indexHtml.matchAll(/<script[^>]*\ssrc="(js\/[^"]+\.js)"><\/script>/g)].map(m => m[1]);
 const dataRefs = scriptOrder.filter(s => /^js\/(data.*|progress)\.js$/.test(s));
 
 // 磁盘上的数据文件是否都已在 index.html 挂载

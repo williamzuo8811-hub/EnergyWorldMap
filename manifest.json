@@ -1,0 +1,22 @@
+{
+  "name": "全球能源项目世界地图 · Global Energy Projects Map",
+  "short_name": "能源地图",
+  "description": "可缩放的全球能源项目世界地图：3000+ 个能源与基建项目，按品类 / 大区 / 状态 / 年份筛选，含投资 KPI、容量硬指标、投资热力图、时间轴回放与国别下钻。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#060b18",
+  "theme_color": "#060b18",
+  "categories": ["education", "utilities", "business"],
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "3D 地球 · 3D Globe", "url": "globe.html" }
+  ]
+}

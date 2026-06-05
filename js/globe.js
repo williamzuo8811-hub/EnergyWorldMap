@@ -15,25 +15,11 @@
 
   const { META, CATEGORIES, REGIONS, STATUS } = window.ENERGY;
   const CAT_KEYS = Object.keys(CATEGORIES);
-  const { classifySub, parseCapacity } = window.ENERGY_UTIL;
+  const { buildProjects, LABELS_EN, capFmtMW, invMagnitude } = window.ENERGY_UTIL;
   const LAND = (window.WORLD_GEO && window.WORLD_GEO.features) || [];
 
-  /* ---------- 数据装配（与 app.js 同口径：按名称去重 + 进展 + 子类 + 容量解析）---------- */
-  const PROJECTS = (function () {
-    const all = window.ENERGY.PROJECTS.concat(window.ENERGY_EXTRA || []);
-    const PROG = window.ENERGY_PROGRESS || {};
-    const seen = new Set(), out = [];
-    all.forEach(p => {
-      if (p && p.name && !seen.has(p.name) && p.coord) {
-        if (!p.progress && PROG[p.id]) p.progress = PROG[p.id];
-        p.sub = classifySub(p);
-        const cc = parseCapacity(p.cap);
-        p.capMW = cc.mw; p.capMWh = cc.mwh; p.capKm = cc.km;
-        seen.add(p.name); out.push(p);
-      }
-    });
-    return out;
-  })();
+  /* ---------- 数据装配（与 app.js 同口径，共用 util.buildProjects；3D 只保留有 coord 的项目）---------- */
+  const PROJECTS = buildProjects(window.ENERGY, window.ENERGY_EXTRA, window.ENERGY_PROGRESS, { requireCoord: true });
 
   const years = PROJECTS.map(p => p.year).filter(y => typeof y === 'number');
   const MIN_YEAR = Math.min.apply(null, years);
@@ -58,9 +44,7 @@
   };
 
   /* ---------- 中 / EN 标签 + 金额量级 ---------- */
-  const CAT_EN = { renewable: 'Renewables', nuclear: 'Nuclear', grid: 'Grid & T&D', storage: 'Storage', ci: 'Industry', datacenter: 'Data Center', transport: 'Transport', petro: 'Oil·Gas·Chem', mining: 'Mining', client: 'Key Clients' };
-  const REGION_EN = { '中国': 'China', '亚洲': 'Asia', '中东': 'Middle East', '欧洲': 'Europe', '北美': 'N. America', '南美': 'S. America', '非洲': 'Africa', '大洋洲': 'Oceania' };
-  const STATUS_EN = { '规划': 'Planned', '在建': 'Building', '投运': 'Operating' };
+  const CAT_EN = LABELS_EN.cat, REGION_EN = LABELS_EN.region, STATUS_EN = LABELS_EN.status;
   const T = {
     title: ['全球能源项目 · 3D 地球', 'Global Energy · 3D Globe'],
     sub: ['柱高≈投资额 · 弧线=跨境通道 · 拖拽旋转', 'Bar ≈ investment · Arcs = cross-border corridors'],
@@ -79,22 +63,15 @@
   };
   const L = (k) => T[k][state.lang === 'en' ? 1 : 0];
   const fmtNum = n => Math.round(n).toLocaleString('en-US');
-  const invMag = n => {
-    n = n || 0;
-    if (state.lang === 'en') {
-      if (n >= 10000) return '$' + (n / 10000).toFixed(1) + 'T';
-      const b = n / 10;
-      return '$' + (b >= 100 ? Math.round(b) : Math.round(b * 10) / 10).toLocaleString('en-US') + 'B';
-    }
-    return n >= 10000 ? (n / 10000).toFixed(1) + ' 万亿' : (n < 10 ? (Math.round(n * 10) / 10) : Math.round(n)).toLocaleString('en-US') + ' 亿';
-  };
-  const usd = p => '≈$' + invMag(p.inv || 0).replace(/^\$/, '');
+  // 量级实现抽到 util.invMagnitude（不含币种符号），与 app.js 共用；KPI/详情各自前置 $ / ≈$
+  const invMag = n => invMagnitude(n, state.lang);
+  const usd = p => '≈$' + invMag(p.inv || 0);
   const nm = p => state.lang === 'en' ? (p.en || p.name) : (p.name || p.en || '');
   const altName = p => state.lang === 'en' ? (p.name || '') : (p.en || '');
   const catShort = k => state.lang === 'en' ? (CAT_EN[k] || (CATEGORIES[k] || {}).short || k) : ((CATEGORIES[k] || {}).short || k);
   const regionName = r => state.lang === 'en' ? (REGION_EN[r] || r) : r;
   const statusName = s => state.lang === 'en' ? (STATUS_EN[s] || s) : s;
-  const capFmt = mw => mw == null ? '—' : (mw >= 1000 ? (mw / 1000).toFixed(mw < 10000 ? 1 : 0) + ' GW' : Math.round(mw) + ' MW');
+  const capFmt = capFmtMW;
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   function hexA(hex, a) {
     const h = String(hex).replace('#', '');
@@ -232,7 +209,7 @@
     const invList = list.filter(p => onlyClient || p.cat !== 'client'); // 国际大客户为跨视图，避免与实体项目重复计投资
     setText('kpi-proj', fmtNum(list.length));
     setText('kpi-country', fmtNum(new Set(list.map(p => p.country)).size));
-    setText('kpi-inv', invMag(invList.reduce((s, p) => s + (p.inv || 0), 0)));
+    setText('kpi-inv', (state.lang === 'en' ? '$' : '') + invMag(invList.reduce((s, p) => s + (p.inv || 0), 0)));
     setText('kpi-recent', fmtNum(list.filter(isRecent).length));
   }
   function updateLegend(list) {
