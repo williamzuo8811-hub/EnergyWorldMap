@@ -14,6 +14,10 @@
   Object.keys(SUB_DEFS).forEach(cat => { SUB_LABEL[cat] = {}; SUB_DEFS[cat].forEach(d => { SUB_LABEL[cat][d.key] = d.label; }); });
   const subLabel = p => (SUB_LABEL[p.cat] && SUB_LABEL[p.cat][p.sub]) || '';
 
+  // 特锐德核心产品 → 项目「适配匹配」层（js/products-meta.js）。缺省兜底，保证无该文件时不报错。
+  const TGD = window.ENERGY_PRODUCTS || { PRODUCTS: [], match: () => [] };
+  const PMAP = {}; TGD.PRODUCTS.forEach(pr => { PMAP[pr.key] = pr; });
+
   // 合并核心数据与扩充数据（data-extra.js），按名称去重
   const PROJECTS = (function () {
     const all = window.ENERGY.PROJECTS.concat(window.ENERGY_EXTRA || []);
@@ -23,6 +27,7 @@
       if (p && p.name && !seen.has(p.name)) {
         if (!p.progress && PROG[p.id]) p.progress = PROG[p.id];
         p.sub = classifySub(p);
+        p.products = TGD.match(p);            // 适配的特锐德产品键数组（看板 / 详情卡 / 产品筛选用）
         const cc = parseCapacity(p.cap);
         p.capMW = cc.mw; p.capMWh = cc.mwh; p.capKm = cc.km; p.capKbd = cc.kbd; p.capWty = cc.wty; p.capPF = cc.pf;
         seen.add(p.name); out.push(p);
@@ -115,6 +120,7 @@
     lines: true,                // 飞线（输变电/高铁/管道连线）显隐开关
     compare: [],                // 🆚 国别对比已选国家（最多 4 个）
     heatCat: null,              // 🔥 热力分面：聚焦单一品类（null=全部）
+    product: null,              // 🔌 特锐德产品适配筛选（产品键；null=不限）——与品类正交的额外维度
   };
 
   // 大区 → 国家映射（由项目数据派生）：左侧"所属大区"可展开列出各区国家，点击国家即筛选地图
@@ -224,7 +230,9 @@
       && (!state.recentOnly || isRecent(p))
       && p.year >= state.minYear && p.year <= state.maxYear && matchQ(p, state.q);
   }
-  const filtered = () => PROJECTS.filter(p => state.cats.has(p.cat) && !state.subOff.has(p.cat + ':' + p.sub) && passBase(p));
+  // 🔌 产品适配筛选：与品类正交的额外一维——选中某产品时只看其适配项目（客户横切项目 products 为空，自动排除）
+  const passProduct = p => !state.product || (p.products && p.products.indexOf(state.product) >= 0);
+  const filtered = () => PROJECTS.filter(p => state.cats.has(p.cat) && !state.subOff.has(p.cat + ':' + p.sub) && passProduct(p) && passBase(p));
 
   // 品类 / 大区切换（供品类条、图例、区域格、筛选项共用，保持联动）
   function toggleCat(key) { if (state.cats.has(key)) state.cats.delete(key); else state.cats.add(key); syncCatUI(); render(); }
@@ -554,7 +562,7 @@
     state.cats = new Set(CAT_KEYS); state.subOff.clear(); state.countries.clear(); state.statuses.clear();
     state.regions = new Set(DEFAULT_REGIONS); // 重置后仍只点亮南美
     state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.q = ''; state.recentOnly = false;
-    state.weight = 'inv'; state.sort = 'inv'; state.heatCat = null;
+    state.weight = 'inv'; state.sort = 'inv'; state.heatCat = null; state.product = null;
     clearPresetActive(); document.querySelector('.year-presets .yp[data-preset="all"]').classList.add('on');
     if (typeof syncHeatFacets === 'function') syncHeatFacets();
     fitSouthAmerica(); // 重置视图取景到南美
@@ -614,6 +622,10 @@
   const btnBoard = document.getElementById('btn-board');
   if (btnBoard) btnBoard.addEventListener('click', showClientBoard);
 
+  // 🔌 特锐德产品适配看板
+  const btnProduct = document.getElementById('btn-product');
+  if (btnProduct) btnProduct.addEventListener('click', showProductBoard);
+
   // 🆚 国别对比
   const btnCompare = document.getElementById('btn-compare');
   if (btnCompare) btnCompare.addEventListener('click', openCompare);
@@ -633,6 +645,7 @@
     if (sortToggle) sortToggle.textContent = state.lang === 'en' ? (state.sort === 'cap' ? 'by capacity ⇄' : 'by investment ⇄') : (state.sort === 'cap' ? '按装机容量 ⇄' : '按投资额 ⇄');
     buildCatLegend();   // 地图浮层文案随语言重建
     buildHeatFacets();
+    syncProductTag();   // 产品适配浮标文案随语言切换
     buildRegionTree();  // 左侧大区/国家树随语言整树重建（含国名中英切换）
   }
   if (btnLang) btnLang.addEventListener('click', () => {
@@ -759,6 +772,20 @@
       line('♟', '推荐打法：', 'Approach: ', m.approach) +
       '</div>';
   }
+  // 物理项目详情卡的「特锐德产品适配」块（按 p.products 渲染产品芯片 + 场景）；客户横切项目 products 为空，不显示
+  function productFitBlock(p) {
+    const keys = (p && p.products) || [];
+    if (!keys.length || !PMAP[keys[0]]) return '';
+    const en = state.lang === 'en';
+    const chips = keys.map(k => { const pr = PMAP[k]; return pr ? '<span class="d-prod-chip" style="--pc:' + pr.color + '">' + pr.icon + ' ' + esc(en ? pr.en : pr.zh) + '</span>' : ''; }).join('');
+    const lead = PMAP[keys[0]];
+    return '<div class="d-prod">' +
+      '<div class="d-prod-h"><span class="d-prod-tag">🔌 ' + (en ? 'TGOOD product fit' : '特锐德产品适配') + '</span>' +
+      '<span class="d-prod-board" id="d-prod-board" role="button" tabindex="0" title="' + (en ? 'Open product board' : '打开产品适配看板') + '">' + (en ? 'View board ›' : '查看看板 ›') + '</span></div>' +
+      '<div class="d-prod-chips">' + chips + '</div>' +
+      (lead && lead.scenario ? '<div class="d-prod-sc">🌍 ' + esc(en ? lead.scenarioEn : lead.scenario) + '</div>' : '') +
+      '</div>';
+  }
   // 模态焦点管理：打开时记录并把焦点移入，关闭时还原（无障碍）
   let _lastFocus = null;
   const captureFocus = () => { _lastFocus = document.activeElement; };
@@ -784,9 +811,11 @@
       cell(tr('投资额'), usd(p) + (/美元|\$/.test(p.invText || '') || !p.invText ? '' : ' <span class="d-usd">（原币种：' + esc(p.invText) + '）</span>')) +
       cell(tr('业主 / 参与方'), esc(p.owner || '—')) +
       cell(tr('最近动态'), esc(p.updated || '—')) +
-      '</div>' + clientBdBlock(p) + '<div class="d-desc">' + descBody(p) + '</div>';
+      '</div>' + clientBdBlock(p) + productFitBlock(p) + '<div class="d-desc">' + descBody(p) + '</div>';
     detailEl.classList.add('show');
     document.getElementById('d-close').addEventListener('click', hideDetail);
+    const pb = document.getElementById('d-prod-board');
+    if (pb) pb.addEventListener('click', () => { hideDetail(); showProductBoard(); });
     const ds = document.getElementById('d-share');
     if (ds) ds.addEventListener('click', () => {
       const params = new URLSearchParams(stateToHash());
@@ -1078,6 +1107,79 @@
     }));
   }
 
+  /* ---------- 🔌 特锐德产品适配看板（按核心产品聚合全量项目；点产品即筛其全部适配项目）---------- */
+  function showProductBoard() {
+    const en = state.lang === 'en';
+    // 一次遍历汇总每个产品的项目数 / 投资 / 覆盖国家 / 近一年 / 品类分布（产品匹配已排除 client，无需再剔除）
+    const stat = {}; TGD.PRODUCTS.forEach(pr => { stat[pr.key] = { n: 0, inv: 0, countries: new Set(), recentN: 0, cats: {} }; });
+    PROJECTS.forEach(p => {
+      (p.products || []).forEach(k => {
+        const s = stat[k]; if (!s) return;
+        s.n++; s.inv += (p.inv || 0); s.countries.add(p.country); if (isRecent(p)) s.recentN++;
+        s.cats[p.cat] = (s.cats[p.cat] || 0) + 1;
+      });
+    });
+    const maxN = Math.max(1, ...TGD.PRODUCTS.map(pr => stat[pr.key].n));
+    const totalProj = new Set();
+    PROJECTS.forEach(p => { if ((p.products || []).length) totalProj.add(p.id); });
+
+    const rows = TGD.PRODUCTS.map(pr => {
+      const s = stat[pr.key];
+      const domCats = Object.keys(s.cats).sort((a, b) => s.cats[b] - s.cats[a]).slice(0, 5)
+        .map(k => '<span class="lg-dot" title="' + esc(catShort(k)) + '" style="background:' + ((CATEGORIES[k] || {}).color || '#888') + '"></span>').join('');
+      return '<div class="lg-row bd-row pb-row" data-prod="' + pr.key + '" tabindex="0" role="button" title="' + esc(en ? pr.pitchEn : pr.pitch) + '">' +
+        '<div class="pb-ico" style="--pc:' + pr.color + '">' + pr.icon + '</div>' +
+        '<div class="lg-main"><div class="lg-name">' + esc(en ? pr.en : pr.zh) +
+        (pr.core ? '<span class="pb-core">' + (en ? 'core' : '核心') + '</span>' : '') + ' ' + domCats + '</div>' +
+        '<div class="bd-line">' + esc(en ? pr.blurbEn : pr.blurb) + '</div>' +
+        '<div class="bd-line bd-dim">🌍 ' + esc(en ? pr.scenarioEn : pr.scenario) + '</div>' +
+        '<div class="lg-track"><div class="lg-fill" style="width:' + (s.n / maxN * 100) + '%;background:' + pr.color + '"></div></div></div>' +
+        '<div class="lg-meta"><b>' + s.n + '</b><span>' + (en ? 'proj' : '项目') + '</span></div>' +
+        '<div class="lg-meta"><b>≈$' + fmtInv(s.inv) + '</b><span>' + s.countries.size + ' ' + (en ? 'countries' : '国') + '</span></div></div>';
+    }).join('');
+
+    countryPanel.classList.remove('wide');
+    countryPanel.innerHTML =
+      '<div class="cp-head"><span style="font-size:20px">🔌</span><div class="cp-name">' + (en ? 'TGOOD Product Fit Board' : '特锐德产品适配看板') + '</div>' +
+      '<button class="cp-close" id="cp-close" aria-label="关闭面板" title="关闭">×</button></div>' +
+      '<div class="cp-body"><div class="cp-note" style="margin:0 0 8px">' +
+      (en ? TGD.PRODUCTS.length + ' core products · ' + totalProj.size + ' matched projects · mapped to project scenarios across all categories. Click a product to filter its fit projects on the map.'
+          : TGD.PRODUCTS.length + ' 个核心产品 · 适配 ' + totalProj.size + ' 个项目 · 按项目场景跨品类匹配。点产品即在地图上筛出其全部适配项目。') +
+      '</div><div class="lg-list">' + rows + '</div></div>';
+    countryBackdrop.classList.add('show'); countryPanel.classList.add('show');
+    document.getElementById('cp-close').addEventListener('click', hideCountry);
+    focusEl('cp-close');
+    countryPanel.querySelectorAll('.pb-row').forEach(el => el.addEventListener('click', () => {
+      const prod = el.dataset.prod; const pr = PMAP[prod]; if (!pr) return;
+      state.product = prod;
+      state.cats = new Set(CAT_KEYS); state.subOff = new Set();   // 产品跨品类——放开品类，仅以产品维度收窄
+      state.regions.clear(); state.countries.clear(); state.statuses.clear();
+      state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.recentOnly = false; state.q = '';
+      hideCountry(); clearPresetActive();
+      const allBtn = document.querySelector('.year-presets .yp[data-preset="all"]'); if (allBtn) allBtn.classList.add('on');
+      applyUIFromState(); render();
+      const pts = PROJECTS.filter(p => (p.products || []).indexOf(prod) >= 0 && p.coord).map(p => toLatLng(p.coord));
+      if (pts.length === 1) map.flyTo(pts[0], 6, { duration: 0.7 });
+      else if (pts.length && L.latLngBounds) { try { map.flyToBounds(L.latLngBounds(pts), { padding: [50, 50], maxZoom: 6, duration: 0.7 }); } catch (e) { /* ignore */ } }
+      toast((en ? 'Filtered to product: ' : '已筛选产品适配：') + (en ? pr.en : pr.zh));
+    }));
+  }
+
+  /* ---------- 🔌 产品适配地图浮标（产品筛选生效时显示，可一键清除）---------- */
+  const productTagEl = document.getElementById('product-tag');
+  function syncProductTag() {
+    if (!productTagEl) return;
+    const pr = state.product && PMAP[state.product];
+    if (!pr) { productTagEl.classList.remove('show'); productTagEl.innerHTML = ''; return; }
+    const en = state.lang === 'en';
+    productTagEl.innerHTML = '<span class="pt-dot" style="background:' + pr.color + '"></span>' +
+      '<span class="pt-label">' + pr.icon + ' ' + (en ? 'Product fit' : '产品适配') + ' · ' + esc(en ? pr.en : pr.zh) + '</span>' +
+      '<button class="pt-x" id="pt-x" title="' + (en ? 'Clear product filter' : '清除产品筛选') + '" aria-label="清除产品筛选">✕</button>';
+    productTagEl.classList.add('show');
+    const x = document.getElementById('pt-x');
+    if (x) x.addEventListener('click', () => { state.product = null; syncProductTag(); render(); toast(en ? 'Product filter cleared' : '已清除产品筛选'); });
+  }
+
   /* ---------- 品类色图例（地图左上，点击=切换该品类；随语言重建）---------- */
   const legendEl = document.getElementById('cat-legend');
   function buildCatLegend() {
@@ -1143,6 +1245,7 @@
     if (state.lang === 'en') p.set('lang', 'en');
     if (!state.lines) p.set('lines', '0');
     if (state.heatCat) p.set('hcat', state.heatCat);
+    if (state.product) p.set('prod', state.product);
     if (state.compare.length) p.set('cmp', state.compare.join('~'));
     return p.toString();
   }
@@ -1170,6 +1273,7 @@
     if (p.get('lang') === 'en') state.lang = 'en';
     if (p.get('lines') === '0') state.lines = false;
     if (p.has('hcat') && CATEGORIES[p.get('hcat')]) state.heatCat = p.get('hcat');
+    if (p.has('prod') && PMAP[p.get('prod')]) state.product = p.get('prod');
     if (p.has('cmp')) state.compare = p.get('cmp').split('~').filter(Boolean).slice(0, 4);
     if (p.has('project')) pendingProjectId = p.get('project');
   }
@@ -1313,10 +1417,11 @@
     if (btnFlow) btnFlow.classList.toggle('on', state.lines);
     const sEl = document.getElementById('search'); if (sEl) sEl.value = state.q;
     if (yearMin) { yearMin.value = state.minYear; yearMax.value = state.maxYear; syncYearUI(); }
+    syncProductTag();
   }
 
   /* ---------- 渲染 ---------- */
-  function render() { const items = filtered(); updateMap(items); updateStats(items); updateList(items); }
+  function render() { const items = filtered(); updateMap(items); updateStats(items); updateList(items); syncProductTag(); }
 
   // 顶栏：数据更新时间
   const lu = document.getElementById('last-updated');
@@ -1417,5 +1522,5 @@
   })();
 
   // 调试 / 程序化控制句柄
-  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showLeague, showDetail, PROJECTS, applyLang, buildRegionTree, showCompare, openCompare };
+  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showProductBoard, showLeague, showDetail, PROJECTS, applyLang, buildRegionTree, showCompare, openCompare };
 })();
