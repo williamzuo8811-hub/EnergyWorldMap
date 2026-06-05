@@ -38,6 +38,9 @@ verify in a browser — there is no build step.
 - `node scripts/test-smoke.js` — after editing `js/app.js`. Loads util + data + `app.js` under a
   minimal DOM/Leaflet stub and asserts the IIFE init, `render()`, `buildSnapshotSVG()` and
   `stateToHash()` run without throwing (catches runtime reference errors with no browser).
+- `node scripts/test-globe.js` — after editing `js/globe.js`. Loads util + data + `lib/world-110m.js`
+  under a minimal DOM + `Globe` stub and asserts the IIFE init, the extruded-column (`buildPoints`) and
+  cross-border-arc (`buildArcs`) assembly, `render()` and `focusProject()` run without throwing (no WebGL needed).
 
 ## Architecture
 
@@ -53,6 +56,25 @@ Two layers loaded as ordinary `<script>` tags in `index.html` (order is load-bea
 4. **`js/app.js`**: the application/UI logic — map setup, basemap switching, filtering,
    stats, detail cards, heatmap, mobile drawers. Runs inside one IIFE; pulls the pure helpers
    from `window.ENERGY_UTIL`.
+
+### 3D globe view (`globe.html` + `js/globe.js`)
+
+A second, standalone page renders the same dataset as a **three-dimensional globe** (the 2D map links to it
+via the `🌐 3D 地球` button in `index.html`'s map-tools; the globe links back via `🗺️ 平面地图`). It is the
+"visual ceiling" view and is fully independent of `app.js` — but **reuses the exact data layer**: `globe.html`
+loads the same `js/data*.js` + `js/progress.js` + `js/util.js` script order, then `lib/world-110m.js`,
+`lib/globe.gl.min.js`, and `js/globe.js`. `globe.js` rebuilds `PROJECTS` with the same dedup-by-name / progress /
+`classifySub` / `parseCapacity` pipeline as `app.js` (it keeps only entries with a `coord`). Three visual encodings:
+**extruded columns** (`pointsData`; bar height ∝ `√weight` normalized to the global max, color = category, white when
+focused — `weightVal` switches investment ⇄ `capMW` via the 柱高 toggle), **cross-border arcs** (`arcsData`; every
+consecutive segment of a project's `route` becomes a great-circle arc with an animated dashed gradient, stroke ∝ `inv`),
+and a **hexed dark globe** (`hexPolygonsData` dotted land from the vendored Natural-Earth-110m GeoJSON, plus graticules
+and an atmosphere glow over a CSS starfield). Left-panel chips filter by category/region/status/year-preset (same
+client-exclusion rule in the investment KPI as `app.js`); clicking a column opens a detail card and flies the camera
+(`pointOfView`) to it with a pulse ring; auto-rotate via `controls()`. A debug handle is exposed at `window.__GLOBE__`.
+The library `lib/globe.gl.min.js` is a vendored standalone UMD bundle (globe.gl + three.js, global `Globe`) and
+`lib/world-110m.js` a precomputed GeoJSON global (`window.WORLD_GEO`) — **do not edit either**; everything is offline
+(no CDN, no build), like the rest of the project.
 
 ### Data globals and merge model
 

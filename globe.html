@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>3D 地球 · 全球能源项目 · Global Energy Projects Globe</title>
+  <meta name="description" content="全球能源项目 3D 地球：投资额做地表挤出柱、跨境管道 / 输变电走大圆弧的交互式 globe.gl 三维可视化。An interactive 3D globe of global energy projects — investment as extruded columns, cross-border pipelines & transmission as great-circle arcs.">
+  <meta name="theme-color" content="#04070f">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="3D 地球 · 全球能源项目">
+  <meta property="og:description" content="投资额做地表挤出柱、跨境管道/输电走弧线的全球能源 3D 地球。">
+  <meta property="og:image" content="assets/og-cover.svg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="css/globe.css">
+</head>
+<body>
+  <!-- 背景星空 -->
+  <canvas id="stars"></canvas>
+  <!-- 3D 地球画布 -->
+  <div id="globe" role="region" aria-label="全球能源项目 3D 地球"></div>
+
+  <!-- 首屏加载态 -->
+  <div class="globe-loader" id="globe-loader">
+    <div class="gl-logo">🌐</div>
+    <div class="gl-ring"></div>
+    <div class="gl-text">全球能源项目 · 3D 地球<span>构建三维场景中 · Building globe…</span></div>
+  </div>
+
+  <!-- 顶栏 -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">🌐</div>
+      <div>
+        <h1 id="g-title">全球能源项目 · 3D 地球</h1>
+        <div class="sub" id="g-sub">柱高≈投资额 · 弧线=跨境通道 · 拖拽旋转</div>
+      </div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="num accent" id="kpi-proj">0</div><div class="lab" id="lab-proj">项目</div></div>
+      <div class="kpi"><div class="num" id="kpi-country">0</div><div class="lab" id="lab-country">国家/地区</div></div>
+      <div class="kpi"><div class="num good" id="kpi-inv">0</div><div class="lab" id="lab-inv">总投资</div></div>
+      <div class="kpi"><div class="num warn" id="kpi-recent">0</div><div class="lab" id="lab-recent">🆕 最新</div></div>
+    </div>
+    <div class="top-actions">
+      <button class="tbtn panel-toggle" id="panel-toggle" aria-label="展开 / 收起筛选">☰</button>
+      <button class="tbtn" id="btn-lang" aria-label="中文 / English">EN</button>
+      <a class="tbtn" id="btn-flat" href="index.html" aria-label="返回平面地图">🗺️ 平面地图</a>
+    </div>
+  </header>
+
+  <!-- 左侧筛选面板 -->
+  <aside class="left-panel" id="left-panel" aria-label="筛选面板">
+    <div class="block">
+      <div class="block-title" id="t-cats">能源品类</div>
+      <div class="cat-list" id="cat-list"></div>
+    </div>
+    <div class="block">
+      <div class="block-title" id="t-regions">所属大区</div>
+      <div class="chip-row" id="region-chips"></div>
+    </div>
+    <div class="block">
+      <div class="block-title" id="t-status">项目状态</div>
+      <div class="chip-row" id="status-chips"></div>
+    </div>
+    <div class="block">
+      <div class="block-title" id="t-year">年份</div>
+      <div class="year-presets" id="year-presets">
+        <button class="yp on" data-preset="all">全部</button>
+        <button class="yp" data-preset="recent">🆕 近一年</button>
+        <button class="yp" data-preset="future">未来 2027+</button>
+      </div>
+    </div>
+    <div class="block">
+      <div class="toggle-row">
+        <button class="tgl" id="btn-weight">⚖️ 柱高：投资额</button>
+        <button class="tgl on" id="btn-arcs">⚡ 跨境弧线</button>
+        <button class="tgl on" id="btn-rotate">🌀 自动旋转</button>
+        <button class="btn-reset2" id="btn-reset">↺ 重置</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 底部图例 -->
+  <div class="legend">
+    <div class="lg-head">
+      <span><span class="bar-ico"><i style="height:4px"></i><i style="height:8px"></i><i style="height:12px"></i></span><b id="legend-cap">柱高≈投资额</b></span>
+      <span id="legend-corridor">弧线 = 跨境/输送走廊</span>
+    </div>
+    <div class="lg-cats" id="legend-cats"></div>
+  </div>
+
+  <div class="hint" id="g-hint">点击柱体看项目详情 · 滚轮缩放</div>
+  <div class="credit">爱思考的杨帆William<span class="mc-by"> · 制作</span></div>
+
+  <!-- 详情卡 -->
+  <div class="detail" id="detail"></div>
+
+  <!-- 数据层（与 index.html 同序）+ 工具层 + 3D 库 + 地球应用 -->
+  <script src="js/data.js"></script>
+  <script src="js/data-extra.js"></script>
+  <script src="js/data-brazil.js"></script>
+  <script src="js/data-mideast.js"></script>
+  <script src="js/data-russia-ca.js"></script>
+  <script src="js/data-clients.js"></script>
+  <script src="js/data-brazil-future.js"></script>
+  <script src="js/data-saudi-future.js"></script>
+  <script src="js/data-seasia.js"></script>
+  <script src="js/data-africa.js"></script>
+  <script src="js/data-oceania.js"></script>
+  <script src="js/data-europe.js"></script>
+  <script src="js/data-nuclear.js"></script>
+  <script src="js/data-northam.js"></script>
+  <script src="js/data-southasia.js"></script>
+  <script src="js/data-china-future.js"></script>
+  <script src="js/data-clients2.js"></script>
+  <script src="js/progress.js"></script>
+  <script src="js/util.js"></script>
+  <script src="lib/world-110m.js"></script>
+  <script src="lib/globe.gl.min.js"></script>
+  <script src="js/globe.js"></script>
+</body>
+</html>
