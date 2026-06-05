@@ -710,13 +710,13 @@ body.heat-on .heat-facets { display: flex; }
 .btn-weight:hover { color: var(--txt); border-color: var(--border-strong); }
 .btn-weight.on { color: #fff; border-color: var(--good); background: linear-gradient(90deg, rgba(46, 230, 166, 0.28), rgba(33, 199, 255, 0.22)); box-shadow: 0 0 0 1px rgba(46, 230, 166, 0.4), var(--shadow); }
 
-/* ⚡ 飞线 / 🏢 企业榜 / 🔌 产品 / 🆚 对比 / 中·EN 按钮（沿用 map-tools 按钮风格）*/
-.btn-flow, .btn-league, .btn-product, .btn-compare, .btn-lang {
+/* ⚡ 飞线 / 🏢 企业榜 / 🆚 对比 / 中·EN 按钮（沿用 map-tools 按钮风格）*/
+.btn-flow, .btn-league, .btn-compare, .btn-lang {
   padding: 7px 12px; font-size: 12px; color: var(--txt-dim); background: var(--panel);
   border: 1px solid var(--border); border-radius: 10px; cursor: pointer;
   backdrop-filter: blur(8px); box-shadow: var(--shadow); white-space: nowrap;
 }
-.btn-flow:hover, .btn-league:hover, .btn-product:hover, .btn-compare:hover, .btn-lang:hover { color: var(--txt); border-color: var(--border-strong); }
+.btn-flow:hover, .btn-league:hover, .btn-compare:hover, .btn-lang:hover { color: var(--txt); border-color: var(--border-strong); }
 .btn-flow.on { color: #fff; border-color: #21c7ff; background: linear-gradient(90deg, rgba(33,199,255,.28), rgba(46,230,166,.18)); box-shadow: 0 0 0 1px rgba(33,199,255,.42), var(--shadow); }
 .btn-lang { font-weight: 800; letter-spacing: .04em; min-width: 34px; text-align: center; }
 
@@ -760,37 +760,6 @@ body.heat-on .heat-facets { display: flex; }
 .d-bd-type { font-size: 10px; color: var(--txt-faint); }
 .d-bd-l { font-size: 11.5px; color: #c7d2e6; line-height: 1.5; margin-top: 2px; }
 .d-bd-l b { color: var(--txt); font-weight: 700; }
-
-/* 🔌 特锐德产品适配看板（复用 lg-list / lg-row / bd-row 外壳）*/
-.pb-row { gap: 9px; }
-.pb-ico { width: 30px; height: 30px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 16px; border-radius: 8px; background: color-mix(in srgb, var(--pc) 16%, transparent); border: 1px solid color-mix(in srgb, var(--pc) 45%, transparent); box-shadow: 0 0 9px color-mix(in srgb, var(--pc) 30%, transparent); }
-.pb-core { font-size: 9px; font-weight: 800; color: #0a0f1c; background: linear-gradient(90deg, #ffd000, #ff7a18); border-radius: 5px; padding: 1px 5px; flex: none; }
-
-/* 🔌 产品适配地图浮标（产品筛选生效时显示）*/
-.product-tag {
-  position: absolute; top: 14px; left: 50%; transform: translateX(-50%) translateY(-8px);
-  z-index: 620; display: none; align-items: center; gap: 8px;
-  padding: 6px 8px 6px 12px; border-radius: 999px;
-  font-size: 12px; color: var(--txt); background: var(--panel);
-  border: 1px solid var(--border-strong); box-shadow: var(--shadow); backdrop-filter: blur(8px);
-  opacity: 0; transition: opacity .2s, transform .2s;
-}
-.product-tag.show { display: flex; opacity: 1; transform: translateX(-50%) translateY(0); }
-.product-tag .pt-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; box-shadow: 0 0 8px currentColor; }
-.product-tag .pt-label { font-weight: 700; white-space: nowrap; }
-.product-tag .pt-x { width: 20px; height: 20px; flex: none; border: none; border-radius: 50%; cursor: pointer; font-size: 12px; line-height: 1; color: var(--txt-dim); background: rgba(255,255,255,.07); }
-.product-tag .pt-x:hover { color: #fff; background: rgba(255,90,90,.32); }
-@media (max-width: 760px) { .product-tag { top: auto; bottom: 76px; } }
-
-/* 详情卡 · 特锐德产品适配块 */
-.d-prod { margin: 0 0 10px; padding: 9px 11px; border: 1px solid var(--border); border-left: 3px solid #ffb02e; border-radius: 8px; background: rgba(255,176,46,.05); }
-.d-prod-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
-.d-prod-tag { font-size: 11px; font-weight: 800; color: var(--txt); }
-.d-prod-board { font-size: 10.5px; font-weight: 700; color: #ffd27a; cursor: pointer; white-space: nowrap; }
-.d-prod-board:hover { color: #fff; }
-.d-prod-chips { display: flex; flex-wrap: wrap; gap: 5px; }
-.d-prod-chip { font-size: 10.5px; font-weight: 700; color: var(--pc); border: 1px solid color-mix(in srgb, var(--pc) 50%, transparent); background: color-mix(in srgb, var(--pc) 12%, transparent); border-radius: 6px; padding: 2px 7px; white-space: nowrap; }
-.d-prod-sc { font-size: 11px; color: var(--txt-faint); line-height: 1.5; margin-top: 6px; }
 
 /* TOP 排序切换（标题里的可点击 chip）*/
 .sort-toggle { cursor: pointer; user-select: none; transition: color .15s; }
