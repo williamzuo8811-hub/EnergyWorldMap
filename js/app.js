@@ -1154,6 +1154,15 @@
   const fabStats = document.getElementById('fab-stats');
   if (fabFilters) fabFilters.addEventListener('click', () => toggleDrawer('left'));
   if (fabStats) fabStats.addEventListener('click', () => toggleDrawer('right'));
+
+  /* 移动端：顶栏「关键数据」开关——默认收起 KPI，点击展开/收起，给地图让出空间 */
+  const kpiToggle = document.getElementById('kpi-toggle');
+  const topbarEl = document.querySelector('.topbar');
+  if (kpiToggle && topbarEl) kpiToggle.addEventListener('click', () => {
+    const open = topbarEl.classList.toggle('kpis-open');
+    kpiToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    setTimeout(() => { try { map.invalidateSize(); } catch (e) {} }, 220);
+  });
   if (drawerBackdrop) drawerBackdrop.addEventListener('click', closeDrawers);
   document.querySelectorAll('.drawer-close').forEach(b => b.addEventListener('click', closeDrawers));
 
