@@ -2,7 +2,7 @@
 
 一个**可交互的能源项目世界地图**：在真实可缩放的世界地图上展示全球各国近年的重点能源项目，**放大可逐级看到国家 → 省 → 市 → 街道**（带清晰国界与地名），支持按品类、区域、状态、年份多维筛选，并提供实时统计、项目详情与"最新"动态高亮。
 
-![品类](https://img.shields.io/badge/品类-10类-21c7ff) ![项目](https://img.shields.io/badge/项目-3003个-2ee6a6) ![核电](https://img.shields.io/badge/核电-101-facc15) ![可再生](https://img.shields.io/badge/可再生-433-2ee6a6) ![矿业](https://img.shields.io/badge/矿业-303-d4a23a) ![石油化工](https://img.shields.io/badge/石油化工-317-ef4444) ![大交通](https://img.shields.io/badge/大交通-303-3b82f6) ![数据中心](https://img.shields.io/badge/数据中心-278-ff5fa8) ![输变电](https://img.shields.io/badge/输变电-247-21c7ff) ![工商业·配网](https://img.shields.io/badge/工商业·配网-253-f0883e) ![储能](https://img.shields.io/badge/储能-221-a855f7) ![国际大客户](https://img.shields.io/badge/国际大客户-547-a3e635) ![年份](https://img.shields.io/badge/年份-2024→2036-8b5cf6)
+![品类](https://img.shields.io/badge/品类-10类-21c7ff) ![项目](https://img.shields.io/badge/项目-3091个-2ee6a6) ![核电](https://img.shields.io/badge/核电-101-facc15) ![可再生](https://img.shields.io/badge/可再生-433-2ee6a6) ![矿业](https://img.shields.io/badge/矿业-303-d4a23a) ![石油化工](https://img.shields.io/badge/石油化工-317-ef4444) ![大交通](https://img.shields.io/badge/大交通-303-3b82f6) ![数据中心](https://img.shields.io/badge/数据中心-278-ff5fa8) ![输变电](https://img.shields.io/badge/输变电-247-21c7ff) ![工商业·配网](https://img.shields.io/badge/工商业·配网-253-f0883e) ![储能](https://img.shields.io/badge/储能-221-a855f7) ![国际大客户](https://img.shields.io/badge/国际大客户-637-a3e635) ![年份](https://img.shields.io/badge/年份-2024→2036-8b5cf6)
 
 ---
 
