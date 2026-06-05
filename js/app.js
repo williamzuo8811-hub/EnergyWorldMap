@@ -57,9 +57,9 @@
     { subdomains: ['1', '2', '3', '4'], maxZoom: 18, attribution: '© 高德地图 AutoNavi' });
 
   const BASES = [
-    { key: 'osm',    name: 'OSM',       crs: 'wgs84', layer: osm },
-    { key: 'amap',   name: '高德·国内', crs: 'gcj02', layer: amap },
-    { key: 'dark',   name: '暗色科技',   crs: 'wgs84', layer: esriDark },
+    { key: 'osm',    name: 'OSM（国际）',     crs: 'wgs84', layer: osm },
+    { key: 'amap',   name: '高德（中国）',     crs: 'gcj02', layer: amap },
+    { key: 'dark',   name: '暗色科技（国际）', crs: 'wgs84', layer: esriDark },
   ];
   let currentCRS = 'wgs84';
   let activeBaseKey = 'osm';
