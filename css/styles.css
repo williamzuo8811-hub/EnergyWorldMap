@@ -73,6 +73,19 @@ html, body {
 .kpi .num.good { color: var(--good); }
 .kpi .num.warn { color: var(--warn); }
 
+/* 移动端：顶栏「关键数据」开关（桌面端隐藏，由 ≤820px 媒体查询点亮）*/
+.kpi-toggle {
+  display: none; align-items: center; gap: 5px; flex: none;
+  padding: 7px 11px; font-size: 12px; font-weight: 600; color: var(--txt-dim);
+  background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border);
+  border-radius: 18px; cursor: pointer; white-space: nowrap;
+}
+.kpi-toggle .kt-ico { font-size: 13px; line-height: 1; }
+.kpi-toggle .kt-car { font-size: 10px; transition: transform .2s; }
+.kpi-toggle:active { transform: scale(.97); }
+.topbar.kpis-open .kpi-toggle { color: var(--txt); border-color: var(--border-strong); }
+.topbar.kpis-open .kpi-toggle .kt-car { transform: rotate(180deg); }
+
 .main {
   display: grid;
   grid-template-columns: 286px 1fr 330px;
@@ -370,10 +383,12 @@ input[type=range]::-webkit-slider-thumb {
   .side.left .drawer-close { display: block; }
   .fab-left { display: block; }
 
-  /* 顶栏 KPI 不再被挤出屏幕：品牌占一行，4 个 KPI 在下方换成 2×2 全显示（修复手机上"覆盖/总投资/近一年"被截断）*/
+  /* 顶栏：默认只显示品牌标题 + 📊 开关，KPI 收起让出地图空间；点开后 4 个 KPI 在下方换成 2×2 全显示 */
   .topbar { flex-wrap: wrap; gap: 10px 16px; padding: 10px 14px; padding-top: calc(10px + env(safe-area-inset-top)); }
-  .brand { flex: 1 1 auto; }
-  .kpis { margin-left: 0; width: 100%; flex-wrap: wrap; gap: 10px 16px; }
+  .brand { flex: 1 1 auto; min-width: 0; }
+  .topbar .kpi-toggle { display: inline-flex; }
+  .kpis { display: none; margin-left: 0; width: 100%; flex-wrap: wrap; gap: 10px 16px; }
+  .topbar.kpis-open .kpis { display: flex; }
   .kpi { text-align: left; flex: 1 0 40%; }
   .kpi .num { font-size: 19px; }
 
@@ -394,8 +409,8 @@ input[type=range]::-webkit-slider-thumb {
 
   /* iPhone 安全区：底部浮动按钮上移让开 home 横条 / 浏览器底栏 */
   .mobile-fab { bottom: calc(18px + env(safe-area-inset-bottom)); }
-  /* 让 Leaflet 左下缩放 / 右下归属让位给浮动按钮，避免重叠 */
-  .leaflet-bottom.leaflet-left { margin-bottom: calc(60px + env(safe-area-inset-bottom)); }
+  /* 左下缩放控件抬高到 🔍 筛选浮钮之上，并提层级，确保 ＋/－ 两颗都完整露出、不被浮钮盖住 */
+  .leaflet-bottom.leaflet-left { margin-bottom: calc(82px + env(safe-area-inset-bottom)); z-index: 1860; }
   .leaflet-bottom.leaflet-right { margin-bottom: calc(54px + env(safe-area-inset-bottom)); }
   /* 🔍 浮钮在左下 → 热力分面条上移让位 */
   .heat-facets { bottom: 70px; }
