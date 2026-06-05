@@ -741,24 +741,6 @@
     return esc(p.detail || p.desc);
   }
   // 国际大客户详情卡的 BD 画像（梯队/产品契合/重点产品/海外场景/推荐打法），数据来自 window.CLIENT_META
-  function clientBdBlock(p) {
-    if (p.cat !== 'client' || !window.CLIENT_META) return '';
-    const m = window.CLIENT_META[p.sub]; if (!m) return '';
-    const en = state.lang === 'en';
-    const TC = { '第一梯队': '#ff5fa8', '第二梯队': '#ffb02e', '第三梯队': '#21c7ff', '其他': '#7f8db0' };
-    const TE = { '第一梯队': 'Tier 1', '第二梯队': 'Tier 2', '第三梯队': 'Tier 3', '其他': 'Other' };
-    const FE = { '极高': 'Very high', '高': 'High', '中高': 'Med-high', '中': 'Medium' };
-    const line = (ico, zh, en2, v) => v ? '<div class="d-bd-l"><b>' + ico + ' ' + (en ? en2 : zh) + '</b>' + esc(v) + '</div>' : '';
-    return '<div class="d-bd">' +
-      '<div class="d-bd-h"><span class="d-bd-tag">🎯 ' + (en ? 'BD profile' : 'BD 画像') + '</span>' +
-      '<span class="d-bd-tier" style="--tc:' + (TC[m.tier] || '#7f8db0') + '">' + (en ? (TE[m.tier] || m.tier) : m.tier) + '</span>' +
-      (m.fit ? '<span class="d-bd-fit">' + (en ? 'Fit·' : '契合·') + (en ? (FE[m.fit] || m.fit) : m.fit) + '</span>' : '') +
-      (m.type ? '<span class="d-bd-type">' + esc(m.type) + '</span>' : '') + '</div>' +
-      line('🔌', '重点产品：', 'Products: ', m.product) +
-      line('🌍', '海外场景：', 'Scenario: ', m.scenario) +
-      line('♟', '推荐打法：', 'Approach: ', m.approach) +
-      '</div>';
-  }
   // 模态焦点管理：打开时记录并把焦点移入，关闭时还原（无障碍）
   let _lastFocus = null;
   const captureFocus = () => { _lastFocus = document.activeElement; };
@@ -784,7 +766,7 @@
       cell(tr('投资额'), usd(p) + (/美元|\$/.test(p.invText || '') || !p.invText ? '' : ' <span class="d-usd">（原币种：' + esc(p.invText) + '）</span>')) +
       cell(tr('业主 / 参与方'), esc(p.owner || '—')) +
       cell(tr('最近动态'), esc(p.updated || '—')) +
-      '</div>' + clientBdBlock(p) + '<div class="d-desc">' + descBody(p) + '</div>';
+      '</div>' + '<div class="d-desc">' + descBody(p) + '</div>';
     detailEl.classList.add('show');
     document.getElementById('d-close').addEventListener('click', hideDetail);
     const ds = document.getElementById('d-share');

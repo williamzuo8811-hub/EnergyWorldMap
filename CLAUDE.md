@@ -188,10 +188,10 @@ fit, each row showing type / 重点关联产品 / 海外场景 / project & count
 map to just that company (`state.cats={client}`, `subOff` = all client subs except the picked one) and flies to
 its bounds. The board's per-company BD metadata lives in **`js/clients-meta.js`** (`window.CLIENT_META`, keyed by
 the `SUB_DEFS.client` sub-key, sourced from the《特锐德 50 家出海大客户》Excel); it is **not** project data —
-loaded after `util.js`, before `app.js`, and not subject to `validate-data.js`. `CLIENT_META` also feeds: the
-**client detail card's BD block** (`clientBdBlock` — tier badge / product fit / 重点产品 / 海外场景 / 推荐打法 above the
-description), and the **tier-grouped client sub-chips** in the left filter (the `client` category's sub-list is sorted
-by BD tier with 🥇/🥈/🥉 dividers instead of a flat 55-chip strip). The total-investment KPI carries a generic
+loaded after `util.js`, before `app.js`, and not subject to `validate-data.js`. `CLIENT_META` also feeds the
+**tier-grouped client sub-chips** in the left filter (the `client` category's sub-list is sorted
+by BD tier with 🥇/🥈/🥉 dividers instead of a flat 55-chip strip). (The per-project BD 画像 block in the detail
+card was removed.) The total-investment KPI carries a generic
 **outlier `title`**: when one project ≥25% of the shown total (e.g. Stargate $500B), it hovers "其中「…」≈$X · N%".
 
 ## Project data conventions
