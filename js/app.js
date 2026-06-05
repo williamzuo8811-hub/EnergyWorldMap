@@ -377,6 +377,7 @@
     const META = (key === 'client' && window.CLIENT_META) ? window.CLIENT_META : null;
     const TIER_ORDER = ['第一梯队', '第二梯队', '第三梯队', '其他'];
     const TIER_LABEL = { '第一梯队': '🥇 第一梯队', '第二梯队': '🥈 第二梯队', '第三梯队': '🥉 第三梯队', '其他': '其他出海客户', '未归类': '未归类' };
+    const TIER_HUE = { '第一梯队': '#ffd24a', '第二梯队': '#cbd5e6', '第三梯队': '#d98c4a', '其他': '#7f8db0', '未归类': '#7f8db0' };
     const tierOf = d => d.key === 'other' ? '未归类' : (TIER_ORDER.indexOf((META[d.key] || {}).tier) >= 0 ? (META[d.key] || {}).tier : '其他');
     let ordered = SUB_DEFS[key];
     if (META) ordered = ordered.map((d, i) => ({ d, i })).sort((a, b) => {
@@ -386,7 +387,7 @@
     }).map(x => x.d);
     let lastTier = null;
     ordered.forEach(d => {
-      if (META) { const t = tierOf(d); if (t !== lastTier) { const tv = document.createElement('div'); tv.className = 'sub-tier'; tv.textContent = TIER_LABEL[t] || t; subWrap.appendChild(tv); lastTier = t; } }
+      if (META) { const t = tierOf(d); if (t !== lastTier) { const tv = document.createElement('div'); tv.className = 'sub-tier'; tv.setAttribute('style', '--tc:' + (TIER_HUE[t] || '#7f8db0')); tv.textContent = TIER_LABEL[t] || t; subWrap.appendChild(tv); lastTier = t; } }
       const s = document.createElement('div');
       s.className = 'sub-chip'; s.dataset.key = key; s.dataset.sub = d.key; s.tabIndex = 0; s.setAttribute('role', 'button');
       s.innerHTML = '<span class="sdot" style="background:' + c.color + '"></span><span class="snm">' + d.label + '</span><span class="sct">0</span>';

@@ -744,9 +744,9 @@ body.heat-on .heat-facets { display: flex; }
 .bd-line { font-size: 10.5px; color: #b9c4dc; margin-top: 3px; line-height: 1.4; }
 .bd-line.bd-dim { color: var(--txt-faint); }
 
-/* 客户子分类的梯队小标题（左栏 client 子分类按 BD 梯队分组） */
-.sub-tier { font-size: 10px; font-weight: 700; color: var(--txt-faint); letter-spacing: .3px; margin: 6px 0 1px; padding-left: 2px; }
-.sub-tier:first-child { margin-top: 2px; }
+/* 客户子分类的梯队小标题（左栏 client 子分类按 BD 梯队分组）——做成醒目的分组分隔条 */
+.sub-tier { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 800; letter-spacing: .4px; color: #dbe4f3; background: rgba(255,255,255,.055); border-left: 3px solid var(--tc, var(--border-strong)); border-radius: 5px; margin: 13px 0 5px -5px; padding: 5px 9px; }
+.sub-tier:first-child { margin-top: 4px; }
 
 /* 详情卡 · 国际大客户 BD 画像块 */
 .d-bd { margin: 0 0 10px; padding: 9px 11px; border: 1px solid var(--border); border-left: 3px solid #21c7ff; border-radius: 8px; background: rgba(33,199,255,.05); }
