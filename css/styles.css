@@ -385,8 +385,9 @@ input[type=range]::-webkit-slider-thumb {
   .rg-caret { width: 34px; height: 34px; }
   input[type=range]::-webkit-slider-thumb { width: 22px; height: 22px; }
 
-  /* 右上角工具栏折叠成「⋯」菜单，点开才展开 8 个按钮，避免竖排占满屏 */
-  .tools-toggle { display: grid; place-items: center; }
+  /* 右上角工具栏折叠成「⋯」菜单，点开才展开 8 个按钮，避免竖排占满屏。
+     用 .map-tools .tools-toggle 提高优先级，压过后文 .tools-toggle{display:none} 基础规则 */
+  .map-tools .tools-toggle { display: grid; place-items: center; }
   .map-tools > :not(.tools-toggle) { display: none; }
   .map-tools.tools-open > :not(.tools-toggle) { display: flex; }
   .map-tools.tools-open .tools-toggle { color: var(--accent); border-color: var(--accent); }
