@@ -148,6 +148,46 @@
   const catName = k => state.lang === 'en' ? (CAT_EN[k] || (CATEGORIES[k] || {}).name || k) : ((CATEGORIES[k] || {}).name || k);
   const regionName = r => state.lang === 'en' ? (REGION_EN[r] || r) : r;
   const statusName = s => state.lang === 'en' ? (STATUS_EN[s] || s) : s;
+  // 国名中→英（全库约 139 个原子国名；EN 模式下悬浮/列表/详情/国别面板/对比统一显示英文）。
+  // 仅用于"显示"，dataset/状态键仍存中文原串；复合国名（"英国—德国"/"贝宁、多哥等"）逐段翻译再拼接。
+  const COUNTRY_EN = {
+    '中国': 'China', '中国台湾': 'Taiwan, China', '中国香港': 'Hong Kong, China', '不丹': 'Bhutan',
+    '丹麦': 'Denmark', '乌克兰': 'Ukraine', '乌兹别克斯坦': 'Uzbekistan', '乌干达': 'Uganda', '乍得': 'Chad',
+    '以色列': 'Israel', '伊拉克': 'Iraq', '伊朗': 'Iran', '佛得角': 'Cape Verde', '俄罗斯': 'Russia',
+    '保加利亚': 'Bulgaria', '克罗地亚': 'Croatia', '冈比亚': 'Gambia', '冰岛': 'Iceland', '几内亚': 'Guinea',
+    '几内亚比绍': 'Guinea-Bissau', '刚果（布）': 'Congo-Brazzaville', '刚果（金）': 'DR Congo', '利比亚': 'Libya',
+    '加拿大': 'Canada', '加纳': 'Ghana', '加蓬': 'Gabon', '匈牙利': 'Hungary', '南苏丹': 'South Sudan',
+    '南非': 'South Africa', '博茨瓦纳': 'Botswana', '卡塔尔': 'Qatar', '卢旺达': 'Rwanda', '印度': 'India',
+    '印度尼西亚': 'Indonesia', '厄瓜多尔': 'Ecuador', '厄立特里亚': 'Eritrea', '吉尔吉斯斯坦': 'Kyrgyzstan',
+    '吉布提': 'Djibouti', '哈萨克斯坦': 'Kazakhstan', '哥伦比亚': 'Colombia', '喀麦隆': 'Cameroon',
+    '土库曼斯坦': 'Turkmenistan', '土耳其': 'Turkey', '圭亚那': 'Guyana', '坦桑尼亚': 'Tanzania', '埃及': 'Egypt',
+    '埃塞俄比亚': 'Ethiopia', '塔吉克斯坦': 'Tajikistan', '塞内加尔': 'Senegal', '塞尔维亚': 'Serbia',
+    '塞浦路斯': 'Cyprus', '墨西哥': 'Mexico', '多哥': 'Togo', '多哥等': 'Togo etc.', '奥地利': 'Austria',
+    '孟加拉国': 'Bangladesh', '安哥拉': 'Angola', '尼日利亚': 'Nigeria', '尼日尔': 'Niger', '尼泊尔': 'Nepal',
+    '巴基斯坦': 'Pakistan', '巴布亚新几内亚': 'Papua New Guinea', '巴拿马': 'Panama', '巴林': 'Bahrain',
+    '巴西': 'Brazil', '布基纳法索': 'Burkina Faso', '布隆迪': 'Burundi', '希腊': 'Greece', '德国': 'Germany',
+    '意大利': 'Italy', '挪威': 'Norway', '捷克': 'Czechia', '摩洛哥': 'Morocco', '文莱': 'Brunei',
+    '斯里兰卡': 'Sri Lanka', '新加坡': 'Singapore', '新西兰': 'New Zealand', '日本': 'Japan', '智利': 'Chile',
+    '柬埔寨': 'Cambodia', '格陵兰': 'Greenland', '欧盟': 'EU', '比利时': 'Belgium', '毛里塔尼亚': 'Mauritania',
+    '沙特': 'Saudi Arabia', '沙特阿拉伯': 'Saudi Arabia', '法国': 'France', '波兰': 'Poland',
+    '波斯尼亚和黑塞哥维那': 'Bosnia & Herzegovina', '波黑': 'Bosnia & Herzegovina', '泰国': 'Thailand',
+    '津巴布韦': 'Zimbabwe', '澳大利亚': 'Australia', '爱尔兰': 'Ireland', '爱沙尼亚': 'Estonia', '牙买加': 'Jamaica',
+    '玻利维亚': 'Bolivia', '瑞典': 'Sweden', '科威特': 'Kuwait', '科特迪瓦': 'Côte d’Ivoire', '秘鲁': 'Peru',
+    '突尼斯': 'Tunisia', '立陶宛': 'Lithuania', '约旦': 'Jordan', '纳米比亚': 'Namibia', '缅甸': 'Myanmar',
+    '罗马尼亚': 'Romania', '美国': 'United States', '老挝': 'Laos', '肯尼亚': 'Kenya', '芬兰': 'Finland',
+    '苏里南': 'Suriname', '英国': 'United Kingdom', '荷兰': 'Netherlands', '莫桑比克': 'Mozambique',
+    '莱索托': 'Lesotho', '菲律宾': 'Philippines', '葡萄牙': 'Portugal', '蒙古': 'Mongolia', '蒙古国': 'Mongolia',
+    '西班牙': 'Spain', '贝宁': 'Benin', '赞比亚': 'Zambia', '赤道几内亚': 'Equatorial Guinea', '越南': 'Vietnam',
+    '阿塞拜疆': 'Azerbaijan', '阿富汗': 'Afghanistan', '阿尔及利亚': 'Algeria', '阿拉伯联合酋长国': 'UAE',
+    '阿曼': 'Oman', '阿根廷': 'Argentina', '阿联酋': 'UAE', '韩国': 'South Korea', '马拉维': 'Malawi',
+    '马来西亚': 'Malaysia', '马耳他': 'Malta', '马达加斯加': 'Madagascar', '马里': 'Mali', '黑山': 'Montenegro',
+  };
+  const countryName = c => {
+    if (state.lang !== 'en' || !c) return c;
+    if (COUNTRY_EN[c]) return COUNTRY_EN[c];
+    if (/[—\/、]/.test(c)) return c.split(/[—\/、]/).map(t => COUNTRY_EN[t.trim()] || t.trim()).filter(Boolean).join(' – ');
+    return c;
+  };
 
   const sizeFn = v => Math.max(8, Math.min(34, 7 + Math.sqrt(Math.max(v, 1)) * 0.95));
   const fmtNum = n => Math.round(n).toLocaleString('en-US');
@@ -304,7 +344,7 @@
       m._cat = p.cat;
       m.bindTooltip(
         '<b>' + (isRecent(p) ? '🆕 ' : '') + esc(nm(p)) + '</b><br>' +
-        '<span style="color:' + c.color + '">' + catShort(p.cat) + (subLabel(p) ? ' / ' + subLabel(p) : '') + '</span> · ' + esc(p.country) +
+        '<span style="color:' + c.color + '">' + catShort(p.cat) + (subLabel(p) ? ' / ' + subLabel(p) : '') + '</span> · ' + esc(countryName(p.country)) +
         ' · ' + esc(usd(p)) + (p.capMW ? ' · ' + capFmt(p.capMW) : '') +
         (p.progress ? '<br><span style="color:#8fb0e0">📍 ' + esc(p.progress) + '</span>' : ''),
         { direction: 'top', offset: [0, -d / 2 - 2], className: 'mk-tip', sticky: true }
@@ -669,7 +709,7 @@
       return '<div class="proj-item" data-id="' + p.id + '" style="border-left-color:' + c.color + '">' +
         '<div class="pn">' + (p.flagship ? '<span class="star">★</span>' : '') + esc(nm(p)) +
         (isRecent(p) ? '<span class="newtag">🆕</span>' : '') + '</div>' +
-        '<div class="pm"><span>' + esc(p.country) + '</span><span>' + catShort(p.cat) + '</span><span>' + (sortCap ? esc(capFmt(p.capMW)) : esc(usd(p))) + '</span></div></div>';
+        '<div class="pm"><span>' + esc(countryName(p.country)) + '</span><span>' + catShort(p.cat) + '</span><span>' + (sortCap ? esc(capFmt(p.capMW)) : esc(usd(p))) + '</span></div></div>';
     }).join('');
     listEl.querySelectorAll('.proj-item').forEach(el => {
       el.addEventListener('click', () => {
@@ -727,7 +767,7 @@
       (altName(p) ? '<div class="d-en">' + esc(altName(p)) + '</div>' : '') + '</div>' +
       (p.progress ? '<div class="d-progress"><span class="dp-tag">' + tr('📍 最新进展') + '</span>' + esc(p.progress) + '</div>' : '') +
       '<div class="d-grid">' +
-      cell(tr('国家 / 地区'), '<span class="d-country-link" data-country="' + esc(p.country) + '">' + esc(p.country) + ' 🔎</span>') +
+      cell(tr('国家 / 地区'), '<span class="d-country-link" data-country="' + esc(p.country) + '">' + esc(countryName(p.country)) + ' 🔎</span>') +
       cell(tr('状态'), '<span class="tag-status st-' + p.status + '">' + statusName(p.status) + '</span>') +
       cell(tr('规模 / 容量'), esc(p.cap)) +
       cell(tr('投资额'), usd(p) + (/美元|\$/.test(p.invText || '') || !p.invText ? '' : ' <span class="d-usd">（原币种：' + esc(p.invText) + '）</span>')) +
@@ -800,7 +840,7 @@
 
     countryPanel.classList.remove('wide');
     countryPanel.innerHTML =
-      '<div class="cp-head"><span style="font-size:20px">🌍</span><div class="cp-name">' + esc(country) + '</div>' +
+      '<div class="cp-head"><span style="font-size:20px">🌍</span><div class="cp-name">' + esc(countryName(country)) + '</div>' +
       '<button class="cp-filter" id="cp-filter" title="在地图上只看该国项目">📍 ' + (state.lang === 'en' ? 'Show on map' : '地图筛选') + '</button>' +
       '<button class="cp-add" id="cp-add" title="加入国别对比">⊕ ' + (state.lang === 'en' ? 'Compare' : '加入对比') + '</button>' +
       '<button class="cp-close" id="cp-close" aria-label="关闭面板" title="关闭">×</button></div>' +
@@ -868,7 +908,7 @@
       const top = d.ps.slice().sort((a, b) => b.inv - a.inv).slice(0, 3).map((p, i) =>
         '<div class="cmp-top" data-id="' + p.id + '"><span class="r">' + (i + 1) + '</span><span class="t">' + esc(nm(p)) + '</span><span class="v">' + esc(usd(p)) + '</span></div>').join('');
       return '<div class="cmp-col">' +
-        '<div class="cmp-col-head"><span class="cc-name">' + esc(country) + '</span>' +
+        '<div class="cmp-col-head"><span class="cc-name">' + esc(countryName(country)) + '</span>' +
         '<button class="cmp-rm" data-rm="' + esc(country) + '" aria-label="移除" title="移除">✕</button></div>' +
         '<div class="cmp-kpis">' +
         cmpKpi(d.ps.length, tr('项目数')) + cmpKpi('≈$' + fmtInv(d.totalInv), tr('总投资')) +
@@ -883,7 +923,7 @@
     let picker = '';
     if (comparePickerOpen && canAdd) {
       const list = countryCounts().filter(o => !state.compare.includes(o.c))
-        .map(o => '<button class="cmp-pick" data-pick="' + esc(o.c) + '">' + esc(o.c) + '<span>' + o.n + '</span></button>').join('');
+        .map(o => '<button class="cmp-pick" data-pick="' + esc(o.c) + '">' + esc(countryName(o.c)) + '<span>' + o.n + '</span></button>').join('');
       picker = '<div class="cmp-picker"><input id="cmp-search" placeholder="' + (state.lang === 'en' ? 'Search country…' : '搜索国家…') + '" aria-label="搜索国家"><div class="cmp-picklist" id="cmp-picklist">' + list + '</div></div>';
     }
     const hint = state.compare.length < 2
