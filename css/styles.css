@@ -288,7 +288,10 @@ input[type=range]::-webkit-slider-thumb {
 .detail .d-top { padding: 14px 16px; position: relative; }
 .detail .d-cat {
   display: inline-flex; align-items: center; gap: 6px; font-size: 11px;
-  padding: 3px 9px; border-radius: 20px; margin-bottom: 9px; font-weight: 600;
+  padding: 3px 9px; border-radius: 12px; margin-bottom: 9px; font-weight: 600;
+  /* 顶部右侧排着 EN 语言切换 / 🔗 / ✕ 三个绝对定位按钮（最左到 ≈104px）；
+     给品类胶囊留出右侧空间并允许换行，避免长「品类·子类」把 EN 切换标签盖住 */
+  max-width: calc(100% - 112px); box-sizing: border-box;
 }
 .detail .d-name { font-size: 17px; font-weight: 800; line-height: 1.3; }
 .detail .d-en { font-size: 11px; color: var(--txt-faint); margin-top: 3px; }
