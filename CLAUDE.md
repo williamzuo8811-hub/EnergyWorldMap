@@ -60,7 +60,7 @@ Two layers loaded as ordinary `<script>` tags in `index.html` (order is load-bea
   core curated projects plus all the shared config (categories, regions, statuses, update dates).
 - `js/data-extra.js` defines `window.ENERGY_EXTRA = [ ... ]` (the bulk-research projects).
 - **Every other regional data file** (`data-brazil.js`, `data-mideast.js`, `data-russia-ca.js`,
-  `data-clients.js`, `data-brazil-future.js`, `data-saudi-future.js`, `data-seasia.js`,
+  `data-clients.js`, `data-clients2.js`, `data-brazil-future.js`, `data-saudi-future.js`, `data-seasia.js`,
   `data-africa.js`) **appends** via `window.ENERGY_EXTRA = (window.ENERGY_EXTRA || []).concat([ ... ])`.
   They must load *after* `data-extra.js` and *before* `app.js`.
 - `js/progress.js` defines `window.ENERGY_PROGRESS = { <id>: "<latest progress text>" }`, merged
@@ -137,10 +137,12 @@ Chinese text with a note. On-map overlays (`#cat-legend`, `#heat-facets`) rebuil
 ### Derived capacity & metrics
 
 `parseCapacity(cap)` (in `js/util.js`) turns the free-text `cap` into structured numbers attached to each
-project at build time: `capMW` (electrical power), `capMWh` (storage energy), `capKm` (line/route length), `capKbd`
-(oil 万桶/日), `capWty` (mass 万吨/年) — `null` when not parseable. It takes the first match per unit,
-sums `A+B` lists, multiplies `N×M`, and uses lookaheads so `MW`/`GW` don't swallow `MWh`/`GWh`.
-These power the right-panel **硬指标** block (`updateCapStats`, sums per the current filter) and a
+project at build time: `capMW` (electrical power; `万kW` == `万千瓦`, `N+ MW` drops the `≥`-sense plus), `capMWh`
+(storage energy), `capKm` (line/route length), `capKbd` (oil 万桶/日), `capWty` (mass 万吨/年), `capPF` (AI compute
+in PFLOPS: `EFLOPS/exaflops`×1000, `万P/万PFlops`×10000, `PFLOPS` and bare `数字P` like `7209P` ×1) — `null` when
+not parseable. It takes the first match per unit, sums `A+B` lists, multiplies `N×M`, and uses lookaheads so
+`MW`/`GW` don't swallow `MWh`/`GWh` (and bare `P` doesn't swallow `PFLOPS`/`Pa`).
+These power the right-panel **硬指标** block (`updateCapStats`, sums 装机/储能/🧠算力/线路/油气/产能 per the current filter) and a
 **weight toggle** (`state.weight` `inv`|`cap`): marker size (`sizeFn(weightVal(p))`) and the heatmap
 weight both switch between investment and `capMW`. The TOP list sorts by `state.sort` (`inv`|`cap`).
 Two correctness rules in `updateStats`: investment + 硬指标 totals exclude `cat==='client'` (the 国际大客户
@@ -158,7 +160,17 @@ its 投资/装机 totals apply the same client-exclusion rule. The per-country a
 small-multiple columns (`state.compare`), each with its own KPIs / category bars / TOP-3, plus a
 searchable country picker and an `⊕ 加入对比` shortcut on the single-country panel. The **🏢 company
 league** (`showLeague`) groups by `normalizeOwner` (in `js/util.js`), which strips legal-entity suffixes
-so "中国电建" and "中国电建集团" aggregate as one owner.
+so "中国电建" and "中国电建集团" aggregate as one owner. The **🎯 client BD board** (`showClientBoard`, the
+`🎯 客户` map-tools button) renders the 54 `client` companies grouped by BD tier (第一/二/三梯队) × product
+fit, each row showing type / 重点关联产品 / 海外场景 / project & country counts; clicking a company filters the
+map to just that company (`state.cats={client}`, `subOff` = all client subs except the picked one) and flies to
+its bounds. The board's per-company BD metadata lives in **`js/clients-meta.js`** (`window.CLIENT_META`, keyed by
+the `SUB_DEFS.client` sub-key, sourced from the《特锐德 50 家出海大客户》Excel); it is **not** project data —
+loaded after `util.js`, before `app.js`, and not subject to `validate-data.js`. `CLIENT_META` also feeds: the
+**client detail card's BD block** (`clientBdBlock` — tier badge / product fit / 重点产品 / 海外场景 / 推荐打法 above the
+description), and the **tier-grouped client sub-chips** in the left filter (the `client` category's sub-list is sorted
+by BD tier with 🥇/🥈/🥉 dividers instead of a flat 55-chip strip). The total-investment KPI carries a generic
+**outlier `title`**: when one project ≥25% of the shown total (e.g. Stargate $500B), it hovers "其中「…」≈$X · N%".
 
 ## Project data conventions
 
@@ -185,8 +197,9 @@ A project object (see `data.js` header comment for the full field reference):
 - **Changed project**: update `status`/`cap`/`inv`/`desc`/`detail` and bump `updated`.
 - **"Recent" window**: controlled by `META.recentSince` (currently `'2025-06'`); `META.lastUpdated`
   (`'2026-06'`) is shown in the header. Bump both when refreshing the dataset.
-- The category key `client` (国际大客户) groups overseas projects of 14 Chinese companies by `owner`
-  (see the `SUB_DEFS.client` `fn` matchers).
+- The category key `client` (国际大客户) groups overseas projects of 54 Chinese companies by `owner`
+  (see the `SUB_DEFS.client` `fn` matchers): the original 14 (`data-clients.js`, id 1570–1698) plus the 40
+  from the《特锐德 50 家中国出海大客户》list plus deeper passes (`data-clients2.js`, id 4000–4522).
 
 ## Data-refresh workflow
 

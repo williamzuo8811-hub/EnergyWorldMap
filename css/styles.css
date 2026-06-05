@@ -731,6 +731,33 @@ body.heat-on .heat-facets { display: flex; }
 .lg-meta b { display: block; font-size: 13px; font-weight: 800; }
 .lg-meta span { font-size: 10px; color: var(--txt-faint); }
 
+/* 🎯 国际大客户 BD 看板 */
+.bd-tier { display: flex; align-items: center; gap: 7px; margin: 13px 0 5px; font-size: 12px; color: var(--txt); }
+.bd-tier:first-child { margin-top: 2px; }
+.bd-tier b { font-weight: 800; }
+.bd-tier-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--tc); box-shadow: 0 0 7px var(--tc); flex: none; }
+.bd-tier-meta { color: var(--txt-faint); font-size: 10px; }
+.bd-row { align-items: flex-start; }
+.bd-row .lg-name { white-space: normal; overflow: visible; flex-wrap: wrap; }
+.bd-fit { font-size: 9px; font-weight: 800; color: #0a0f1c; background: var(--fc); border-radius: 5px; padding: 1px 5px; flex: none; }
+.bd-type { font-size: 10px; font-weight: 500; color: var(--txt-faint); }
+.bd-line { font-size: 10.5px; color: #b9c4dc; margin-top: 3px; line-height: 1.4; }
+.bd-line.bd-dim { color: var(--txt-faint); }
+
+/* 客户子分类的梯队小标题（左栏 client 子分类按 BD 梯队分组） */
+.sub-tier { font-size: 10px; font-weight: 700; color: var(--txt-faint); letter-spacing: .3px; margin: 6px 0 1px; padding-left: 2px; }
+.sub-tier:first-child { margin-top: 2px; }
+
+/* 详情卡 · 国际大客户 BD 画像块 */
+.d-bd { margin: 0 0 10px; padding: 9px 11px; border: 1px solid var(--border); border-left: 3px solid #21c7ff; border-radius: 8px; background: rgba(33,199,255,.05); }
+.d-bd-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 5px; }
+.d-bd-tag { font-size: 11px; font-weight: 800; color: var(--txt); }
+.d-bd-tier { font-size: 10px; font-weight: 800; color: #0a0f1c; background: var(--tc); border-radius: 5px; padding: 1px 6px; }
+.d-bd-fit { font-size: 10px; font-weight: 700; color: var(--txt-dim); border: 1px solid var(--border-strong); border-radius: 5px; padding: 1px 6px; }
+.d-bd-type { font-size: 10px; color: var(--txt-faint); }
+.d-bd-l { font-size: 11.5px; color: #c7d2e6; line-height: 1.5; margin-top: 2px; }
+.d-bd-l b { color: var(--txt); font-weight: 700; }
+
 /* TOP 排序切换（标题里的可点击 chip）*/
 .sort-toggle { cursor: pointer; user-select: none; transition: color .15s; }
 .sort-toggle:hover { color: var(--accent); }

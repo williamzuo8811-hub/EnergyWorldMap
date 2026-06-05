@@ -104,8 +104,9 @@ try {
   global.window.ENERGY_UTIL = require(path.join(__dirname, '..', 'js', 'util.js'));
   ['data', 'data-extra', 'data-brazil', 'data-mideast', 'data-russia-ca', 'data-clients',
     'data-brazil-future', 'data-saudi-future', 'data-seasia', 'data-africa', 'data-oceania',
-    'data-europe', 'data-nuclear', 'data-northam', 'data-southasia', 'data-china-future', 'progress']
+    'data-europe', 'data-nuclear', 'data-northam', 'data-southasia', 'data-china-future', 'data-clients2', 'progress']
     .forEach(f => require(path.join(__dirname, '..', 'js', f + '.js')));
+  require(path.join(__dirname, '..', 'js', 'clients-meta.js'));   // window.CLIENT_META（BD 看板用）
   require(path.join(__dirname, '..', 'js', 'app.js'));
 } catch (e) {
   console.error('✘ app.js 初始化抛出异常：\n', e && e.stack || e);
@@ -131,6 +132,11 @@ try {
   const h = APP.stateToHash();
   ok(typeof h === 'string', 'stateToHash() 返回字符串');
 } catch (e) { fails.push('stateToHash() 抛错：' + (e && e.message)); }
+
+try { APP.showClientBoard(); ok(true, 'showClientBoard()（🎯 客户 BD 看板）不抛错'); }
+catch (e) { fails.push('showClientBoard() 抛错：' + (e && e.message)); }
+try { APP.showLeague(); ok(true, 'showLeague()（🏢 企业榜）不抛错'); }
+catch (e) { fails.push('showLeague() 抛错：' + (e && e.message)); }
 
 /* ---------- 汇总 ---------- */
 console.log('═══════════════════════════════════════════════');

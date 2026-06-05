@@ -24,12 +24,26 @@
         if (!p.progress && PROG[p.id]) p.progress = PROG[p.id];
         p.sub = classifySub(p);
         const cc = parseCapacity(p.cap);
-        p.capMW = cc.mw; p.capMWh = cc.mwh; p.capKm = cc.km; p.capKbd = cc.kbd; p.capWty = cc.wty;
+        p.capMW = cc.mw; p.capMWh = cc.mwh; p.capKm = cc.km; p.capKbd = cc.kbd; p.capWty = cc.wty; p.capPF = cc.pf;
         seen.add(p.name); out.push(p);
       }
     });
     return out;
   })();
+
+  // 脉冲只给"各国旗舰"：每个国家按投资额取前 2 个 flagship，避免 1/3 标记都脉冲的视觉噪声。
+  // （★ 仍按 p.flagship 在 TOP 列表 / 详情卡显示，不受影响。）
+  const PULSE_IDS = (function () {
+    const byCountry = {};
+    PROJECTS.forEach(p => { if (p.flagship) (byCountry[p.country] = byCountry[p.country] || []).push(p); });
+    const set = new Set();
+    Object.values(byCountry).forEach(arr => {
+      arr.sort((a, b) => (b.inv || 0) - (a.inv || 0));
+      arr.slice(0, 2).forEach(p => set.add(p.id));
+    });
+    return set;
+  })();
+  const isPulse = p => !!p.flagship && PULSE_IDS.has(p.id);
   const RECENT_SINCE = META.recentSince;
   const isRecent = p => (p.updated || '') >= RECENT_SINCE;
 
@@ -119,11 +133,11 @@
   const STATUS_EN = { '规划': 'Planned', '在建': 'Building', '投运': 'Operating' };
   const I18N = {
     '国家 / 地区': 'Country / Region', '状态': 'Status', '规模 / 容量': 'Capacity', '投资额': 'Investment',
-    '业主 / 参与方': 'Owner', '最近动态': 'Updated', '📍 最新进展': '📍 Latest', '🆕 近一年': '🆕 Recent',
+    '业主 / 参与方': 'Owner', '最近动态': 'Updated', '📍 最新进展': '📍 Latest', '🆕 最新': '🆕 Latest',
     '项目数': 'Projects', '总投资': 'Investment', '装机容量': 'Capacity', '分品类（项目数 · 投资额）': 'By category (count · investment)',
     '项目状态': 'Status', '里程碑年份分布': 'Milestone years', '重点项目 TOP（按投资额）': 'Top projects (by investment)',
     '无匹配项目，请调整筛选条件': 'No matching projects — adjust filters', '当前筛选无可解析的容量指标': 'No parseable capacity metrics in current filter',
-    '装机': 'Power', '储能': 'Storage', '线路': 'Lines', '油气产能': 'Oil/Gas', '产能': 'Output',
+    '装机': 'Power', '储能': 'Storage', '算力': 'AI Compute', '线路': 'Lines', '油气产能': 'Oil/Gas', '产能': 'Output',
     '企业 / 业主排行榜': 'Company / Owner League Table', '项目数': 'Projects', '按项目数排名（投资额为该业主累计）': 'Ranked by project count (investment = owner total)',
     '点公司名筛选其全部项目': 'Click a company to filter its projects', '🏢 企业榜': '🏢 Companies',
   };
@@ -134,6 +148,46 @@
   const catName = k => state.lang === 'en' ? (CAT_EN[k] || (CATEGORIES[k] || {}).name || k) : ((CATEGORIES[k] || {}).name || k);
   const regionName = r => state.lang === 'en' ? (REGION_EN[r] || r) : r;
   const statusName = s => state.lang === 'en' ? (STATUS_EN[s] || s) : s;
+  // 国名中→英（全库约 139 个原子国名；EN 模式下悬浮/列表/详情/国别面板/对比统一显示英文）。
+  // 仅用于"显示"，dataset/状态键仍存中文原串；复合国名（"英国—德国"/"贝宁、多哥等"）逐段翻译再拼接。
+  const COUNTRY_EN = {
+    '中国': 'China', '中国台湾': 'Taiwan, China', '中国香港': 'Hong Kong, China', '不丹': 'Bhutan',
+    '丹麦': 'Denmark', '乌克兰': 'Ukraine', '乌兹别克斯坦': 'Uzbekistan', '乌干达': 'Uganda', '乍得': 'Chad',
+    '以色列': 'Israel', '伊拉克': 'Iraq', '伊朗': 'Iran', '佛得角': 'Cape Verde', '俄罗斯': 'Russia',
+    '保加利亚': 'Bulgaria', '克罗地亚': 'Croatia', '冈比亚': 'Gambia', '冰岛': 'Iceland', '几内亚': 'Guinea',
+    '几内亚比绍': 'Guinea-Bissau', '刚果（布）': 'Congo-Brazzaville', '刚果（金）': 'DR Congo', '利比亚': 'Libya',
+    '加拿大': 'Canada', '加纳': 'Ghana', '加蓬': 'Gabon', '匈牙利': 'Hungary', '南苏丹': 'South Sudan',
+    '南非': 'South Africa', '博茨瓦纳': 'Botswana', '卡塔尔': 'Qatar', '卢旺达': 'Rwanda', '印度': 'India',
+    '印度尼西亚': 'Indonesia', '厄瓜多尔': 'Ecuador', '厄立特里亚': 'Eritrea', '吉尔吉斯斯坦': 'Kyrgyzstan',
+    '吉布提': 'Djibouti', '哈萨克斯坦': 'Kazakhstan', '哥伦比亚': 'Colombia', '喀麦隆': 'Cameroon',
+    '土库曼斯坦': 'Turkmenistan', '土耳其': 'Turkey', '圭亚那': 'Guyana', '坦桑尼亚': 'Tanzania', '埃及': 'Egypt',
+    '埃塞俄比亚': 'Ethiopia', '塔吉克斯坦': 'Tajikistan', '塞内加尔': 'Senegal', '塞尔维亚': 'Serbia',
+    '塞浦路斯': 'Cyprus', '墨西哥': 'Mexico', '多哥': 'Togo', '多哥等': 'Togo etc.', '奥地利': 'Austria',
+    '孟加拉国': 'Bangladesh', '安哥拉': 'Angola', '尼日利亚': 'Nigeria', '尼日尔': 'Niger', '尼泊尔': 'Nepal',
+    '巴基斯坦': 'Pakistan', '巴布亚新几内亚': 'Papua New Guinea', '巴拿马': 'Panama', '巴林': 'Bahrain',
+    '巴西': 'Brazil', '布基纳法索': 'Burkina Faso', '布隆迪': 'Burundi', '希腊': 'Greece', '德国': 'Germany',
+    '意大利': 'Italy', '挪威': 'Norway', '捷克': 'Czechia', '摩洛哥': 'Morocco', '文莱': 'Brunei',
+    '斯里兰卡': 'Sri Lanka', '新加坡': 'Singapore', '新西兰': 'New Zealand', '日本': 'Japan', '智利': 'Chile',
+    '柬埔寨': 'Cambodia', '格陵兰': 'Greenland', '欧盟': 'EU', '比利时': 'Belgium', '毛里塔尼亚': 'Mauritania',
+    '沙特': 'Saudi Arabia', '沙特阿拉伯': 'Saudi Arabia', '法国': 'France', '波兰': 'Poland',
+    '波斯尼亚和黑塞哥维那': 'Bosnia & Herzegovina', '波黑': 'Bosnia & Herzegovina', '泰国': 'Thailand',
+    '津巴布韦': 'Zimbabwe', '澳大利亚': 'Australia', '爱尔兰': 'Ireland', '爱沙尼亚': 'Estonia', '牙买加': 'Jamaica',
+    '玻利维亚': 'Bolivia', '瑞典': 'Sweden', '科威特': 'Kuwait', '科特迪瓦': 'Côte d’Ivoire', '秘鲁': 'Peru',
+    '突尼斯': 'Tunisia', '立陶宛': 'Lithuania', '约旦': 'Jordan', '纳米比亚': 'Namibia', '缅甸': 'Myanmar',
+    '罗马尼亚': 'Romania', '美国': 'United States', '老挝': 'Laos', '肯尼亚': 'Kenya', '芬兰': 'Finland',
+    '苏里南': 'Suriname', '英国': 'United Kingdom', '荷兰': 'Netherlands', '莫桑比克': 'Mozambique',
+    '莱索托': 'Lesotho', '菲律宾': 'Philippines', '葡萄牙': 'Portugal', '蒙古': 'Mongolia', '蒙古国': 'Mongolia',
+    '西班牙': 'Spain', '贝宁': 'Benin', '赞比亚': 'Zambia', '赤道几内亚': 'Equatorial Guinea', '越南': 'Vietnam',
+    '阿塞拜疆': 'Azerbaijan', '阿富汗': 'Afghanistan', '阿尔及利亚': 'Algeria', '阿拉伯联合酋长国': 'UAE',
+    '阿曼': 'Oman', '阿根廷': 'Argentina', '阿联酋': 'UAE', '韩国': 'South Korea', '马拉维': 'Malawi',
+    '马来西亚': 'Malaysia', '马耳他': 'Malta', '马达加斯加': 'Madagascar', '马里': 'Mali', '黑山': 'Montenegro',
+  };
+  const countryName = c => {
+    if (state.lang !== 'en' || !c) return c;
+    if (COUNTRY_EN[c]) return COUNTRY_EN[c];
+    if (/[—\/、]/.test(c)) return c.split(/[—\/、]/).map(t => COUNTRY_EN[t.trim()] || t.trim()).filter(Boolean).join(' – ');
+    return c;
+  };
 
   const sizeFn = v => Math.max(8, Math.min(34, 7 + Math.sqrt(Math.max(v, 1)) * 0.95));
   const fmtNum = n => Math.round(n).toLocaleString('en-US');
@@ -281,7 +335,7 @@
     const markers = [];
     items.forEach(p => {
       const c = CATEGORIES[p.cat], d = Math.round(sizeFn(weightVal(p)));
-      const cls = 'dot' + (p.flagship ? ' is-flag' : '') + (isRecent(p) ? ' is-new' : '') + (state.playYear === p.year ? ' is-year-new' : '');
+      const cls = 'dot' + (isPulse(p) ? ' is-flag' : '') + (isRecent(p) ? ' is-new' : '') + (state.playYear === p.year ? ' is-year-new' : '');
       const icon = L.divIcon({
         className: 'mk', iconSize: [d, d], iconAnchor: [d / 2, d / 2],
         html: '<i class="' + cls + '" style="--c:' + c.color + ';width:' + d + 'px;height:' + d + 'px"></i>',
@@ -290,7 +344,7 @@
       m._cat = p.cat;
       m.bindTooltip(
         '<b>' + (isRecent(p) ? '🆕 ' : '') + esc(nm(p)) + '</b><br>' +
-        '<span style="color:' + c.color + '">' + catShort(p.cat) + (subLabel(p) ? ' / ' + subLabel(p) : '') + '</span> · ' + esc(p.country) +
+        '<span style="color:' + c.color + '">' + catShort(p.cat) + (subLabel(p) ? ' / ' + subLabel(p) : '') + '</span> · ' + esc(countryName(p.country)) +
         ' · ' + esc(usd(p)) + (p.capMW ? ' · ' + capFmt(p.capMW) : '') +
         (p.progress ? '<br><span style="color:#8fb0e0">📍 ' + esc(p.progress) + '</span>' : ''),
         { direction: 'top', offset: [0, -d / 2 - 2], className: 'mk-tip', sticky: true }
@@ -319,7 +373,20 @@
     group.appendChild(chip);
     const subWrap = document.createElement('div');
     subWrap.className = 'sub-list';
-    SUB_DEFS[key].forEach(d => {
+    // 国际大客户：54 家子分类按 BD 梯队（CLIENT_META）分组并加梯队小标题，避免一长条平铺难扫读
+    const META = (key === 'client' && window.CLIENT_META) ? window.CLIENT_META : null;
+    const TIER_ORDER = ['第一梯队', '第二梯队', '第三梯队', '其他'];
+    const TIER_LABEL = { '第一梯队': '🥇 第一梯队', '第二梯队': '🥈 第二梯队', '第三梯队': '🥉 第三梯队', '其他': '其他出海客户', '未归类': '未归类' };
+    const tierOf = d => d.key === 'other' ? '未归类' : (TIER_ORDER.indexOf((META[d.key] || {}).tier) >= 0 ? (META[d.key] || {}).tier : '其他');
+    let ordered = SUB_DEFS[key];
+    if (META) ordered = ordered.map((d, i) => ({ d, i })).sort((a, b) => {
+      const oa = a.d.key === 'other' ? 99 : TIER_ORDER.indexOf(tierOf(a.d));
+      const ob = b.d.key === 'other' ? 99 : TIER_ORDER.indexOf(tierOf(b.d));
+      return oa - ob || a.i - b.i;
+    }).map(x => x.d);
+    let lastTier = null;
+    ordered.forEach(d => {
+      if (META) { const t = tierOf(d); if (t !== lastTier) { const tv = document.createElement('div'); tv.className = 'sub-tier'; tv.textContent = TIER_LABEL[t] || t; subWrap.appendChild(tv); lastTier = t; } }
       const s = document.createElement('div');
       s.className = 'sub-chip'; s.dataset.key = key; s.dataset.sub = d.key; s.tabIndex = 0; s.setAttribute('role', 'button');
       s.innerHTML = '<span class="sdot" style="background:' + c.color + '"></span><span class="snm">' + d.label + '</span><span class="sct">0</span>';
@@ -337,41 +404,50 @@
 
   // 所属大区：每个大区一组，可展开列出该区国家；点大区芯片按大区筛选，点国家芯片按国家筛选并飞到该国
   const regionEl = document.getElementById('region-chips');
-  regionEl.className = 'region-tree';
-  REGIONS.forEach(r => {
-    const countries = REGION_COUNTRIES[r] || [];
-    const regProj = countries.reduce((s, c) => s + (COUNTRY_COUNT[c] || 0), 0);
-    const group = document.createElement('div');
-    group.className = 'region-group'; group.dataset.region = r;
+  // 左侧"所属大区→国家"树：抽成函数以便语言切换时整树重建（大区名/国家名随之中英切换）
+  function buildRegionTree() {
+    const en = state.lang === 'en';
+    regionEl.className = 'region-tree';
+    regionEl.innerHTML = '';
+    REGIONS.forEach(r => {
+      const countries = REGION_COUNTRIES[r] || [];
+      const regProj = countries.reduce((s, c) => s + (COUNTRY_COUNT[c] || 0), 0);
+      const group = document.createElement('div');
+      group.className = 'region-group'; group.dataset.region = r;
 
-    const row = document.createElement('div');
-    row.className = 'region-row';
-    const pill = document.createElement('span');
-    pill.className = 'pill rg-pill'; pill.textContent = regionName(r); pill.dataset.v = r;
-    pill.tabIndex = 0; pill.setAttribute('role', 'button'); pill.setAttribute('aria-label', regionName(r) + ' 大区筛选');
-    pill.addEventListener('click', () => toggleRegion(r));
-    const meta = document.createElement('span');
-    meta.className = 'rg-meta'; meta.textContent = countries.length + ' 国 · ' + regProj;
-    const caret = document.createElement('span');
-    caret.className = 'rg-caret'; caret.textContent = '▸'; caret.tabIndex = 0; caret.setAttribute('role', 'button');
-    caret.setAttribute('aria-label', '展开 / 收起该区国家');
-    caret.addEventListener('click', () => group.classList.toggle('open'));
-    row.appendChild(pill); row.appendChild(meta); row.appendChild(caret);
+      const row = document.createElement('div');
+      row.className = 'region-row';
+      const pill = document.createElement('span');
+      pill.className = 'pill rg-pill'; pill.textContent = regionName(r); pill.dataset.v = r;
+      pill.tabIndex = 0; pill.setAttribute('role', 'button'); pill.setAttribute('aria-label', regionName(r) + (en ? ' region filter' : ' 大区筛选'));
+      pill.addEventListener('click', () => toggleRegion(r));
+      const meta = document.createElement('span');
+      meta.className = 'rg-meta'; meta.textContent = countries.length + (en ? ' ctry · ' : ' 国 · ') + regProj;
+      const caret = document.createElement('span');
+      caret.className = 'rg-caret'; caret.textContent = '▸'; caret.tabIndex = 0; caret.setAttribute('role', 'button');
+      caret.setAttribute('aria-label', en ? 'Expand / collapse countries' : '展开 / 收起该区国家');
+      caret.addEventListener('click', () => group.classList.toggle('open'));
+      row.appendChild(pill); row.appendChild(meta); row.appendChild(caret);
 
-    const list = document.createElement('div');
-    list.className = 'country-list';
-    countries.forEach(c => {
-      const chip = document.createElement('span');
-      chip.className = 'country-chip'; chip.dataset.country = c; chip.tabIndex = 0; chip.setAttribute('role', 'button');
-      chip.innerHTML = '<span class="cn">' + esc(c) + '</span><i class="cc">' + (COUNTRY_COUNT[c] || 0) + '</i>';
-      chip.addEventListener('click', () => toggleCountry(c));
-      list.appendChild(chip);
+      const list = document.createElement('div');
+      list.className = 'country-list';
+      countries.forEach(c => {
+        const chip = document.createElement('span');
+        chip.className = 'country-chip'; chip.dataset.country = c; chip.tabIndex = 0; chip.setAttribute('role', 'button');
+        chip.innerHTML = '<span class="cn">' + esc(countryName(c)) + '</span><i class="cc">' + (COUNTRY_COUNT[c] || 0) + '</i>';
+        chip.addEventListener('click', () => toggleCountry(c));
+        list.appendChild(chip);
+      });
+      if (!countries.length) { const e = document.createElement('div'); e.className = 'country-empty'; e.textContent = en ? 'None' : '暂无'; list.appendChild(e); }
+
+      group.appendChild(row); group.appendChild(list);
+      regionEl.appendChild(group);
     });
-    if (!countries.length) { const e = document.createElement('div'); e.className = 'country-empty'; e.textContent = '暂无'; list.appendChild(e); }
-
-    group.appendChild(row); group.appendChild(list);
-    regionEl.appendChild(group);
-  });
+    // 重建后把已选大区/国家的高亮态还原
+    document.querySelectorAll('#region-chips .rg-pill').forEach(el => el.classList.toggle('on', state.regions.has(el.dataset.v)));
+    syncCountryUI();
+  }
+  buildRegionTree();
 
   const statusEl = document.getElementById('status-chips');
   STATUS.forEach(s => {
@@ -384,7 +460,7 @@
     statusEl.appendChild(el);
   });
 
-  // 🆕 仅看最近一年
+  // 🆕 仅看最新动态
   const recentBtn = document.getElementById('recent-toggle');
   recentBtn.addEventListener('click', () => {
     state.recentOnly = !state.recentOnly;
@@ -533,6 +609,10 @@
   const btnLeague = document.getElementById('btn-league');
   if (btnLeague) btnLeague.addEventListener('click', showLeague);
 
+  // 🎯 国际大客户 BD 看板
+  const btnBoard = document.getElementById('btn-board');
+  if (btnBoard) btnBoard.addEventListener('click', showClientBoard);
+
   // 🆚 国别对比
   const btnCompare = document.getElementById('btn-compare');
   if (btnCompare) btnCompare.addEventListener('click', openCompare);
@@ -552,6 +632,7 @@
     if (sortToggle) sortToggle.textContent = state.lang === 'en' ? (state.sort === 'cap' ? 'by capacity ⇄' : 'by investment ⇄') : (state.sort === 'cap' ? '按装机容量 ⇄' : '按投资额 ⇄');
     buildCatLegend();   // 地图浮层文案随语言重建
     buildHeatFacets();
+    buildRegionTree();  // 左侧大区/国家树随语言整树重建（含国名中英切换）
   }
   if (btnLang) btnLang.addEventListener('click', () => {
     state.lang = state.lang === 'en' ? 'zh' : 'en';
@@ -564,11 +645,12 @@
     const el = document.getElementById('cap-stats'); if (!el) return;
     const sum = f => items.reduce((s, p) => s + (f(p) || 0), 0);
     const gw = sum(p => p.capMW) / 1000, gwh = sum(p => p.capMWh) / 1000;
-    const km = sum(p => p.capKm), kbd = sum(p => p.capKbd), wty = sum(p => p.capWty);
+    const km = sum(p => p.capKm), kbd = sum(p => p.capKbd), wty = sum(p => p.capWty), pf = sum(p => p.capPF);
     const n1 = x => (x < 10 ? (Math.round(x * 10) / 10) : Math.round(x)).toLocaleString('en-US');
     const chips = [];
     if (gw > 0) chips.push(['⚡', '装机', gw >= 1000 ? (gw / 1000).toFixed(1) + ' TW' : n1(gw) + ' GW']);
     if (gwh > 0) chips.push(['🔋', '储能', n1(gwh) + ' GWh']);
+    if (pf > 0) chips.push(['🧠', '算力', pf >= 1000 ? (pf / 1000).toFixed(pf < 10000 ? 1 : 0) + ' EFLOPS' : Math.round(pf).toLocaleString('en-US') + ' PFLOPS']);
     if (km > 0) chips.push(['🔌', '线路', Math.round(km).toLocaleString('en-US') + ' km']);
     if (kbd > 0) chips.push(['🛢️', '油气产能', Math.round(kbd).toLocaleString('en-US') + ' 万桶/日']);
     if (wty > 0) chips.push(['🏭', '产能', Math.round(wty).toLocaleString('en-US') + ' 万吨/年']);
@@ -590,6 +672,14 @@
     document.getElementById('kpi-country').textContent = countries;
     document.getElementById('kpi-inv').textContent = fmtInv(totalInv);
     document.getElementById('kpi-recent').textContent = recentN;
+    // 投资额离群透明化：单个项目占比 ≥25% 时在总投资 KPI 上挂 title 提示（如 Stargate $500B 独占却无感）
+    const invEl = document.getElementById('kpi-inv');
+    if (invEl) {
+      const top = statItems.reduce((a, p) => (p.inv || 0) > (a ? (a.inv || 0) : -1) ? p : a, null);
+      invEl.title = (top && totalInv > 0 && top.inv / totalInv >= 0.25)
+        ? (state.lang === 'en' ? 'incl. ' : '其中「') + nm(top) + (state.lang === 'en' ? ' ' : '」') + '≈$' + fmtInv(top.inv) + ' · ' + Math.round(top.inv / totalInv * 100) + '%'
+        : '';
+    }
     updateCapStats(statItems);
 
     const base = PROJECTS.filter(passBase);
@@ -629,7 +719,7 @@
       return '<div class="proj-item" data-id="' + p.id + '" style="border-left-color:' + c.color + '">' +
         '<div class="pn">' + (p.flagship ? '<span class="star">★</span>' : '') + esc(nm(p)) +
         (isRecent(p) ? '<span class="newtag">🆕</span>' : '') + '</div>' +
-        '<div class="pm"><span>' + esc(p.country) + '</span><span>' + catShort(p.cat) + '</span><span>' + (sortCap ? esc(capFmt(p.capMW)) : esc(usd(p))) + '</span></div></div>';
+        '<div class="pm"><span>' + esc(countryName(p.country)) + '</span><span>' + catShort(p.cat) + '</span><span>' + (sortCap ? esc(capFmt(p.capMW)) : esc(usd(p))) + '</span></div></div>';
     }).join('');
     listEl.querySelectorAll('.proj-item').forEach(el => {
       el.addEventListener('click', () => {
@@ -649,6 +739,25 @@
     }
     return esc(p.detail || p.desc);
   }
+  // 国际大客户详情卡的 BD 画像（梯队/产品契合/重点产品/海外场景/推荐打法），数据来自 window.CLIENT_META
+  function clientBdBlock(p) {
+    if (p.cat !== 'client' || !window.CLIENT_META) return '';
+    const m = window.CLIENT_META[p.sub]; if (!m) return '';
+    const en = state.lang === 'en';
+    const TC = { '第一梯队': '#ff5fa8', '第二梯队': '#ffb02e', '第三梯队': '#21c7ff', '其他': '#7f8db0' };
+    const TE = { '第一梯队': 'Tier 1', '第二梯队': 'Tier 2', '第三梯队': 'Tier 3', '其他': 'Other' };
+    const FE = { '极高': 'Very high', '高': 'High', '中高': 'Med-high', '中': 'Medium' };
+    const line = (ico, zh, en2, v) => v ? '<div class="d-bd-l"><b>' + ico + ' ' + (en ? en2 : zh) + '</b>' + esc(v) + '</div>' : '';
+    return '<div class="d-bd">' +
+      '<div class="d-bd-h"><span class="d-bd-tag">🎯 ' + (en ? 'BD profile' : 'BD 画像') + '</span>' +
+      '<span class="d-bd-tier" style="--tc:' + (TC[m.tier] || '#7f8db0') + '">' + (en ? (TE[m.tier] || m.tier) : m.tier) + '</span>' +
+      (m.fit ? '<span class="d-bd-fit">' + (en ? 'Fit·' : '契合·') + (en ? (FE[m.fit] || m.fit) : m.fit) + '</span>' : '') +
+      (m.type ? '<span class="d-bd-type">' + esc(m.type) + '</span>' : '') + '</div>' +
+      line('🔌', '重点产品：', 'Products: ', m.product) +
+      line('🌍', '海外场景：', 'Scenario: ', m.scenario) +
+      line('♟', '推荐打法：', 'Approach: ', m.approach) +
+      '</div>';
+  }
   // 模态焦点管理：打开时记录并把焦点移入，关闭时还原（无障碍）
   let _lastFocus = null;
   const captureFocus = () => { _lastFocus = document.activeElement; };
@@ -663,18 +772,18 @@
       '<div class="d-top"><button class="d-close" id="d-close" aria-label="关闭详情卡" title="关闭">×</button>' +
       '<button class="d-share" id="d-share" aria-label="复制该项目的分享链接" title="复制项目链接">🔗</button>' +
       '<span class="d-cat" style="background:' + c.color + '22;color:' + c.color + '">' + c.icon + ' ' + catName(p.cat) + (subLabel(p) ? ' · ' + subLabel(p) : '') + '</span>' +
-      (isRecent(p) ? '<span class="d-new">' + tr('🆕 近一年') + '</span>' : '') +
+      (isRecent(p) ? '<span class="d-new">' + tr('🆕 最新') + '</span>' : '') +
       '<div class="d-name">' + (p.flagship ? '★ ' : '') + esc(nm(p)) + '</div>' +
       (altName(p) ? '<div class="d-en">' + esc(altName(p)) + '</div>' : '') + '</div>' +
       (p.progress ? '<div class="d-progress"><span class="dp-tag">' + tr('📍 最新进展') + '</span>' + esc(p.progress) + '</div>' : '') +
       '<div class="d-grid">' +
-      cell(tr('国家 / 地区'), '<span class="d-country-link" data-country="' + esc(p.country) + '">' + esc(p.country) + ' 🔎</span>') +
+      cell(tr('国家 / 地区'), '<span class="d-country-link" data-country="' + esc(p.country) + '">' + esc(countryName(p.country)) + ' 🔎</span>') +
       cell(tr('状态'), '<span class="tag-status st-' + p.status + '">' + statusName(p.status) + '</span>') +
       cell(tr('规模 / 容量'), esc(p.cap)) +
       cell(tr('投资额'), usd(p) + (/美元|\$/.test(p.invText || '') || !p.invText ? '' : ' <span class="d-usd">（原币种：' + esc(p.invText) + '）</span>')) +
       cell(tr('业主 / 参与方'), esc(p.owner || '—')) +
       cell(tr('最近动态'), esc(p.updated || '—')) +
-      '</div><div class="d-desc">' + descBody(p) + '</div>';
+      '</div>' + clientBdBlock(p) + '<div class="d-desc">' + descBody(p) + '</div>';
     detailEl.classList.add('show');
     document.getElementById('d-close').addEventListener('click', hideDetail);
     const ds = document.getElementById('d-share');
@@ -741,14 +850,14 @@
 
     countryPanel.classList.remove('wide');
     countryPanel.innerHTML =
-      '<div class="cp-head"><span style="font-size:20px">🌍</span><div class="cp-name">' + esc(country) + '</div>' +
+      '<div class="cp-head"><span style="font-size:20px">🌍</span><div class="cp-name">' + esc(countryName(country)) + '</div>' +
       '<button class="cp-filter" id="cp-filter" title="在地图上只看该国项目">📍 ' + (state.lang === 'en' ? 'Show on map' : '地图筛选') + '</button>' +
       '<button class="cp-add" id="cp-add" title="加入国别对比">⊕ ' + (state.lang === 'en' ? 'Compare' : '加入对比') + '</button>' +
       '<button class="cp-close" id="cp-close" aria-label="关闭面板" title="关闭">×</button></div>' +
       '<div class="cp-kpis">' +
       kpi(ps.length, tr('项目数')) + kpi('≈$' + fmtInv(d.totalInv), tr('总投资')) +
       kpi(d.totalMW >= 1000 ? (d.totalMW / 1000).toFixed(1) + ' GW' : Math.round(d.totalMW) + ' MW', tr('装机容量')) +
-      kpi(d.recentN, tr('🆕 近一年')) + '</div>' +
+      kpi(d.recentN, tr('🆕 最新')) + '</div>' +
       '<div class="cp-body">' +
       '<div class="cp-sec-title">' + tr('分品类（项目数 · 投资额）') + '</div>' + catBars +
       '<div class="cp-sec-title">' + tr('项目状态') + '</div><div class="cp-status">' + statusChips + '</div>' +
@@ -809,12 +918,12 @@
       const top = d.ps.slice().sort((a, b) => b.inv - a.inv).slice(0, 3).map((p, i) =>
         '<div class="cmp-top" data-id="' + p.id + '"><span class="r">' + (i + 1) + '</span><span class="t">' + esc(nm(p)) + '</span><span class="v">' + esc(usd(p)) + '</span></div>').join('');
       return '<div class="cmp-col">' +
-        '<div class="cmp-col-head"><span class="cc-name">' + esc(country) + '</span>' +
+        '<div class="cmp-col-head"><span class="cc-name">' + esc(countryName(country)) + '</span>' +
         '<button class="cmp-rm" data-rm="' + esc(country) + '" aria-label="移除" title="移除">✕</button></div>' +
         '<div class="cmp-kpis">' +
         cmpKpi(d.ps.length, tr('项目数')) + cmpKpi('≈$' + fmtInv(d.totalInv), tr('总投资')) +
         cmpKpi(d.totalMW >= 1000 ? (d.totalMW / 1000).toFixed(1) + ' GW' : Math.round(d.totalMW) + ' MW', tr('装机容量')) +
-        cmpKpi(d.recentN, tr('🆕 近一年')) + '</div>' +
+        cmpKpi(d.recentN, tr('🆕 最新')) + '</div>' +
         '<div class="cmp-sec">' + tr('分品类（项目数 · 投资额）') + '</div>' + (catBars || '<div class="cmp-empty">—</div>') +
         '<div class="cmp-sec">' + tr('重点项目 TOP（按投资额）') + '</div>' + (top || '<div class="cmp-empty">—</div>') +
         '</div>';
@@ -824,7 +933,7 @@
     let picker = '';
     if (comparePickerOpen && canAdd) {
       const list = countryCounts().filter(o => !state.compare.includes(o.c))
-        .map(o => '<button class="cmp-pick" data-pick="' + esc(o.c) + '">' + esc(o.c) + '<span>' + o.n + '</span></button>').join('');
+        .map(o => '<button class="cmp-pick" data-pick="' + esc(o.c) + '" data-en="' + esc(COUNTRY_EN[o.c] || '') + '">' + esc(countryName(o.c)) + '<span>' + o.n + '</span></button>').join('');
       picker = '<div class="cmp-picker"><input id="cmp-search" placeholder="' + (state.lang === 'en' ? 'Search country…' : '搜索国家…') + '" aria-label="搜索国家"><div class="cmp-picklist" id="cmp-picklist">' + list + '</div></div>';
     }
     const hint = state.compare.length < 2
@@ -853,7 +962,7 @@
     if (cs) cs.addEventListener('input', () => {
       const q = cs.value.trim().toLowerCase();
       countryPanel.querySelectorAll('#cmp-picklist .cmp-pick').forEach(b => {
-        b.style.display = b.dataset.pick.toLowerCase().indexOf(q) >= 0 ? '' : 'none';
+        b.style.display = (b.dataset.pick + ' ' + (b.dataset.en || '')).toLowerCase().indexOf(q) >= 0 ? '' : 'none';
       });
     });
   }
@@ -891,6 +1000,80 @@
     focusEl('cp-close');
     countryPanel.querySelectorAll('.lg-row').forEach(el => el.addEventListener('click', () => {
       hideCountry(); state.q = el.dataset.owner; const sEl = document.getElementById('search'); if (sEl) sEl.value = state.q; render();
+    }));
+  }
+
+  /* ---------- 🎯 国际大客户 BD 看板（按梯队/产品契合；点公司即筛其全部海外项目）---------- */
+  function showClientBoard() {
+    const META = window.CLIENT_META || {};
+    const stat = {};
+    PROJECTS.forEach(p => {
+      if (p.cat !== 'client') return;
+      const k = p.sub || 'other';
+      if (!stat[k]) stat[k] = { n: 0, inv: 0, countries: new Set(), recentN: 0 };
+      stat[k].n++; stat[k].inv += (p.inv || 0); stat[k].countries.add(p.country); if (isRecent(p)) stat[k].recentN++;
+    });
+    const en = state.lang === 'en';
+    const TIER_ORDER = ['第一梯队', '第二梯队', '第三梯队', '其他'];
+    const TIER_EN = { '第一梯队': 'Tier 1', '第二梯队': 'Tier 2', '第三梯队': 'Tier 3', '其他': 'Other' };
+    const TIER_COLOR = { '第一梯队': '#ff5fa8', '第二梯队': '#ffb02e', '第三梯队': '#21c7ff', '其他': '#7f8db0' };
+    const FIT_COLOR = { '极高': '#ff2d2d', '高': '#ff7a18', '中高': '#ffd000', '中': '#8aa0c8' };
+    const subs = SUB_DEFS.client.filter(d => d.key !== 'other').map(d => d.key);
+    const rowsByTier = {}; TIER_ORDER.forEach(t => rowsByTier[t] = []);
+    subs.forEach(k => {
+      const m = META[k] || {};
+      const tier = TIER_ORDER.indexOf(m.tier) >= 0 ? m.tier : '其他';
+      const s = stat[k] || { n: 0, inv: 0, countries: new Set(), recentN: 0 };
+      rowsByTier[tier].push({ k, label: (SUB_LABEL.client[k] || k), m, s });
+    });
+    const maxN = Math.max(1, ...subs.map(k => (stat[k] ? stat[k].n : 0)));
+    const totalProj = Object.values(stat).reduce((a, b) => a + b.n, 0);
+    const fitBadge = f => f ? '<span class="bd-fit" style="--fc:' + (FIT_COLOR[f] || '#8aa0c8') + '">' + esc(f) + '</span>' : '';
+
+    let html = '';
+    TIER_ORDER.forEach(tier => {
+      const list = rowsByTier[tier]; if (!list.length) return;
+      list.sort((a, b) => b.s.n - a.s.n);
+      const tierProj = list.reduce((a, b) => a + b.s.n, 0);
+      html += '<div class="bd-tier" style="--tc:' + TIER_COLOR[tier] + '"><span class="bd-tier-dot"></span><b>' +
+        (en ? TIER_EN[tier] : tier) + '</b><span class="bd-tier-meta">' + list.length + (en ? ' cos · ' : ' 家 · ') + tierProj + (en ? ' proj' : ' 项目') + '</span></div>';
+      html += list.map(r => {
+        const m = r.m, s = r.s;
+        return '<div class="lg-row bd-row" data-sub="' + r.k + '" tabindex="0" role="button" title="' + esc(m.approach || '') + '">' +
+          '<div class="lg-main"><div class="lg-name">' + esc(r.label) + ' ' + fitBadge(m.fit) +
+          (m.type ? '<span class="bd-type">' + esc(m.type) + '</span>' : '') + '</div>' +
+          (m.product ? '<div class="bd-line">🔌 ' + esc(m.product) + '</div>' : '') +
+          (m.scenario ? '<div class="bd-line bd-dim">🌍 ' + esc(m.scenario) + '</div>' : '') +
+          '<div class="lg-track"><div class="lg-fill" style="width:' + (s.n / maxN * 100) + '%;background:' + TIER_COLOR[tier] + '"></div></div></div>' +
+          '<div class="lg-meta"><b>' + s.n + '</b><span>' + (en ? 'proj' : '项目') + '</span></div>' +
+          '<div class="lg-meta"><b>' + s.countries.size + '</b><span>' + (en ? 'countries' : '国') + '</span></div></div>';
+      }).join('');
+    });
+
+    countryPanel.classList.remove('wide');
+    countryPanel.innerHTML =
+      '<div class="cp-head"><span style="font-size:20px">🎯</span><div class="cp-name">' + (en ? 'Key Clients · BD Board' : '国际大客户 · BD 看板') + '</div>' +
+      '<button class="cp-close" id="cp-close" aria-label="关闭面板" title="关闭">×</button></div>' +
+      '<div class="cp-body"><div class="cp-note" style="margin:0 0 8px">' +
+      (en ? subs.length + ' target companies · ' + totalProj + ' overseas projects · grouped by BD tier & product fit. Click a company to filter its projects on the map.'
+          : subs.length + ' 家目标客户 · ' + totalProj + ' 个海外项目 · 按 BD 梯队与产品关联度分组。点公司即在地图上筛出其全部海外项目。') +
+      '</div><div class="lg-list">' + html + '</div></div>';
+    countryBackdrop.classList.add('show'); countryPanel.classList.add('show');
+    document.getElementById('cp-close').addEventListener('click', hideCountry);
+    focusEl('cp-close');
+    countryPanel.querySelectorAll('.bd-row').forEach(el => el.addEventListener('click', () => {
+      const sub = el.dataset.sub;
+      state.cats = new Set(['client']);
+      state.subOff = new Set(SUB_DEFS.client.filter(d => d.key !== sub).map(d => 'client:' + d.key));
+      state.regions.clear(); state.countries.clear(); state.statuses.clear();
+      state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.recentOnly = false; state.q = '';
+      hideCountry(); clearPresetActive();
+      const allBtn = document.querySelector('.year-presets .yp[data-preset="all"]'); if (allBtn) allBtn.classList.add('on');
+      applyUIFromState(); render();
+      const pts = PROJECTS.filter(p => p.cat === 'client' && p.sub === sub && p.coord).map(p => toLatLng(p.coord));
+      if (pts.length === 1) map.flyTo(pts[0], 6, { duration: 0.7 });
+      else if (pts.length && L.latLngBounds) { try { map.flyToBounds(L.latLngBounds(pts), { padding: [50, 50], maxZoom: 6, duration: 0.7 }); } catch (e) { /* ignore */ } }
+      toast((en ? 'Filtered to ' : '已筛选客户：') + (SUB_LABEL.client[sub] || sub));
     }));
   }
 
@@ -1033,7 +1216,7 @@
     if (state.regions.size) parts.push((en ? 'Regions: ' : '大区: ') + [...state.regions].map(regionName).join('/'));
     if (state.statuses.size) parts.push((en ? 'Status: ' : '状态: ') + [...state.statuses].map(statusName).join('/'));
     if (state.minYear > MIN_YEAR || state.maxYear < MAX_YEAR) parts.push(state.minYear + '–' + state.maxYear);
-    if (state.recentOnly) parts.push(en ? 'Recent 12mo' : '近一年');
+    if (state.recentOnly) parts.push(en ? 'Latest' : '最新');
     if (state.q) parts.push('“' + state.q + '”');
     const filterDesc = parts.length ? parts.join('   ·   ') : (en ? 'All projects' : '全部项目');
     const clip = (s, n) => { s = String(s == null ? '' : s); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
@@ -1077,7 +1260,7 @@
       kpiCard(0, items.length, en ? 'Projects' : '项目总数', '#21c7ff') +
       kpiCard(1, countries, en ? 'Countries' : '覆盖国家', '#e8eefb') +
       kpiCard(2, '≈$' + fmtInv(totalInv), en ? 'Investment' : '总投资(美元)', '#2ee6a6') +
-      kpiCard(3, recentN, en ? 'Recent 12mo' : '🆕 近一年', '#ffb02e') +
+      kpiCard(3, recentN, en ? 'Latest' : '🆕 最新', '#ffb02e') +
       '<text x="60" y="360" font-size="14" letter-spacing="1" fill="#5f718f">' + (en ? 'BY CATEGORY (count)' : '分品类（项目数）') + '</text>' +
       '<text x="620" y="360" font-size="14" letter-spacing="1" fill="#5f718f">' + (en ? (sortCap ? 'TOP (by capacity)' : 'TOP (by investment)') : (sortCap ? '重点项目 TOP（按装机）' : '重点项目 TOP（按投资）')) + '</text>' +
       catRows + topRows +
@@ -1233,5 +1416,5 @@
   })();
 
   // 调试 / 程序化控制句柄
-  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG };
+  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showLeague, showDetail, PROJECTS, applyLang, buildRegionTree, showCompare, openCompare };
 })();

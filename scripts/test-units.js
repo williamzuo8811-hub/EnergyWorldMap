@@ -38,9 +38,17 @@ eq(pc('200万千瓦时').mwh, 2000, '万千瓦时→MWh');
 eq(pc('约 400 公里').km, 400, '线路 公里→km');
 eq(pc('16×100万千瓦').mw, 16000, 'N×M 相乘（16×100 万千瓦）');
 const empty = pc('');
-ok(empty.mw === null && empty.mwh === null && empty.km === null && empty.kbd === null && empty.wty === null, '空 cap → 全 null');
+ok(empty.mw === null && empty.mwh === null && empty.km === null && empty.kbd === null && empty.wty === null && empty.pf === null, '空 cap → 全 null');
 eq(pc('日产 60 万桶').kbd, 60, '油气 万桶/日');
 eq(pc('产能 200 万吨/年').wty, 200, '产能 万吨/年');
+eq(pc('±800kV直流/800万kW').mw, 8000, '万kW → MW（同万千瓦）');
+eq(pc('250+ MW（初期）').mw, 250, 'N+ MW：去≥语义加号仍解析');
+eq(pc('400 MW PV + 1 GWh 储能').mw, 400, 'A+B 不同单位不加和（回归，确保去加号不误伤）');
+eq(pc('智算 160 EFLOPS').pf, 160000, '算力 EFLOPS→PFLOPS');
+eq(pc('4.4万PFlops，机架12.1万架').pf, 44000, '算力 万PFlops→PFLOPS');
+eq(pc('5万P，目标10万P').pf, 50000, '算力 万P→PFLOPS（取首个）');
+eq(pc('300 PFLOPS').pf, 300, '算力 PFLOPS 直读');
+eq(pc('光伏 500 MW').pf, null, '非算力 cap → pf 为 null');
 
 /* ---------- classifySub ---------- */
 const cs = U.classifySub;

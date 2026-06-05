@@ -90,9 +90,10 @@
       { key: 'other', label: '其他金属·煤' },
     ],
     client: [
+      // —— 首批已入库的 14 家（保持在前；matcher 命中 owner）——
       { key: 'powerchina',  label: '中国电建',  fn: (h, l, p) => /中国电建/.test(p.owner || '') },
       { key: 'energychina', label: '中国能建',  fn: (h, l, p) => /中国能建/.test(p.owner || '') },
-      { key: 'sgcc',        label: '国网国际',  fn: (h, l, p) => /电力技术装备|国网/.test(p.owner || '') },
+      { key: 'sgcc',        label: '中电装备',  fn: (h, l, p) => /电力技术装备/.test(p.owner || '') },
       { key: 'cpecc',       label: '中石油工程', fn: (h, l, p) => /中石油工程/.test(p.owner || '') },
       { key: 'ctg',         label: '三峡国际',  fn: (h, l, p) => /三峡/.test(p.owner || '') },
       { key: 'spic',        label: '国家电投',  fn: (h, l, p) => /国家电投/.test(p.owner || '') },
@@ -104,6 +105,47 @@
       { key: 'gem',         label: '格林美',    fn: (h, l, p) => /格林美/.test(p.owner || '') },
       { key: 'gds',         label: '万国DayOne', fn: (h, l, p) => /万国数据|DayOne/.test(p.owner || '') },
       { key: 'chindata',    label: '秦淮数据',  fn: (h, l, p) => /秦淮/.test(p.owner || '') },
+      // —— 《特锐德50家出海大客户》新增 40 家（owner 前缀已含公司名，按 owner 归类）——
+      { key: 'cmec',      label: '中国机械CMEC', fn: (h, l, p) => /中国机械设备|CMEC/.test(p.owner || '') },
+      { key: 'cneec',     label: '中电工程CNEEC', fn: (h, l, p) => /中国电力工程|CNEEC/.test(p.owner || '') },
+      { key: 'complant',  label: '中成进出口',   fn: (h, l, p) => /中成进出口|COMPLANT|成套设备进出口/.test(p.owner || '') },
+      { key: 'camce',     label: '中工国际',     fn: (h, l, p) => /中工国际|CAMCE/.test(p.owner || '') },
+      { key: 'norinco',   label: '北方国际',     fn: (h, l, p) => /北方国际|NORINCO/.test(p.owner || '') },
+      { key: 'crcc',      label: '中国铁建',     fn: (h, l, p) => /中国铁建|铁建国际|CRCC/.test(p.owner || '') },
+      { key: 'crec',      label: '中国中铁',     fn: (h, l, p) => /中国中铁|中铁国际|CREC/.test(p.owner || '') },
+      { key: 'cccc',      label: '中国交建',     fn: (h, l, p) => /中国交建|CCCC/.test(p.owner || '') },
+      { key: 'chec',      label: '中国港湾',     fn: (h, l, p) => /中国港湾|CHEC/.test(p.owner || '') },
+      { key: 'crbc',      label: '中国路桥',     fn: (h, l, p) => /中国路桥|CRBC/.test(p.owner || '') },
+      { key: 'mcc',       label: '中冶集团',     fn: (h, l, p) => /中冶|MCC/.test(p.owner || '') },
+      { key: 'sinosteel', label: '中钢设备',     fn: (h, l, p) => /中钢|Sinosteel/.test(p.owner || '') },
+      { key: 'sinoma',    label: '中材国际',     fn: (h, l, p) => /中材|Sinoma/.test(p.owner || '') },
+      { key: 'mmg',       label: '五矿资源',     fn: (h, l, p) => /五矿|MMG|Minmetals/.test(p.owner || '') },
+      { key: 'chinalco',  label: '中铝集团',     fn: (h, l, p) => /中铝|中国铝业|Chinalco|Chalco|Chalieco/.test(p.owner || '') },
+      { key: 'sgid',      label: '国网国际',     fn: (h, l, p) => /国网国际|SGID/.test(p.owner || '') },
+      { key: 'csg',       label: '南方电网',     fn: (h, l, p) => /南方电网|南网|CSG/.test(p.owner || '') },
+      { key: 'xj',        label: '许继电气',     fn: (h, l, p) => /许继|XJ Electric/.test(p.owner || '') },
+      { key: 'pinggao',   label: '平高集团',     fn: (h, l, p) => /平高|Pinggao/.test(p.owner || '') },
+      { key: 'sdee',      label: '山东电工',     fn: (h, l, p) => /山东电工|SDEE/.test(p.owner || '') },
+      { key: 'tbea',      label: '特变电工',     fn: (h, l, p) => /特变电工|TBEA/.test(p.owner || '') },
+      { key: 'chint',     label: '正泰新能源',   fn: (h, l, p) => /正泰|CHINT|Astronergy/.test(p.owner || '') },
+      { key: 'sungrow',   label: '阳光电源',     fn: (h, l, p) => /阳光电源|Sungrow/.test(p.owner || '') },
+      { key: 'envision',  label: '远景能源',     fn: (h, l, p) => /远景|Envision/.test(p.owner || '') },
+      { key: 'cgn',       label: '中广核',       fn: (h, l, p) => /中广核|中国广核|CGN/.test(p.owner || '') },
+      { key: 'chnenergy', label: '国家能源/龙源', fn: (h, l, p) => /国家能源集团|龙源|CHN Energy|Longyuan/.test(p.owner || '') },
+      { key: 'huaneng',   label: '华能国际',     fn: (h, l, p) => /华能|Huaneng/.test(p.owner || '') },
+      { key: 'huadian',   label: '华电海外',     fn: (h, l, p) => /华电|Huadian/.test(p.owner || '') },
+      { key: 'datang',    label: '大唐海外',     fn: (h, l, p) => /大唐|Datang/.test(p.owner || '') },
+      { key: 'beih',      label: '京能国际',     fn: (h, l, p) => /京能|Beijing Energy/.test(p.owner || '') },
+      { key: 'cecep',     label: '中节能',       fn: (h, l, p) => /中节能|CECEP/.test(p.owner || '') },
+      { key: 'gcl',       label: '协鑫',         fn: (h, l, p) => /协鑫|GCL/.test(p.owner || '') },
+      { key: 'ganfeng',   label: '赣锋锂业',     fn: (h, l, p) => /赣锋|Ganfeng/.test(p.owner || '') },
+      { key: 'tianqi',    label: '天齐锂业',     fn: (h, l, p) => /天齐|Tianqi/.test(p.owner || '') },
+      { key: 'huayou',    label: '华友钴业',     fn: (h, l, p) => /华友|Huayou/.test(p.owner || '') },
+      { key: 'tsingshan', label: '青山控股',     fn: (h, l, p) => /青山|Tsingshan/.test(p.owner || '') },
+      { key: 'hqc',       label: '寰球工程',     fn: (h, l, p) => /寰球|HQC/.test(p.owner || '') },
+      { key: 'seg',       label: '中石化炼化',   fn: (h, l, p) => /中石化炼化|炼化工程|Sinopec Engineering|SEG/.test(p.owner || '') },
+      { key: 'cooec',     label: '海油工程',     fn: (h, l, p) => /海油工程|COOEC/.test(p.owner || '') },
+      { key: 'cncec',     label: '中国化学',     fn: (h, l, p) => /中国化学|CNCEC/.test(p.owner || '') },
       { key: 'other', label: '其他客户' },
     ],
   };
@@ -124,12 +166,14 @@
   }
 
   /* ---------- 容量解析：把自由文本 cap 抽成结构化数值 ----------
-   * 返回 { mw, mwh, km, kbd, wty }：电功率MW / 储能MWh / 线路km / 油气万桶日 / 产能万吨年。
-   * 取首个匹配为准；遇 "A+B" 加和；"N×M 单位" 相乘；MW/GW 用前瞻避免误吞 MWh/GWh。无则 null。 */
+   * 返回 { mw, mwh, km, kbd, wty, pf }：电功率MW / 储能MWh / 线路km / 油气万桶日 / 产能万吨年 / 智算PFLOPS。
+   * 取首个匹配为准；遇 "A+B" 加和；"N×M 单位" 相乘；MW/GW 用前瞻避免误吞 MWh/GWh；"万kW" 同 "万千瓦"。无则 null。 */
   function parseCapacity(cap) {
-    const out = { mw: null, mwh: null, km: null, kbd: null, wty: null };
+    const out = { mw: null, mwh: null, km: null, kbd: null, wty: null, pf: null };
     if (!cap) return out;
-    const s = String(cap).replace(/[，、]/g, ',').replace(/＋/g, '+').replace(/／/g, '/').replace(/[×✕⨯]/g, 'x').replace(/～/g, '~');
+    const s = String(cap).replace(/[，、]/g, ',').replace(/＋/g, '+').replace(/／/g, '/').replace(/[×✕⨯]/g, 'x').replace(/～/g, '~')
+      // "250+ MW"/"100+ MW"：去掉数字与单位之间的"≥"语义加号（其后接单位、非数字，故不影响 "A+B" 加和）
+      .replace(/\+(\s*)(?=GWp|GW|MWp|MW|kW|兆瓦|吉瓦|千瓦|万千瓦|万kW)/gi, '$1');
     const NUM = '(\\d+(?:\\.\\d+)?)', MUL = '(?:\\s*x\\s*(\\d+(?:\\.\\d+)?))?';
     function collect(unitAlt, factor) {
       const rg = new RegExp(NUM + MUL + '\\s*(?:' + unitAlt + ')', 'gi'), vals = []; let m;
@@ -146,13 +190,21 @@
       return vals[0].v;
     }
     const r = n => (n == null ? null : Math.round(n * 100) / 100);
-    const power = [].concat(collect('GWp|GW(?!h)|吉瓦', 1000)).concat(collect('万千瓦(?!时)', 10)).concat(collect('MWp|MW(?!h)|兆瓦', 1)).concat(collect('kW(?!h)|千瓦(?!时)', 0.001));
+    const power = [].concat(collect('GWp|GW(?!h)|吉瓦', 1000)).concat(collect('万千瓦(?!时)|万kW(?!h)|万KW(?!h)', 10)).concat(collect('MWp|MW(?!h)|兆瓦', 1)).concat(collect('kW(?!h)|千瓦(?!时)', 0.001));
     power.sort((a, b) => a.i - b.i); out.mw = r(pick(power));
-    const energy = [].concat(collect('GWh', 1000)).concat(collect('MWh', 1)).concat(collect('万千瓦时', 10)).concat(collect('kWh', 0.001));
+    const energy = [].concat(collect('GWh', 1000)).concat(collect('MWh', 1)).concat(collect('万千瓦时|万kWh|万KWh', 10)).concat(collect('kWh', 0.001));
     energy.sort((a, b) => a.i - b.i); out.mwh = r(pick(energy));
     const len = collect('公里|km', 1); len.sort((a, b) => a.i - b.i); out.km = len.length ? r(len[0].v) : null;
     let oil = collect('万桶', 1); if (!oil.length) oil = collect('桶', 1 / 10000); oil.sort((a, b) => a.i - b.i); out.kbd = oil.length ? r(oil[0].v) : null;
     const mass = [].concat(collect('万吨', 1)).concat(collect('Mtpa|Mt', 100)); mass.sort((a, b) => a.i - b.i); out.wty = mass.length ? r(mass[0].v) : null;
+    // 智能算力（AI 数据中心头条指标）→ 统一折算 PFLOPS：EFLOPS/exaflops×1000；"万P"/"万PFlops"×10000；
+    // PFLOPS×1；裸 "数字P"（中文算力常用简写，如 7209P）×1。负前瞻仅排除其后紧跟拉丁字母（避免 PFLOPS/Pa/MPa 误吞）。
+    const comp = [].concat(collect('EFLOPS|EFlops|exaflops', 1000))
+      .concat(collect('万\\s*PFLOPS|万\\s*PFlops', 10000))
+      .concat(collect('万\\s*P(?![A-Za-z])', 10000))
+      .concat(collect('PFLOPS|PFlops', 1))
+      .concat(collect('P(?![A-Za-z])', 1));
+    comp.sort((a, b) => a.i - b.i); out.pf = r(pick(comp));
     return out;
   }
 

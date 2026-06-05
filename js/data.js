@@ -19,7 +19,7 @@
  *   invText   投资额展示文本
  *   status    规划 / 在建 / 投运
  *   year      关键里程碑年份
- *   updated   最近动态时间 'YYYY-MM'（≥ META.recentSince 自动标记为 🆕 近一年）
+ *   updated   最近动态时间 'YYYY-MM'（≥ META.recentSince 自动标记为 🆕 最新）
  *   owner     业主 / 主要参与方
  *   flagship  是否旗舰项目（地图上有高亮脉冲）
  *   desc      一句话摘要（用于悬浮提示 / 列表）
@@ -29,7 +29,7 @@
  *   route     可选：[[经度,纬度], ...] 连线（输变电走廊 / 高铁等）
  * ============================================================= */
 window.ENERGY = (function () {
-  const META = { lastUpdated: '2026-06', recentSince: '2025-06', minInvestmentRMB: '5000 万元' };
+  const META = { lastUpdated: '2026-06', recentSince: '2026-01', minInvestmentRMB: '5000 万元' };
 
   const CATEGORIES = {
     renewable:  { name: '可再生能源发电', short: '新能源发电', color: '#2ee6a6', icon: '☀️' },
