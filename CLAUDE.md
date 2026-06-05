@@ -187,7 +187,7 @@ A project object (see `data.js` header comment for the full field reference):
   (`'2026-06'`) is shown in the header. Bump both when refreshing the dataset.
 - The category key `client` (国际大客户) groups overseas projects of 54 Chinese companies by `owner`
   (see the `SUB_DEFS.client` `fn` matchers): the original 14 (`data-clients.js`, id 1570–1698) plus the 40
-  from the《特锐德 50 家中国出海大客户》list (`data-clients2.js`, id 4000–4237).
+  from the《特锐德 50 家中国出海大客户》list (`data-clients2.js`, id 4000–4422).
 
 ## Data-refresh workflow
 
