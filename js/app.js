@@ -547,6 +547,10 @@
   const btnLeague = document.getElementById('btn-league');
   if (btnLeague) btnLeague.addEventListener('click', showLeague);
 
+  // 🎯 国际大客户 BD 看板
+  const btnBoard = document.getElementById('btn-board');
+  if (btnBoard) btnBoard.addEventListener('click', showClientBoard);
+
   // 🆚 国别对比
   const btnCompare = document.getElementById('btn-compare');
   if (btnCompare) btnCompare.addEventListener('click', openCompare);
@@ -908,6 +912,80 @@
     }));
   }
 
+  /* ---------- 🎯 国际大客户 BD 看板（按梯队/产品契合；点公司即筛其全部海外项目）---------- */
+  function showClientBoard() {
+    const META = window.CLIENT_META || {};
+    const stat = {};
+    PROJECTS.forEach(p => {
+      if (p.cat !== 'client') return;
+      const k = p.sub || 'other';
+      if (!stat[k]) stat[k] = { n: 0, inv: 0, countries: new Set(), recentN: 0 };
+      stat[k].n++; stat[k].inv += (p.inv || 0); stat[k].countries.add(p.country); if (isRecent(p)) stat[k].recentN++;
+    });
+    const en = state.lang === 'en';
+    const TIER_ORDER = ['第一梯队', '第二梯队', '第三梯队', '其他'];
+    const TIER_EN = { '第一梯队': 'Tier 1', '第二梯队': 'Tier 2', '第三梯队': 'Tier 3', '其他': 'Other' };
+    const TIER_COLOR = { '第一梯队': '#ff5fa8', '第二梯队': '#ffb02e', '第三梯队': '#21c7ff', '其他': '#7f8db0' };
+    const FIT_COLOR = { '极高': '#ff2d2d', '高': '#ff7a18', '中高': '#ffd000', '中': '#8aa0c8' };
+    const subs = SUB_DEFS.client.filter(d => d.key !== 'other').map(d => d.key);
+    const rowsByTier = {}; TIER_ORDER.forEach(t => rowsByTier[t] = []);
+    subs.forEach(k => {
+      const m = META[k] || {};
+      const tier = TIER_ORDER.indexOf(m.tier) >= 0 ? m.tier : '其他';
+      const s = stat[k] || { n: 0, inv: 0, countries: new Set(), recentN: 0 };
+      rowsByTier[tier].push({ k, label: (SUB_LABEL.client[k] || k), m, s });
+    });
+    const maxN = Math.max(1, ...subs.map(k => (stat[k] ? stat[k].n : 0)));
+    const totalProj = Object.values(stat).reduce((a, b) => a + b.n, 0);
+    const fitBadge = f => f ? '<span class="bd-fit" style="--fc:' + (FIT_COLOR[f] || '#8aa0c8') + '">' + esc(f) + '</span>' : '';
+
+    let html = '';
+    TIER_ORDER.forEach(tier => {
+      const list = rowsByTier[tier]; if (!list.length) return;
+      list.sort((a, b) => b.s.n - a.s.n);
+      const tierProj = list.reduce((a, b) => a + b.s.n, 0);
+      html += '<div class="bd-tier" style="--tc:' + TIER_COLOR[tier] + '"><span class="bd-tier-dot"></span><b>' +
+        (en ? TIER_EN[tier] : tier) + '</b><span class="bd-tier-meta">' + list.length + (en ? ' cos · ' : ' 家 · ') + tierProj + (en ? ' proj' : ' 项目') + '</span></div>';
+      html += list.map(r => {
+        const m = r.m, s = r.s;
+        return '<div class="lg-row bd-row" data-sub="' + r.k + '" tabindex="0" role="button" title="' + esc(m.approach || '') + '">' +
+          '<div class="lg-main"><div class="lg-name">' + esc(r.label) + ' ' + fitBadge(m.fit) +
+          (m.type ? '<span class="bd-type">' + esc(m.type) + '</span>' : '') + '</div>' +
+          (m.product ? '<div class="bd-line">🔌 ' + esc(m.product) + '</div>' : '') +
+          (m.scenario ? '<div class="bd-line bd-dim">🌍 ' + esc(m.scenario) + '</div>' : '') +
+          '<div class="lg-track"><div class="lg-fill" style="width:' + (s.n / maxN * 100) + '%;background:' + TIER_COLOR[tier] + '"></div></div></div>' +
+          '<div class="lg-meta"><b>' + s.n + '</b><span>' + (en ? 'proj' : '项目') + '</span></div>' +
+          '<div class="lg-meta"><b>' + s.countries.size + '</b><span>' + (en ? 'countries' : '国') + '</span></div></div>';
+      }).join('');
+    });
+
+    countryPanel.classList.remove('wide');
+    countryPanel.innerHTML =
+      '<div class="cp-head"><span style="font-size:20px">🎯</span><div class="cp-name">' + (en ? 'Key Clients · BD Board' : '国际大客户 · BD 看板') + '</div>' +
+      '<button class="cp-close" id="cp-close" aria-label="关闭面板" title="关闭">×</button></div>' +
+      '<div class="cp-body"><div class="cp-note" style="margin:0 0 8px">' +
+      (en ? subs.length + ' target companies · ' + totalProj + ' overseas projects · grouped by BD tier & product fit. Click a company to filter its projects on the map.'
+          : subs.length + ' 家目标客户 · ' + totalProj + ' 个海外项目 · 按 BD 梯队与产品关联度分组。点公司即在地图上筛出其全部海外项目。') +
+      '</div><div class="lg-list">' + html + '</div></div>';
+    countryBackdrop.classList.add('show'); countryPanel.classList.add('show');
+    document.getElementById('cp-close').addEventListener('click', hideCountry);
+    focusEl('cp-close');
+    countryPanel.querySelectorAll('.bd-row').forEach(el => el.addEventListener('click', () => {
+      const sub = el.dataset.sub;
+      state.cats = new Set(['client']);
+      state.subOff = new Set(SUB_DEFS.client.filter(d => d.key !== sub).map(d => 'client:' + d.key));
+      state.regions.clear(); state.countries.clear(); state.statuses.clear();
+      state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.recentOnly = false; state.q = '';
+      hideCountry(); clearPresetActive();
+      const allBtn = document.querySelector('.year-presets .yp[data-preset="all"]'); if (allBtn) allBtn.classList.add('on');
+      applyUIFromState(); render();
+      const pts = PROJECTS.filter(p => p.cat === 'client' && p.sub === sub && p.coord).map(p => toLatLng(p.coord));
+      if (pts.length === 1) map.flyTo(pts[0], 6, { duration: 0.7 });
+      else if (pts.length && L.latLngBounds) { try { map.flyToBounds(L.latLngBounds(pts), { padding: [50, 50], maxZoom: 6, duration: 0.7 }); } catch (e) { /* ignore */ } }
+      toast((en ? 'Filtered to ' : '已筛选客户：') + (SUB_LABEL.client[sub] || sub));
+    }));
+  }
+
   /* ---------- 品类色图例（地图左上，点击=切换该品类；随语言重建）---------- */
   const legendEl = document.getElementById('cat-legend');
   function buildCatLegend() {
@@ -1247,5 +1325,5 @@
   })();
 
   // 调试 / 程序化控制句柄
-  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG };
+  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showLeague };
 })();

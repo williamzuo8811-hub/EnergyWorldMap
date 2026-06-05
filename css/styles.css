@@ -731,6 +731,19 @@ body.heat-on .heat-facets { display: flex; }
 .lg-meta b { display: block; font-size: 13px; font-weight: 800; }
 .lg-meta span { font-size: 10px; color: var(--txt-faint); }
 
+/* 🎯 国际大客户 BD 看板 */
+.bd-tier { display: flex; align-items: center; gap: 7px; margin: 13px 0 5px; font-size: 12px; color: var(--txt); }
+.bd-tier:first-child { margin-top: 2px; }
+.bd-tier b { font-weight: 800; }
+.bd-tier-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--tc); box-shadow: 0 0 7px var(--tc); flex: none; }
+.bd-tier-meta { color: var(--txt-faint); font-size: 10px; }
+.bd-row { align-items: flex-start; }
+.bd-row .lg-name { white-space: normal; overflow: visible; flex-wrap: wrap; }
+.bd-fit { font-size: 9px; font-weight: 800; color: #0a0f1c; background: var(--fc); border-radius: 5px; padding: 1px 5px; flex: none; }
+.bd-type { font-size: 10px; font-weight: 500; color: var(--txt-faint); }
+.bd-line { font-size: 10.5px; color: #b9c4dc; margin-top: 3px; line-height: 1.4; }
+.bd-line.bd-dim { color: var(--txt-faint); }
+
 /* TOP 排序切换（标题里的可点击 chip）*/
 .sort-toggle { cursor: pointer; user-select: none; transition: color .15s; }
 .sort-toggle:hover { color: var(--accent); }

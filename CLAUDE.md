@@ -158,7 +158,13 @@ its 投资/装机 totals apply the same client-exclusion rule. The per-country a
 small-multiple columns (`state.compare`), each with its own KPIs / category bars / TOP-3, plus a
 searchable country picker and an `⊕ 加入对比` shortcut on the single-country panel. The **🏢 company
 league** (`showLeague`) groups by `normalizeOwner` (in `js/util.js`), which strips legal-entity suffixes
-so "中国电建" and "中国电建集团" aggregate as one owner.
+so "中国电建" and "中国电建集团" aggregate as one owner. The **🎯 client BD board** (`showClientBoard`, the
+`🎯 客户` map-tools button) renders the 54 `client` companies grouped by BD tier (第一/二/三梯队) × product
+fit, each row showing type / 重点关联产品 / 海外场景 / project & country counts; clicking a company filters the
+map to just that company (`state.cats={client}`, `subOff` = all client subs except the picked one) and flies to
+its bounds. The board's per-company BD metadata lives in **`js/clients-meta.js`** (`window.CLIENT_META`, keyed by
+the `SUB_DEFS.client` sub-key, sourced from the《特锐德 50 家出海大客户》Excel); it is **not** project data —
+loaded after `util.js`, before `app.js`, and not subject to `validate-data.js`.
 
 ## Project data conventions
 
