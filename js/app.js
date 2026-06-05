@@ -601,7 +601,9 @@
     const subCount = {};
     base.forEach(p => { const id = p.cat + ':' + p.sub; subCount[id] = (subCount[id] || 0) + 1; });
     document.querySelectorAll('.sub-chip').forEach(el => {
-      el.querySelector('.sct').textContent = subCount[el.dataset.key + ':' + el.dataset.sub] || 0;
+      const n = subCount[el.dataset.key + ':' + el.dataset.sub] || 0;
+      el.querySelector('.sct').textContent = n;
+      el.classList.toggle('is-zero', n === 0);
     });
 
     const regCount = {}; REGIONS.forEach(r => regCount[r] = 0);
