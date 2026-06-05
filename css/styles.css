@@ -385,7 +385,7 @@ input[type=range]::-webkit-slider-thumb {
 
   /* 顶栏精简成一行：logo + 标题 + 📊 数据开关；英文副标隐藏、KPI 收起，最大化地图。
      点「📊 数据」后 4 个 KPI 在下方换成 2×2 全显示 */
-  .topbar { flex-wrap: wrap; gap: 8px 12px; padding: 8px 12px; padding-top: calc(8px + env(safe-area-inset-top)); }
+  .topbar { flex-wrap: wrap; gap: 8px 12px; padding: 8px 12px; padding-top: calc(8px + env(safe-area-inset-top, 0px)); }
   .brand { flex: 1 1 auto; min-width: 0; gap: 9px; }
   .brand .logo { width: 30px; height: 30px; font-size: 16px; }
   .brand > div { min-width: 0; }
@@ -414,11 +414,11 @@ input[type=range]::-webkit-slider-thumb {
   .map-tools.tools-open .tools-toggle { color: var(--accent); border-color: var(--accent); }
 
   /* iPhone 安全区：底部浮动按钮上移让开 home 横条 / 浏览器底栏 */
-  .mobile-fab { bottom: calc(18px + env(safe-area-inset-bottom)); }
+  .mobile-fab { bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
   /* 左下缩放控件抬高到 🔍 筛选浮钮之上：用 bottom 定位（margin 对 Leaflet 角容器无效），
      并把层级提到浮钮之上，确保 ＋/－ 两颗都完整露出、不被浮钮或浏览器底栏遮住 */
-  .leaflet-bottom.leaflet-left { bottom: calc(80px + env(safe-area-inset-bottom)); z-index: 1860; }
-  .leaflet-bottom.leaflet-right { bottom: calc(58px + env(safe-area-inset-bottom)); }
+  .leaflet-bottom.leaflet-left { bottom: 96px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 1860; }
+  .leaflet-bottom.leaflet-right { bottom: 64px; bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
   /* 🔍 浮钮在左下 → 热力分面条上移让位 */
   .heat-facets { bottom: 70px; }
 }
