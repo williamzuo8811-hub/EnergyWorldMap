@@ -52,6 +52,11 @@ if (!ENERGY) { console.error('✘ 致命：window.ENERGY 未定义（data.js 未
 const { CATEGORIES, REGIONS, STATUS } = ENERGY;
 const CAT_KEYS = Object.keys(CATEGORIES);
 const PROJECTS = ENERGY.PROJECTS.concat(global.window.ENERGY_EXTRA || []);
+// 稀疏空洞 / 假值元素检测：data 文件里多一个逗号会产生数组 elision，forEach 会静默跳过、各种统计悄悄对不上
+for (let i = 0; i < PROJECTS.length; i++) {
+  if (!(i in PROJECTS)) E(`项目数组存在空洞（elision）@ 索引 ${i}——多半是某 data 文件里多了一个逗号`);
+  else if (!PROJECTS[i] || typeof PROJECTS[i] !== 'object') E(`项目数组含假值元素 @ 索引 ${i}：${JSON.stringify(PROJECTS[i])}`);
+}
 const PROGRESS = global.window.ENERGY_PROGRESS || {};
 // 复用与 app.js 相同的容量解析（检测"有 cap 文本却解析不出任何数值"的盲区）
 let UTIL = null;
@@ -172,6 +177,28 @@ if (UTIL && UTIL.parseCapacity) {
   if (blind.length) W(`容量解析盲区 ${blind.length} 个（cap 有数字但解析不出任何口径，可补 SUB/解析规则）：` +
     blind.slice(0, 8).map(p => `#${p.id}"${p.cap}"`).join(' · ') + (blind.length > 8 ? ' …' : ''));
 }
+
+// 5e) 国际大客户子分类兜底：client 项目落入"其他客户"= 可能漏配 SUB_DEFS.client matcher
+if (UTIL && UTIL.classifySub) {
+  const otherOwners = new Set();
+  PROJECTS.forEach(p => { if (p && p.cat === 'client' && UTIL.classifySub(p) === 'other') otherOwners.add(p.owner || '(无业主)'); });
+  if (otherOwners.size) W(`国际大客户落入兜底「其他客户」桶的业主 ${otherOwners.size} 家（若为目标客户，请在 util.js SUB_DEFS.client 补 matcher）：` +
+    [...otherOwners].slice(0, 12).join(' · ') + (otherOwners.size > 12 ? ' …' : ''));
+}
+
+// 5f) 准重复检测（高精度）：两个项目名仅在"空格/分隔点/工程·项目后缀"上不同 → 几乎必为同一项目重复录入
+//     （按 name 去重抓不到，因原始串不同；但归一化后相同）。分期"二期/扩建/不同机组"因保留区分词不会命中。
+(function () {
+  const key = s => String(s || '').replace(/[\s·]/g, '').replace(/(工程|项目)$/, '');
+  const seen = new Map();   // normKey -> 首个 {id,name}
+  PROJECTS.forEach(p => {
+    if (!p || !p.name) return;
+    const k = key(p.name);
+    if (seen.has(k) && seen.get(k).name !== p.name)
+      W(`准重复（名称仅空格/后缀差异，疑似重复录入并双重计数）：#${p.id}「${p.name}」≈ #${seen.get(k).id}「${seen.get(k).name}」`);
+    else if (!seen.has(k)) seen.set(k, { id: p.id, name: p.name });
+  });
+})();
 
 /* ---------- 6) 概览 ---------- */
 const by = (key) => PROJECTS.reduce((m, p) => { const k = p[key]; m[k] = (m[k] || 0) + 1; return m; }, {});
