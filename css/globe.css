@@ -176,11 +176,13 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); c
   /* 平面地图按钮在窄屏收成图标，省出横向空间 */
   #btn-flat { font-size: 0; }
   #btn-flat::before { content: "🗺️"; font-size: 15px; }
-  .left-panel { top: 60px; left: 10px; width: 212px; max-height: calc(100vh - 80px); padding: 11px; }
+  /* 面板高度用 dvh（动态视口，自动扣掉手机浏览器上下工具栏），保证尾部控件在可视区内、可滚动到底 */
+  .left-panel { top: 56px; left: 10px; width: 212px; padding: 11px;
+    max-height: calc(100vh - 68px); max-height: calc(100dvh - 68px); -webkit-overflow-scrolling: touch; }
   .left-panel.collapsed { display: none; }
   .panel-toggle { display: inline-flex; }
   .detail { top: auto; bottom: 0; right: 0; left: 0; width: 100%; max-width: 100%; border-radius: 16px 16px 0 0;
-    max-height: 64vh; }
+    max-height: 64dvh; }
   .legend { max-width: calc(100vw - 20px); left: 10px; bottom: 10px; }
   .hint { display: none; }
   .credit { bottom: 10px; right: 10px; }
