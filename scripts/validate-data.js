@@ -173,7 +173,7 @@ PROJECTS.forEach(p => {
 // 容量解析盲区：cap 含数字但 parseCapacity 五个口径全 null（解析规则可能漏了单位）
 if (UTIL && UTIL.parseCapacity) {
   const blind = PROJECTS.filter(p => p.cap && /\d/.test(p.cap))
-    .filter(p => { const c = UTIL.parseCapacity(p.cap); return c.mw == null && c.mwh == null && c.km == null && c.kbd == null && c.wty == null; });
+    .filter(p => { const c = UTIL.parseCapacity(p.cap); return c.mw == null && c.mwh == null && c.km == null && c.kbd == null && c.wty == null && c.pf == null; });
   if (blind.length) W(`容量解析盲区 ${blind.length} 个（cap 有数字但解析不出任何口径，可补 SUB/解析规则）：` +
     blind.slice(0, 8).map(p => `#${p.id}"${p.cap}"`).join(' · ') + (blind.length > 8 ? ' …' : ''));
 }

@@ -24,7 +24,7 @@
         if (!p.progress && PROG[p.id]) p.progress = PROG[p.id];
         p.sub = classifySub(p);
         const cc = parseCapacity(p.cap);
-        p.capMW = cc.mw; p.capMWh = cc.mwh; p.capKm = cc.km; p.capKbd = cc.kbd; p.capWty = cc.wty;
+        p.capMW = cc.mw; p.capMWh = cc.mwh; p.capKm = cc.km; p.capKbd = cc.kbd; p.capWty = cc.wty; p.capPF = cc.pf;
         seen.add(p.name); out.push(p);
       }
     });
@@ -137,7 +137,7 @@
     '项目数': 'Projects', '总投资': 'Investment', '装机容量': 'Capacity', '分品类（项目数 · 投资额）': 'By category (count · investment)',
     '项目状态': 'Status', '里程碑年份分布': 'Milestone years', '重点项目 TOP（按投资额）': 'Top projects (by investment)',
     '无匹配项目，请调整筛选条件': 'No matching projects — adjust filters', '当前筛选无可解析的容量指标': 'No parseable capacity metrics in current filter',
-    '装机': 'Power', '储能': 'Storage', '线路': 'Lines', '油气产能': 'Oil/Gas', '产能': 'Output',
+    '装机': 'Power', '储能': 'Storage', '算力': 'AI Compute', '线路': 'Lines', '油气产能': 'Oil/Gas', '产能': 'Output',
     '企业 / 业主排行榜': 'Company / Owner League Table', '项目数': 'Projects', '按项目数排名（投资额为该业主累计）': 'Ranked by project count (investment = owner total)',
     '点公司名筛选其全部项目': 'Click a company to filter its projects', '🏢 企业榜': '🏢 Companies',
   };
@@ -333,7 +333,20 @@
     group.appendChild(chip);
     const subWrap = document.createElement('div');
     subWrap.className = 'sub-list';
-    SUB_DEFS[key].forEach(d => {
+    // 国际大客户：54 家子分类按 BD 梯队（CLIENT_META）分组并加梯队小标题，避免一长条平铺难扫读
+    const META = (key === 'client' && window.CLIENT_META) ? window.CLIENT_META : null;
+    const TIER_ORDER = ['第一梯队', '第二梯队', '第三梯队', '其他'];
+    const TIER_LABEL = { '第一梯队': '🥇 第一梯队', '第二梯队': '🥈 第二梯队', '第三梯队': '🥉 第三梯队', '其他': '其他出海客户', '未归类': '未归类' };
+    const tierOf = d => d.key === 'other' ? '未归类' : (TIER_ORDER.indexOf((META[d.key] || {}).tier) >= 0 ? (META[d.key] || {}).tier : '其他');
+    let ordered = SUB_DEFS[key];
+    if (META) ordered = ordered.map((d, i) => ({ d, i })).sort((a, b) => {
+      const oa = a.d.key === 'other' ? 99 : TIER_ORDER.indexOf(tierOf(a.d));
+      const ob = b.d.key === 'other' ? 99 : TIER_ORDER.indexOf(tierOf(b.d));
+      return oa - ob || a.i - b.i;
+    }).map(x => x.d);
+    let lastTier = null;
+    ordered.forEach(d => {
+      if (META) { const t = tierOf(d); if (t !== lastTier) { const tv = document.createElement('div'); tv.className = 'sub-tier'; tv.textContent = TIER_LABEL[t] || t; subWrap.appendChild(tv); lastTier = t; } }
       const s = document.createElement('div');
       s.className = 'sub-chip'; s.dataset.key = key; s.dataset.sub = d.key; s.tabIndex = 0; s.setAttribute('role', 'button');
       s.innerHTML = '<span class="sdot" style="background:' + c.color + '"></span><span class="snm">' + d.label + '</span><span class="sct">0</span>';
@@ -582,11 +595,12 @@
     const el = document.getElementById('cap-stats'); if (!el) return;
     const sum = f => items.reduce((s, p) => s + (f(p) || 0), 0);
     const gw = sum(p => p.capMW) / 1000, gwh = sum(p => p.capMWh) / 1000;
-    const km = sum(p => p.capKm), kbd = sum(p => p.capKbd), wty = sum(p => p.capWty);
+    const km = sum(p => p.capKm), kbd = sum(p => p.capKbd), wty = sum(p => p.capWty), pf = sum(p => p.capPF);
     const n1 = x => (x < 10 ? (Math.round(x * 10) / 10) : Math.round(x)).toLocaleString('en-US');
     const chips = [];
     if (gw > 0) chips.push(['⚡', '装机', gw >= 1000 ? (gw / 1000).toFixed(1) + ' TW' : n1(gw) + ' GW']);
     if (gwh > 0) chips.push(['🔋', '储能', n1(gwh) + ' GWh']);
+    if (pf > 0) chips.push(['🧠', '算力', pf >= 1000 ? (pf / 1000).toFixed(pf < 10000 ? 1 : 0) + ' EFLOPS' : Math.round(pf).toLocaleString('en-US') + ' PFLOPS']);
     if (km > 0) chips.push(['🔌', '线路', Math.round(km).toLocaleString('en-US') + ' km']);
     if (kbd > 0) chips.push(['🛢️', '油气产能', Math.round(kbd).toLocaleString('en-US') + ' 万桶/日']);
     if (wty > 0) chips.push(['🏭', '产能', Math.round(wty).toLocaleString('en-US') + ' 万吨/年']);
@@ -608,6 +622,14 @@
     document.getElementById('kpi-country').textContent = countries;
     document.getElementById('kpi-inv').textContent = fmtInv(totalInv);
     document.getElementById('kpi-recent').textContent = recentN;
+    // 投资额离群透明化：单个项目占比 ≥25% 时在总投资 KPI 上挂 title 提示（如 Stargate $500B 独占却无感）
+    const invEl = document.getElementById('kpi-inv');
+    if (invEl) {
+      const top = statItems.reduce((a, p) => (p.inv || 0) > (a ? (a.inv || 0) : -1) ? p : a, null);
+      invEl.title = (top && totalInv > 0 && top.inv / totalInv >= 0.25)
+        ? (state.lang === 'en' ? 'incl. ' : '其中「') + nm(top) + (state.lang === 'en' ? ' ' : '」') + '≈$' + fmtInv(top.inv) + ' · ' + Math.round(top.inv / totalInv * 100) + '%'
+        : '';
+    }
     updateCapStats(statItems);
 
     const base = PROJECTS.filter(passBase);
@@ -667,6 +689,25 @@
     }
     return esc(p.detail || p.desc);
   }
+  // 国际大客户详情卡的 BD 画像（梯队/产品契合/重点产品/海外场景/推荐打法），数据来自 window.CLIENT_META
+  function clientBdBlock(p) {
+    if (p.cat !== 'client' || !window.CLIENT_META) return '';
+    const m = window.CLIENT_META[p.sub]; if (!m) return '';
+    const en = state.lang === 'en';
+    const TC = { '第一梯队': '#ff5fa8', '第二梯队': '#ffb02e', '第三梯队': '#21c7ff', '其他': '#7f8db0' };
+    const TE = { '第一梯队': 'Tier 1', '第二梯队': 'Tier 2', '第三梯队': 'Tier 3', '其他': 'Other' };
+    const FE = { '极高': 'Very high', '高': 'High', '中高': 'Med-high', '中': 'Medium' };
+    const line = (ico, zh, en2, v) => v ? '<div class="d-bd-l"><b>' + ico + ' ' + (en ? en2 : zh) + '</b>' + esc(v) + '</div>' : '';
+    return '<div class="d-bd">' +
+      '<div class="d-bd-h"><span class="d-bd-tag">🎯 ' + (en ? 'BD profile' : 'BD 画像') + '</span>' +
+      '<span class="d-bd-tier" style="--tc:' + (TC[m.tier] || '#7f8db0') + '">' + (en ? (TE[m.tier] || m.tier) : m.tier) + '</span>' +
+      (m.fit ? '<span class="d-bd-fit">' + (en ? 'Fit·' : '契合·') + (en ? (FE[m.fit] || m.fit) : m.fit) + '</span>' : '') +
+      (m.type ? '<span class="d-bd-type">' + esc(m.type) + '</span>' : '') + '</div>' +
+      line('🔌', '重点产品：', 'Products: ', m.product) +
+      line('🌍', '海外场景：', 'Scenario: ', m.scenario) +
+      line('♟', '推荐打法：', 'Approach: ', m.approach) +
+      '</div>';
+  }
   // 模态焦点管理：打开时记录并把焦点移入，关闭时还原（无障碍）
   let _lastFocus = null;
   const captureFocus = () => { _lastFocus = document.activeElement; };
@@ -692,7 +733,7 @@
       cell(tr('投资额'), usd(p) + (/美元|\$/.test(p.invText || '') || !p.invText ? '' : ' <span class="d-usd">（原币种：' + esc(p.invText) + '）</span>')) +
       cell(tr('业主 / 参与方'), esc(p.owner || '—')) +
       cell(tr('最近动态'), esc(p.updated || '—')) +
-      '</div><div class="d-desc">' + descBody(p) + '</div>';
+      '</div>' + clientBdBlock(p) + '<div class="d-desc">' + descBody(p) + '</div>';
     detailEl.classList.add('show');
     document.getElementById('d-close').addEventListener('click', hideDetail);
     const ds = document.getElementById('d-share');
@@ -1325,5 +1366,5 @@
   })();
 
   // 调试 / 程序化控制句柄
-  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showLeague };
+  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showLeague, showDetail, PROJECTS };
 })();

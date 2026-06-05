@@ -166,12 +166,14 @@
   }
 
   /* ---------- 容量解析：把自由文本 cap 抽成结构化数值 ----------
-   * 返回 { mw, mwh, km, kbd, wty }：电功率MW / 储能MWh / 线路km / 油气万桶日 / 产能万吨年。
-   * 取首个匹配为准；遇 "A+B" 加和；"N×M 单位" 相乘；MW/GW 用前瞻避免误吞 MWh/GWh。无则 null。 */
+   * 返回 { mw, mwh, km, kbd, wty, pf }：电功率MW / 储能MWh / 线路km / 油气万桶日 / 产能万吨年 / 智算PFLOPS。
+   * 取首个匹配为准；遇 "A+B" 加和；"N×M 单位" 相乘；MW/GW 用前瞻避免误吞 MWh/GWh；"万kW" 同 "万千瓦"。无则 null。 */
   function parseCapacity(cap) {
-    const out = { mw: null, mwh: null, km: null, kbd: null, wty: null };
+    const out = { mw: null, mwh: null, km: null, kbd: null, wty: null, pf: null };
     if (!cap) return out;
-    const s = String(cap).replace(/[，、]/g, ',').replace(/＋/g, '+').replace(/／/g, '/').replace(/[×✕⨯]/g, 'x').replace(/～/g, '~');
+    const s = String(cap).replace(/[，、]/g, ',').replace(/＋/g, '+').replace(/／/g, '/').replace(/[×✕⨯]/g, 'x').replace(/～/g, '~')
+      // "250+ MW"/"100+ MW"：去掉数字与单位之间的"≥"语义加号（其后接单位、非数字，故不影响 "A+B" 加和）
+      .replace(/\+(\s*)(?=GWp|GW|MWp|MW|kW|兆瓦|吉瓦|千瓦|万千瓦|万kW)/gi, '$1');
     const NUM = '(\\d+(?:\\.\\d+)?)', MUL = '(?:\\s*x\\s*(\\d+(?:\\.\\d+)?))?';
     function collect(unitAlt, factor) {
       const rg = new RegExp(NUM + MUL + '\\s*(?:' + unitAlt + ')', 'gi'), vals = []; let m;
@@ -188,13 +190,21 @@
       return vals[0].v;
     }
     const r = n => (n == null ? null : Math.round(n * 100) / 100);
-    const power = [].concat(collect('GWp|GW(?!h)|吉瓦', 1000)).concat(collect('万千瓦(?!时)', 10)).concat(collect('MWp|MW(?!h)|兆瓦', 1)).concat(collect('kW(?!h)|千瓦(?!时)', 0.001));
+    const power = [].concat(collect('GWp|GW(?!h)|吉瓦', 1000)).concat(collect('万千瓦(?!时)|万kW(?!h)|万KW(?!h)', 10)).concat(collect('MWp|MW(?!h)|兆瓦', 1)).concat(collect('kW(?!h)|千瓦(?!时)', 0.001));
     power.sort((a, b) => a.i - b.i); out.mw = r(pick(power));
-    const energy = [].concat(collect('GWh', 1000)).concat(collect('MWh', 1)).concat(collect('万千瓦时', 10)).concat(collect('kWh', 0.001));
+    const energy = [].concat(collect('GWh', 1000)).concat(collect('MWh', 1)).concat(collect('万千瓦时|万kWh|万KWh', 10)).concat(collect('kWh', 0.001));
     energy.sort((a, b) => a.i - b.i); out.mwh = r(pick(energy));
     const len = collect('公里|km', 1); len.sort((a, b) => a.i - b.i); out.km = len.length ? r(len[0].v) : null;
     let oil = collect('万桶', 1); if (!oil.length) oil = collect('桶', 1 / 10000); oil.sort((a, b) => a.i - b.i); out.kbd = oil.length ? r(oil[0].v) : null;
     const mass = [].concat(collect('万吨', 1)).concat(collect('Mtpa|Mt', 100)); mass.sort((a, b) => a.i - b.i); out.wty = mass.length ? r(mass[0].v) : null;
+    // 智能算力（AI 数据中心头条指标）→ 统一折算 PFLOPS：EFLOPS/exaflops×1000；"万P"/"万PFlops"×10000；
+    // PFLOPS×1；裸 "数字P"（中文算力常用简写，如 7209P）×1。负前瞻仅排除其后紧跟拉丁字母（避免 PFLOPS/Pa/MPa 误吞）。
+    const comp = [].concat(collect('EFLOPS|EFlops|exaflops', 1000))
+      .concat(collect('万\\s*PFLOPS|万\\s*PFlops', 10000))
+      .concat(collect('万\\s*P(?![A-Za-z])', 10000))
+      .concat(collect('PFLOPS|PFlops', 1))
+      .concat(collect('P(?![A-Za-z])', 1));
+    comp.sort((a, b) => a.i - b.i); out.pf = r(pick(comp));
     return out;
   }
 

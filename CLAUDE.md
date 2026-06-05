@@ -137,10 +137,12 @@ Chinese text with a note. On-map overlays (`#cat-legend`, `#heat-facets`) rebuil
 ### Derived capacity & metrics
 
 `parseCapacity(cap)` (in `js/util.js`) turns the free-text `cap` into structured numbers attached to each
-project at build time: `capMW` (electrical power), `capMWh` (storage energy), `capKm` (line/route length), `capKbd`
-(oil 万桶/日), `capWty` (mass 万吨/年) — `null` when not parseable. It takes the first match per unit,
-sums `A+B` lists, multiplies `N×M`, and uses lookaheads so `MW`/`GW` don't swallow `MWh`/`GWh`.
-These power the right-panel **硬指标** block (`updateCapStats`, sums per the current filter) and a
+project at build time: `capMW` (electrical power; `万kW` == `万千瓦`, `N+ MW` drops the `≥`-sense plus), `capMWh`
+(storage energy), `capKm` (line/route length), `capKbd` (oil 万桶/日), `capWty` (mass 万吨/年), `capPF` (AI compute
+in PFLOPS: `EFLOPS/exaflops`×1000, `万P/万PFlops`×10000, `PFLOPS` and bare `数字P` like `7209P` ×1) — `null` when
+not parseable. It takes the first match per unit, sums `A+B` lists, multiplies `N×M`, and uses lookaheads so
+`MW`/`GW` don't swallow `MWh`/`GWh` (and bare `P` doesn't swallow `PFLOPS`/`Pa`).
+These power the right-panel **硬指标** block (`updateCapStats`, sums 装机/储能/🧠算力/线路/油气/产能 per the current filter) and a
 **weight toggle** (`state.weight` `inv`|`cap`): marker size (`sizeFn(weightVal(p))`) and the heatmap
 weight both switch between investment and `capMW`. The TOP list sorts by `state.sort` (`inv`|`cap`).
 Two correctness rules in `updateStats`: investment + 硬指标 totals exclude `cat==='client'` (the 国际大客户
@@ -164,7 +166,11 @@ fit, each row showing type / 重点关联产品 / 海外场景 / project & count
 map to just that company (`state.cats={client}`, `subOff` = all client subs except the picked one) and flies to
 its bounds. The board's per-company BD metadata lives in **`js/clients-meta.js`** (`window.CLIENT_META`, keyed by
 the `SUB_DEFS.client` sub-key, sourced from the《特锐德 50 家出海大客户》Excel); it is **not** project data —
-loaded after `util.js`, before `app.js`, and not subject to `validate-data.js`.
+loaded after `util.js`, before `app.js`, and not subject to `validate-data.js`. `CLIENT_META` also feeds: the
+**client detail card's BD block** (`clientBdBlock` — tier badge / product fit / 重点产品 / 海外场景 / 推荐打法 above the
+description), and the **tier-grouped client sub-chips** in the left filter (the `client` category's sub-list is sorted
+by BD tier with 🥇/🥈/🥉 dividers instead of a flat 55-chip strip). The total-investment KPI carries a generic
+**outlier `title`**: when one project ≥25% of the shown total (e.g. Stargate $500B), it hovers "其中「…」≈$X · N%".
 
 ## Project data conventions
 
