@@ -60,7 +60,7 @@ Two layers loaded as ordinary `<script>` tags in `index.html` (order is load-bea
   core curated projects plus all the shared config (categories, regions, statuses, update dates).
 - `js/data-extra.js` defines `window.ENERGY_EXTRA = [ ... ]` (the bulk-research projects).
 - **Every other regional data file** (`data-brazil.js`, `data-mideast.js`, `data-russia-ca.js`,
-  `data-clients.js`, `data-brazil-future.js`, `data-saudi-future.js`, `data-seasia.js`,
+  `data-clients.js`, `data-clients2.js`, `data-brazil-future.js`, `data-saudi-future.js`, `data-seasia.js`,
   `data-africa.js`) **appends** via `window.ENERGY_EXTRA = (window.ENERGY_EXTRA || []).concat([ ... ])`.
   They must load *after* `data-extra.js` and *before* `app.js`.
 - `js/progress.js` defines `window.ENERGY_PROGRESS = { <id>: "<latest progress text>" }`, merged
@@ -185,8 +185,9 @@ A project object (see `data.js` header comment for the full field reference):
 - **Changed project**: update `status`/`cap`/`inv`/`desc`/`detail` and bump `updated`.
 - **"Recent" window**: controlled by `META.recentSince` (currently `'2025-06'`); `META.lastUpdated`
   (`'2026-06'`) is shown in the header. Bump both when refreshing the dataset.
-- The category key `client` (国际大客户) groups overseas projects of 14 Chinese companies by `owner`
-  (see the `SUB_DEFS.client` `fn` matchers).
+- The category key `client` (国际大客户) groups overseas projects of 54 Chinese companies by `owner`
+  (see the `SUB_DEFS.client` `fn` matchers): the original 14 (`data-clients.js`, id 1570–1698) plus the 40
+  from the《特锐德 50 家中国出海大客户》list (`data-clients2.js`, id 4000–4237).
 
 ## Data-refresh workflow
 
