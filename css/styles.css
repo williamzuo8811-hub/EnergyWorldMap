@@ -420,6 +420,8 @@ input[type=range]::-webkit-slider-thumb {
   /* 缩放控件改放地图左上角（见 app.js：窄屏 topleft），彻底避开底部 🔍/📊 浮钮；
      左上角的详情卡相应下移，避免开卡时挡住缩放 ＋/－ */
   .detail { top: 76px; }
+  /* 窄屏：用动态视口高度（dvh）顶住底部浏览器栏，给底部 🔍/📊 浮钮留出余量，超长内容整卡可滑动 */
+  .detail { max-height: calc(100dvh - 168px); }
   /* 🔍 浮钮在左下 → 热力分面条上移让位 */
   .heat-facets { bottom: 70px; }
 }
@@ -594,13 +596,13 @@ body.heat-on .heat-facets { display: flex; }
 }
 @media (max-width: 920px) { .map-hint { display: none; } }
 
-/* 详情卡：限制高度，详细介绍可滚动 */
-.detail { max-height: calc(100vh - 110px); display: flex; flex-direction: column; }
-.detail .d-top, .detail .d-grid { flex: none; }
-.detail .d-desc { max-height: 210px; overflow-y: auto; flex: 1 1 auto; }
-.detail .d-desc::-webkit-scrollbar { width: 7px; }
-.detail .d-desc::-webkit-scrollbar-thumb { background: rgba(120, 160, 220, 0.28); border-radius: 6px; }
-.detail .d-desc::-webkit-scrollbar-track { background: transparent; }
+/* 详情卡：限制高度，整卡可上下滑动；标题栏吸顶常驻（关闭/分享按钮始终可点） */
+.detail { max-height: calc(100vh - 110px); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.detail .d-top { position: sticky; top: 0; z-index: 2; background: var(--panel-solid); }
+.detail .d-desc { padding-bottom: 16px; }
+.detail::-webkit-scrollbar { width: 7px; }
+.detail::-webkit-scrollbar-thumb { background: rgba(120, 160, 220, 0.28); border-radius: 6px; }
+.detail::-webkit-scrollbar-track { background: transparent; }
 
 /* 详情卡 · 最新进展高亮条 */
 .detail .d-progress {
