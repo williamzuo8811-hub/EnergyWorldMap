@@ -30,6 +30,20 @@
     });
     return out;
   })();
+
+  // 脉冲只给"各国旗舰"：每个国家按投资额取前 2 个 flagship，避免 1/3 标记都脉冲的视觉噪声。
+  // （★ 仍按 p.flagship 在 TOP 列表 / 详情卡显示，不受影响。）
+  const PULSE_IDS = (function () {
+    const byCountry = {};
+    PROJECTS.forEach(p => { if (p.flagship) (byCountry[p.country] = byCountry[p.country] || []).push(p); });
+    const set = new Set();
+    Object.values(byCountry).forEach(arr => {
+      arr.sort((a, b) => (b.inv || 0) - (a.inv || 0));
+      arr.slice(0, 2).forEach(p => set.add(p.id));
+    });
+    return set;
+  })();
+  const isPulse = p => !!p.flagship && PULSE_IDS.has(p.id);
   const RECENT_SINCE = META.recentSince;
   const isRecent = p => (p.updated || '') >= RECENT_SINCE;
 
@@ -119,7 +133,7 @@
   const STATUS_EN = { '规划': 'Planned', '在建': 'Building', '投运': 'Operating' };
   const I18N = {
     '国家 / 地区': 'Country / Region', '状态': 'Status', '规模 / 容量': 'Capacity', '投资额': 'Investment',
-    '业主 / 参与方': 'Owner', '最近动态': 'Updated', '📍 最新进展': '📍 Latest', '🆕 近一年': '🆕 Recent',
+    '业主 / 参与方': 'Owner', '最近动态': 'Updated', '📍 最新进展': '📍 Latest', '🆕 最新': '🆕 Latest',
     '项目数': 'Projects', '总投资': 'Investment', '装机容量': 'Capacity', '分品类（项目数 · 投资额）': 'By category (count · investment)',
     '项目状态': 'Status', '里程碑年份分布': 'Milestone years', '重点项目 TOP（按投资额）': 'Top projects (by investment)',
     '无匹配项目，请调整筛选条件': 'No matching projects — adjust filters', '当前筛选无可解析的容量指标': 'No parseable capacity metrics in current filter',
@@ -281,7 +295,7 @@
     const markers = [];
     items.forEach(p => {
       const c = CATEGORIES[p.cat], d = Math.round(sizeFn(weightVal(p)));
-      const cls = 'dot' + (p.flagship ? ' is-flag' : '') + (isRecent(p) ? ' is-new' : '') + (state.playYear === p.year ? ' is-year-new' : '');
+      const cls = 'dot' + (isPulse(p) ? ' is-flag' : '') + (isRecent(p) ? ' is-new' : '') + (state.playYear === p.year ? ' is-year-new' : '');
       const icon = L.divIcon({
         className: 'mk', iconSize: [d, d], iconAnchor: [d / 2, d / 2],
         html: '<i class="' + cls + '" style="--c:' + c.color + ';width:' + d + 'px;height:' + d + 'px"></i>',
@@ -384,7 +398,7 @@
     statusEl.appendChild(el);
   });
 
-  // 🆕 仅看最近一年
+  // 🆕 仅看最新动态
   const recentBtn = document.getElementById('recent-toggle');
   recentBtn.addEventListener('click', () => {
     state.recentOnly = !state.recentOnly;
@@ -663,7 +677,7 @@
       '<div class="d-top"><button class="d-close" id="d-close" aria-label="关闭详情卡" title="关闭">×</button>' +
       '<button class="d-share" id="d-share" aria-label="复制该项目的分享链接" title="复制项目链接">🔗</button>' +
       '<span class="d-cat" style="background:' + c.color + '22;color:' + c.color + '">' + c.icon + ' ' + catName(p.cat) + (subLabel(p) ? ' · ' + subLabel(p) : '') + '</span>' +
-      (isRecent(p) ? '<span class="d-new">' + tr('🆕 近一年') + '</span>' : '') +
+      (isRecent(p) ? '<span class="d-new">' + tr('🆕 最新') + '</span>' : '') +
       '<div class="d-name">' + (p.flagship ? '★ ' : '') + esc(nm(p)) + '</div>' +
       (altName(p) ? '<div class="d-en">' + esc(altName(p)) + '</div>' : '') + '</div>' +
       (p.progress ? '<div class="d-progress"><span class="dp-tag">' + tr('📍 最新进展') + '</span>' + esc(p.progress) + '</div>' : '') +
@@ -748,7 +762,7 @@
       '<div class="cp-kpis">' +
       kpi(ps.length, tr('项目数')) + kpi('≈$' + fmtInv(d.totalInv), tr('总投资')) +
       kpi(d.totalMW >= 1000 ? (d.totalMW / 1000).toFixed(1) + ' GW' : Math.round(d.totalMW) + ' MW', tr('装机容量')) +
-      kpi(d.recentN, tr('🆕 近一年')) + '</div>' +
+      kpi(d.recentN, tr('🆕 最新')) + '</div>' +
       '<div class="cp-body">' +
       '<div class="cp-sec-title">' + tr('分品类（项目数 · 投资额）') + '</div>' + catBars +
       '<div class="cp-sec-title">' + tr('项目状态') + '</div><div class="cp-status">' + statusChips + '</div>' +
@@ -814,7 +828,7 @@
         '<div class="cmp-kpis">' +
         cmpKpi(d.ps.length, tr('项目数')) + cmpKpi('≈$' + fmtInv(d.totalInv), tr('总投资')) +
         cmpKpi(d.totalMW >= 1000 ? (d.totalMW / 1000).toFixed(1) + ' GW' : Math.round(d.totalMW) + ' MW', tr('装机容量')) +
-        cmpKpi(d.recentN, tr('🆕 近一年')) + '</div>' +
+        cmpKpi(d.recentN, tr('🆕 最新')) + '</div>' +
         '<div class="cmp-sec">' + tr('分品类（项目数 · 投资额）') + '</div>' + (catBars || '<div class="cmp-empty">—</div>') +
         '<div class="cmp-sec">' + tr('重点项目 TOP（按投资额）') + '</div>' + (top || '<div class="cmp-empty">—</div>') +
         '</div>';
@@ -1033,7 +1047,7 @@
     if (state.regions.size) parts.push((en ? 'Regions: ' : '大区: ') + [...state.regions].map(regionName).join('/'));
     if (state.statuses.size) parts.push((en ? 'Status: ' : '状态: ') + [...state.statuses].map(statusName).join('/'));
     if (state.minYear > MIN_YEAR || state.maxYear < MAX_YEAR) parts.push(state.minYear + '–' + state.maxYear);
-    if (state.recentOnly) parts.push(en ? 'Recent 12mo' : '近一年');
+    if (state.recentOnly) parts.push(en ? 'Latest' : '最新');
     if (state.q) parts.push('“' + state.q + '”');
     const filterDesc = parts.length ? parts.join('   ·   ') : (en ? 'All projects' : '全部项目');
     const clip = (s, n) => { s = String(s == null ? '' : s); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
@@ -1077,7 +1091,7 @@
       kpiCard(0, items.length, en ? 'Projects' : '项目总数', '#21c7ff') +
       kpiCard(1, countries, en ? 'Countries' : '覆盖国家', '#e8eefb') +
       kpiCard(2, '≈$' + fmtInv(totalInv), en ? 'Investment' : '总投资(美元)', '#2ee6a6') +
-      kpiCard(3, recentN, en ? 'Recent 12mo' : '🆕 近一年', '#ffb02e') +
+      kpiCard(3, recentN, en ? 'Latest' : '🆕 最新', '#ffb02e') +
       '<text x="60" y="360" font-size="14" letter-spacing="1" fill="#5f718f">' + (en ? 'BY CATEGORY (count)' : '分品类（项目数）') + '</text>' +
       '<text x="620" y="360" font-size="14" letter-spacing="1" fill="#5f718f">' + (en ? (sortCap ? 'TOP (by capacity)' : 'TOP (by investment)') : (sortCap ? '重点项目 TOP（按装机）' : '重点项目 TOP（按投资）')) + '</text>' +
       catRows + topRows +
