@@ -426,6 +426,10 @@
   document.querySelectorAll('#year-presets .yp').forEach(b => b.classList.toggle('on', b.dataset.preset === 'all'));
   document.getElementById('btn-arcs') && document.getElementById('btn-arcs').classList.add('on');
   document.getElementById('btn-rotate') && document.getElementById('btn-rotate').classList.add('on');
+  // 窄屏默认收起筛选面板：首屏先看完整地球，点 ☰ 再展开
+  if (window.matchMedia && window.matchMedia('(max-width: 820px)').matches) {
+    const lp = document.getElementById('left-panel'); if (lp) lp.classList.add('collapsed');
+  }
   render();
 
   // 调试句柄（也供 scripts/test-globe.js 在无 WebGL 环境断言数据装配）

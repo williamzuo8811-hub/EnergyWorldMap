@@ -163,13 +163,20 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); c
 /* ---------- 移动端 ---------- */
 .panel-toggle { display: none; }
 @media (max-width: 820px) {
-  .topbar { gap: 10px; padding: 10px 12px; }
-  .brand h1 { font-size: 14px; }
-  .brand .sub { display: none; }
-  .kpis { gap: 12px; }
+  /* 顶栏：隐藏品牌文字只留 logo，KPI 紧跟其后，操作按钮靠右，避免标题与 KPI 数字重叠 */
+  .topbar { gap: 8px; padding: 9px 10px; align-items: center; }
+  .brand { gap: 8px; }
+  .brand > div:not(.logo) { display: none; }
+  .brand .logo { width: 34px; height: 34px; font-size: 18px; }
+  .kpis { gap: 13px; margin-left: 4px; }
   .kpi .num { font-size: 15px; }
   .kpi .lab { font-size: 9px; }
-  .left-panel { top: 64px; left: 10px; width: 210px; max-height: calc(100vh - 84px); padding: 11px; }
+  .top-actions { gap: 6px; margin-left: auto; }
+  .tbtn { padding: 7px 9px; font-size: 12px; }
+  /* 平面地图按钮在窄屏收成图标，省出横向空间 */
+  #btn-flat { font-size: 0; }
+  #btn-flat::before { content: "🗺️"; font-size: 15px; }
+  .left-panel { top: 60px; left: 10px; width: 212px; max-height: calc(100vh - 80px); padding: 11px; }
   .left-panel.collapsed { display: none; }
   .panel-toggle { display: inline-flex; }
   .detail { top: auto; bottom: 0; right: 0; left: 0; width: 100%; max-width: 100%; border-radius: 16px 16px 0 0;
@@ -178,3 +185,10 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); c
   .hint { display: none; }
   .credit { bottom: 10px; right: 10px; }
 }
+@media (max-width: 480px) {
+  /* 极窄屏：KPI 仅留数字（彩色已足够区分），进一步防溢出 */
+  .kpis { gap: 10px; }
+  .kpi .lab { display: none; }
+  .kpi .num { font-size: 14px; }
+}
+
