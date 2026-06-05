@@ -15,8 +15,8 @@
   Object.keys(SUB_DEFS).forEach(cat => { SUB_LABEL[cat] = {}; SUB_DEFS[cat].forEach(d => { SUB_LABEL[cat][d.key] = d.label; }); });
   const subLabel = p => (SUB_LABEL[p.cat] && SUB_LABEL[p.cat][p.sub]) || '';
 
-  // 合并核心数据与扩充数据（data-extra.js），按名称去重 + 进展/子类/容量装配（与 globe.js 同口径）
-  const PROJECTS = buildProjects(window.ENERGY, window.ENERGY_EXTRA, window.ENERGY_PROGRESS);
+  // 合并核心数据与扩充数据（data-extra.js），按名称去重 + 进展/英文正文/子类/容量装配（与 globe.js 同口径）
+  const PROJECTS = buildProjects(window.ENERGY, window.ENERGY_EXTRA, window.ENERGY_PROGRESS, { en: window.ENERGY_EN });
 
   // 脉冲只给"各国旗舰"：每个国家按投资额取前 2 个 flagship，避免 1/3 标记都脉冲的视觉噪声。
   // （★ 仍按 p.flagship 在 TOP 列表 / 详情卡显示，不受影响。）

@@ -130,6 +130,12 @@ ok(typeof built[0].sub === 'string' && built[0].sub.length > 0, 'buildProjects�
 const builtCoord = bp(ENERGY, EXTRA, {}, { requireCoord: true });
 eq(builtCoord.length, 1, 'buildProjects(requireCoord)：只留有 coord 的项目');
 eq(builtCoord[0].name, 'B', 'buildProjects(requireCoord)：无 coord 的 A 被剔除');
+// 英文正文按 id 合并（opts.en），且不覆盖源数据已内联的 descEn/detailEn
+const ENERGY2 = { PROJECTS: [{ id: 10, name: 'C', cap: '', cat: 'grid' }, { id: 11, name: 'D', cap: '', cat: 'grid', detailEn: 'inline-D' }] };
+const built2 = bp(ENERGY2, [], {}, { en: { 10: { descEn: 'desc-C', detailEn: 'detail-C' }, 11: { detailEn: 'merged-D' } } });
+eq(built2[0].detailEn, 'detail-C', 'buildProjects(en)：按 id 合并 detailEn');
+eq(built2[0].descEn, 'desc-C', 'buildProjects(en)：按 id 合并 descEn');
+eq(built2[1].detailEn, 'inline-D', 'buildProjects(en)：源数据已内联 detailEn 时不被覆盖');
 
 /* ---------- 汇总 ---------- */
 console.log('═══════════════════════════════════════════════');

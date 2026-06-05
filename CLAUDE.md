@@ -41,7 +41,8 @@ verify in a browser — there is no build step.
   `index.html`'s real `<script>` order and checks required fields, enum validity
   (`cat`/`region`/`status`), coordinate ↔ region consistency (catches sign errors like positive
   longitude in the Americas), duplicate `name`s (which `app.js` silently drops) and `id`s,
-  per-file id-range overlaps, and orphan `ENERGY_PROGRESS` entries. Also reports data-health
+  per-file id-range overlaps, orphan `ENERGY_PROGRESS` entries, and orphan `ENERGY_EN` ids (English
+  body that maps to no project — ERROR); also reports English-body coverage. Also reports data-health
   warnings: reused/placeholder coordinates, `inv` outliers, malformed `route` coords (ERROR),
   and capacity-parse blind spots. Non-zero exit on any ERROR; warnings don't fail.
 - `node scripts/test-units.js` — after editing `js/util.js`. Asserts `parseCapacity`,
@@ -107,9 +108,14 @@ The library `lib/globe.gl.min.js` is a vendored standalone UMD bundle (globe.gl 
   They must load *after* `data-extra.js` and *before* `app.js`.
 - `js/progress.js` defines `window.ENERGY_PROGRESS = { <id>: "<latest progress text>" }`, merged
   into projects by `id`.
+- `js/i18n-en.js` defines `window.ENERGY_EN = { <id>: { descEn, detailEn } }` (English body text for the
+  bilingual detail card), merged into projects by `id` **only when the source data has no inline
+  `descEn`/`detailEn`** — same id-merge model as `progress.js`. This keeps translations separate from the
+  source data and lets EN coverage grow in incremental batches (add `i18n-en2.js` etc. with the same
+  `Object.assign(window.ENERGY_EN || {}, …)` append). Loads after `progress.js`, before `util.js`.
 - In `app.js`, `PROJECTS` = `ENERGY.PROJECTS.concat(ENERGY_EXTRA)`, **deduplicated by `name`**
-  (first occurrence wins; later duplicates are silently dropped). Progress text is attached by `id`,
-  and a `sub` (subcategory) is computed per project via `classifySub`.
+  (first occurrence wins; later duplicates are silently dropped). Progress text + EN body are attached by
+  `id`, and a `sub` (subcategory) is computed per project — all via the shared `util.buildProjects`.
 
 When adding a new data file: add its `<script>` to `index.html` in the right position **and** use
 the `.concat()` append pattern so you don't clobber earlier data. Each file owns a distinct `id`
@@ -173,8 +179,10 @@ facet (`hcat`), the comparison set (`cmp`), the selected countries (`cty`), and 
 categories / top projects as an infographic and exports **PNG** (rasterized via SVG→canvas; falls back to
 SVG) — map tiles can't be screenshotted (cross-origin canvas taint), so the poster summarizes the filtered
 stats instead. Money everywhere flows through `invMag` which is **language-aware** (亿/万亿 in ZH, $B/$T in
-EN). Detail-card body is bilingual-aware: in EN mode it prefers `detailEn`/`descEn`, else falls back to the
-Chinese text with a note. On-map overlays (`#cat-legend`, `#heat-facets`) rebuild on language switch.
+EN). Detail-card body is bilingual-aware: in EN mode it prefers `detailEn`/`descEn` (supplied inline on the
+project **or** merged by `id` from `js/i18n-en.js`), else falls back to the Chinese text with a note —
+so growing English coverage is just a matter of adding `id` entries to `i18n-en.js` (no source-data edits).
+On-map overlays (`#cat-legend`, `#heat-facets`) rebuild on language switch.
 
 ### Derived capacity & metrics
 

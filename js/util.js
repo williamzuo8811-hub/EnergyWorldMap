@@ -289,17 +289,21 @@
 
   /* ---------- 数据装配管线（app.js 与 globe.js 同口径，单一实现）----------
    * 合并 ENERGY.PROJECTS 与 ENERGY_EXTRA → 按 name 去重（首个占位胜出）→ 挂 progress(按id)
+   * → 合并英文正文 opts.en(按id，仅在源数据未内联 descEn/detailEn 时填充)
    * → 计算 sub(classifySub) 与全部结构化容量(parseCapacity)。opts.requireCoord=true 时（3D 地球）
    * 只保留有 coord 的项目（无 coord 者既不入库也不占用该 name 名额）。就地写入各派生字段。 */
   function buildProjects(ENERGY, EXTRA, PROGRESS, opts) {
     opts = opts || {};
     const all = ((ENERGY && ENERGY.PROJECTS) || []).concat(EXTRA || []);
     const PROG = PROGRESS || {};
+    const EN = opts.en || {};
     const seen = new Set(), out = [];
     all.forEach(p => {
       if (!p || !p.name || seen.has(p.name)) return;
       if (opts.requireCoord && !p.coord) return;
       if (!p.progress && PROG[p.id]) p.progress = PROG[p.id];
+      const en = EN[p.id];
+      if (en) { if (!p.descEn && en.descEn) p.descEn = en.descEn; if (!p.detailEn && en.detailEn) p.detailEn = en.detailEn; }
       p.sub = classifySub(p);
       const cc = parseCapacity(p.cap);
       p.capMW = cc.mw; p.capMWh = cc.mwh; p.capKm = cc.km; p.capKbd = cc.kbd; p.capWty = cc.wty; p.capPF = cc.pf;
