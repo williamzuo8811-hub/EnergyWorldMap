@@ -1,9 +1,9 @@
 /* ============================================================
  * 特锐德 / 特来电 核心产品 → 能源项目「适配匹配」层
  * ------------------------------------------------------------
- * 把特锐德 5 大核心产品线（模块化预制舱变电站 / 车载移动变电站 /
- * E-house / 中低压成套 / 储能并网舱）按「项目场景」映射到全量项目上，
- * 供 app.js 的「🔌 产品适配看板」与详情卡的产品适配块使用。
+ * 把特锐德 2 大核心产品线（模块化预制舱变电站 / 车载移动变电站）
+ * 按「项目场景」映射到全量项目上，供 app.js 的「🔌 产品适配看板」
+ * 与详情卡的产品适配块使用。
  *
  *   key       产品键
  *   zh / en   产品名（中 / 英）
@@ -55,39 +55,6 @@
       pitchEn: 'Lead with downtime-loss & fast-restore value; fits weak-grid & remote projects',
       cats: ['mining', 'transport'],
       kw: ['矿', '施工', '临时', '应急', '营地', '保供电', '抢修', '偏远', '微网'],
-    },
-    {
-      key: 'ehouse', zh: 'E-house 预制电气房', en: 'E-house', icon: '🏠', color: '#2ee6a6', core: true,
-      blurb: '集成式预制电气房，适配高负荷连续生产',
-      blurbEn: 'Integrated prefab electrical house for high-load, continuous loads',
-      scenario: '工业园、数据中心、炼化 / 化工、冶炼厂高负荷配电',
-      scenarioEn: 'Industrial parks, data centers, refining/chem, smelter high-load distribution',
-      pitch: '从高负荷电气房 / 站场模块化配电切入，重可靠性与防护规范',
-      pitchEn: 'Enter via high-load e-rooms & modular plant distribution; stress reliability & protection codes',
-      cats: ['ci', 'datacenter', 'petro'],
-      kw: ['工业园', '数据中心', '炼', '化工', '冶炼', '钢', 'LNG', 'E-house', '电气房', '电解铝', '产业园'],
-    },
-    {
-      key: 'switchgear', zh: '中低压成套 / 配网', en: 'MV/LV Switchgear', icon: '🔌', color: '#b06bff', core: true,
-      blurb: '中低压成套开关柜与配网自动化设备',
-      blurbEn: 'MV/LV switchgear suites & distribution automation',
-      scenario: '配网改造、开关站、园区 / 厂用电成套、岸电',
-      scenarioEn: 'Distribution upgrades, switching stations, park/aux-power suites, shore power',
-      pitch: '按国别标准做中低压设备包，配合配网 / 厂用电系统切入',
-      pitchEn: 'Country-spec MV/LV packages; enter alongside distribution & aux-power systems',
-      cats: ['grid', 'ci', 'datacenter'],
-      kw: ['配网', '配电', '开关柜', '厂用电', '成套', '中低压', '岸电'],
-    },
-    {
-      key: 'storage', zh: '储能并网舱', en: 'Storage Grid-tie', icon: '🔋', color: '#ffd000', core: true,
-      blurb: '储能系统中压侧并网舱 / PCS 配套',
-      blurbEn: 'MV-side grid-tie skids & PCS for storage systems',
-      scenario: '独立储能、风光配储、储能并网与调频',
-      scenarioEn: 'Standalone storage, renewable-paired storage, grid-tie & frequency regulation',
-      pitch: '作为储能系统中压侧并网舱配套，随储能 / 光伏 EPC 切入',
-      pitchEn: 'Bundle as MV-side grid-tie skid; enter with storage / PV EPCs',
-      cats: ['storage'],
-      kw: ['储能', '配储', '并网舱', 'PCS', '调频', '电池储能'],
     },
   ];
 

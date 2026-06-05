@@ -18,7 +18,8 @@ const has = (arr, k, msg) => ok(Array.isArray(arr) && arr.indexOf(k) >= 0, msg +
 const hasNot = (arr, k, msg) => ok(Array.isArray(arr) && arr.indexOf(k) < 0, msg + ' —— 实得 ' + JSON.stringify(arr));
 
 /* ---------- 目录结构 ---------- */
-ok(Array.isArray(P.PRODUCTS) && P.PRODUCTS.length >= 5, 'PRODUCTS 至少 5 个核心产品');
+ok(Array.isArray(P.PRODUCTS) && P.PRODUCTS.length === 2, 'PRODUCTS 恰为 2 个核心产品');
+ok(P.PRODUCTS.map(pr => pr.key).join(',') === 'prefab,mobile', '产品为 模块化预制舱变电站 + 车载移动变电站');
 ok(typeof P.match === 'function', 'match 可调用');
 const CATS = ['renewable', 'nuclear', 'grid', 'storage', 'ci', 'datacenter', 'transport', 'petro', 'mining', 'client'];
 const seenKeys = new Set();
@@ -32,23 +33,26 @@ P.PRODUCTS.forEach(pr => {
   ok(!seenKeys.has(pr.key), '产品键唯一：' + pr.key); seenKeys.add(pr.key);
 });
 
-/* ---------- match：按品类匹配 ---------- */
-has(P.match({ cat: 'storage', name: '电池储能电站', desc: '' }), 'storage', '储能项目 → 储能并网舱');
+/* ---------- match：预制舱变电站（按品类 + 关键词）---------- */
 has(P.match({ cat: 'renewable', name: '光伏电站升压站', desc: '' }), 'prefab', '光伏升压 → 预制舱变电站');
 has(P.match({ cat: 'grid', name: '某变电站工程', desc: '' }), 'prefab', '电网项目 → 预制舱变电站');
+has(P.match({ cat: 'nuclear', name: '某核电送出工程', desc: '' }), 'prefab', '核电项目 → 预制舱变电站');
+has(P.match({ cat: 'ci', name: '某工业园配电', cap: '', desc: '110kV 变电站送出并网' }), 'prefab', '工商业含「变电站/并网」关键词 → 预制舱变电站');
+
+/* ---------- match：车载移动变电站（按品类 + 关键词）---------- */
 has(P.match({ cat: 'mining', name: '铜矿采选', desc: '' }), 'mobile', '矿业项目 → 车载移动变电站');
 has(P.match({ cat: 'transport', name: '城市轨交', desc: '' }), 'mobile', '轨交基建 → 车载移动变电站');
-has(P.match({ cat: 'datacenter', name: '海外数据中心园区', desc: '' }), 'ehouse', '数据中心 → E-house');
-has(P.match({ cat: 'petro', name: 'LNG 接收站', desc: '' }), 'ehouse', '油气化工 → E-house');
+has(P.match({ cat: 'grid', name: '电网应急抢修工程', desc: '' }), 'mobile', '电网含「应急/抢修」关键词 → 车载移动变电站');
 
-/* ---------- match：关键词跨品类补充 ---------- */
-has(P.match({ cat: 'renewable', name: '风光储一体化', cap: '', desc: '配套电池储能' }), 'storage', '风光项目含「储能」关键词 → 储能并网舱');
-has(P.match({ cat: 'ci', name: '工业园区配电', cap: '', desc: '配网改造' }), 'switchgear', '工商业含「配网」关键词 → 中低压成套');
+/* ---------- match：可多产品命中（电网变电站 + 应急抢修 同时命中两类）---------- */
+const gridFit = P.match({ cat: 'grid', name: '变电站应急抢修', desc: '' });
+has(gridFit, 'prefab', '多命中：含预制舱变电站（cat=grid）');
+has(gridFit, 'mobile', '多命中：含车载移动变电站（kw=应急/抢修）');
 
-/* ---------- match：可多产品命中（电网项目同时匹配预制舱与中低压）---------- */
-const gridFit = P.match({ cat: 'grid', name: '配网升级与变电站', desc: '' });
-has(gridFit, 'prefab', '电网项目多命中：含预制舱变电站');
-has(gridFit, 'switchgear', '电网项目多命中：含中低压成套');
+/* ---------- match：只匹配这两类，不再命中已下线的 3 类 ---------- */
+hasNot(P.match({ cat: 'storage', name: '电池储能电站', desc: '' }), 'storage', '储能项目不再命中已下线的「储能并网舱」');
+hasNot(P.match({ cat: 'datacenter', name: '海外数据中心园区', desc: '' }), 'ehouse', '数据中心不再命中已下线的「E-house」');
+ok(P.match({ cat: 'datacenter', name: '海外数据中心园区', desc: '' }).length === 0, '纯数据中心（无变电/移动关键词）→ 无适配产品');
 
 /* ---------- match：client 横切项目返回空（避免与公司级 BD 画像重复计）---------- */
 ok(P.match({ cat: 'client', name: '某出海大客户海外项目', desc: '储能 矿山 变电站' }).length === 0, 'client 项目 match 返回空数组');

@@ -196,8 +196,8 @@ by BD tier with 🥇/🥈/🥉 dividers instead of a flat 55-chip strip). The to
 
 The **🔌 product-fit board** (`showProductBoard`, the `🔌 产品` map-tools button) is the *reverse* of the client
 board: instead of company→projects it maps **特锐德's core products → projects**. The product catalog + matcher live
-in **`js/products-meta.js`** (`window.ENERGY_PRODUCTS = { PRODUCTS, match }`) — five core product lines (预制舱变电站 /
-车载移动变电站 / E-house / 中低压成套 / 储能并网舱), each with a `cats`/`kw` rule. `match(p)` derives the applicable
+in **`js/products-meta.js`** (`window.ENERGY_PRODUCTS = { PRODUCTS, match }`) — two core product lines (模块化预制舱
+变电站 / 车载移动变电站), each with a `cats`/`kw` rule. `match(p)` derives the applicable
 product keys per **physical** project from its `cat`/`name`/`cap`/`desc` (it returns `[]` for `cat==='client'`, since
 those cross-view entries already carry company-level product fit via `CLIENT_META`); the result is attached as
 `p.products` at build time (next to `p.sub`). Like `clients-meta.js` it is BD metadata — dual-exported (browser global
