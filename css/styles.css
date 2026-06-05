@@ -417,10 +417,9 @@ input[type=range]::-webkit-slider-thumb {
 
   /* iPhone 安全区：底部浮动按钮上移让开 home 横条 / 浏览器底栏 */
   .mobile-fab { bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
-  /* 缩放控件留在左下角：改 Leaflet 角容器的 bottom 在部分浏览器/构建上无效（实测连纯 px 都不动），
-     故不再尝试抬升它，仅提层级避免被浮钮遮住；改为把"会动的" 🔍 筛选浮钮右移让开缩放控件，彻底消除横向重叠 */
-  .leaflet-bottom.leaflet-left { z-index: 1860; }
-  .fab-left { left: 76px; }
+  /* 缩放控件改放地图左上角（见 app.js：窄屏 topleft），彻底避开底部 🔍/📊 浮钮；
+     左上角的详情卡相应下移，避免开卡时挡住缩放 ＋/－ */
+  .detail { top: 76px; }
   /* 🔍 浮钮在左下 → 热力分面条上移让位 */
   .heat-facets { bottom: 70px; }
 }

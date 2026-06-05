@@ -39,7 +39,9 @@
     zoomControl: false, worldCopyJump: true, attributionControl: true,
     maxBounds: [[-85, -200], [85, 200]], maxBoundsViscosity: 0.6,
   });
-  L.control.zoom({ position: 'bottomleft' }).addTo(map);
+  // 窄屏把缩放控件放左上角（标题栏下方的空地），彻底避开底部 🔍/📊 浮钮；桌面端仍放左下
+  var _isNarrow = !!(window.matchMedia && window.matchMedia('(max-width: 820px)').matches);
+  L.control.zoom({ position: _isNarrow ? 'topleft' : 'bottomleft' }).addTo(map);
   map.attributionControl.setPrefix('');
 
   const esriDarkBase = L.tileLayer('https://{s}.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
