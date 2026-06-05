@@ -52,11 +52,11 @@
   const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
 
   const BASES = [
-    { key: 'dark',   name: '暗色科技',   crs: 'wgs84', layer: esriDark },
     { key: 'osm',    name: 'OSM',       crs: 'wgs84', layer: osm },
+    { key: 'dark',   name: '暗色科技',   crs: 'wgs84', layer: esriDark },
   ];
   let currentCRS = 'wgs84';
-  let activeBaseKey = 'dark';
+  let activeBaseKey = 'osm';
   BASES[0].layer.addTo(map);
 
   function switchBase(key) {
@@ -1221,7 +1221,7 @@
     if (!loaderEl) return;
     let done = false;
     const hide = () => { if (done) return; done = true; loaderEl.classList.add('hidden'); setTimeout(() => loaderEl.remove(), 480); };
-    esriDarkBase.once('load', hide);     // 首批暗色瓦片绘制完成
+    osm.once('load', hide);              // 首批 OSM 瓦片绘制完成（默认底图）
     map.whenReady(() => setTimeout(hide, 400)); // 视图就绪后短暂保留，避免闪烁
     setTimeout(hide, 2600);              // 离线/瓦片失败兜底，确保不卡 loading
   })();
