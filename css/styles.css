@@ -416,11 +416,11 @@ input[type=range]::-webkit-slider-thumb {
   .map-tools.tools-open .tools-toggle { color: var(--accent); border-color: var(--accent); }
 
   /* iPhone 安全区：底部浮动按钮上移让开 home 横条 / 浏览器底栏 */
-  .mobile-fab { bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
-  /* 左下缩放控件抬高到 🔍 筛选浮钮之上：用 bottom 定位（margin 对 Leaflet 角容器无效），
-     并把层级提到浮钮之上，确保 ＋/－ 两颗都完整露出、不被浮钮或浏览器底栏遮住 */
-  .leaflet-bottom.leaflet-left { bottom: 96px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 1860; }
-  .leaflet-bottom.leaflet-right { bottom: 64px; bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+  .mobile-fab { bottom: calc(28px + env(safe-area-inset-bottom, 0px)); }
+  /* 左下缩放控件抬到 🔍 筛选浮钮之上并留出明显间距：用 bottom 定位（margin 对 Leaflet 角容器无效），
+     纯 px 兜底 + 带 fallback 的 env，并把层级提到浮钮之上，确保 ＋/－ 两颗都完整露出、与浮钮不重叠 */
+  .leaflet-bottom.leaflet-left { bottom: 132px; bottom: calc(122px + env(safe-area-inset-bottom, 0px)); z-index: 1860; }
+  .leaflet-bottom.leaflet-right { bottom: 80px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
   /* 🔍 浮钮在左下 → 热力分面条上移让位 */
   .heat-facets { bottom: 70px; }
 }
