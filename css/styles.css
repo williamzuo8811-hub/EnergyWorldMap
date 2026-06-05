@@ -281,6 +281,8 @@ input[type=range]::-webkit-slider-thumb {
   box-shadow: var(--shadow);
   overflow: hidden; transform: translateY(-8px); opacity: 0; pointer-events: none;
   transition: opacity .2s, transform .2s;
+  /* 桌面默认限高（窄屏会在下方 @media 用 dvh 覆盖）；放在基础规则里，确保 @media 的窄屏值能后置覆盖 */
+  max-height: calc(100vh - 110px);
 }
 .detail.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
 .detail .d-top { padding: 14px 16px; position: relative; }
@@ -603,8 +605,10 @@ body.heat-on .heat-facets { display: flex; }
 }
 @media (max-width: 920px) { .map-hint { display: none; } }
 
-/* 详情卡：限制高度，整卡可上下滑动；标题栏吸顶常驻（关闭/分享按钮始终可点） */
-.detail { max-height: calc(100vh - 110px); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+/* 详情卡：整卡可上下滑动；标题栏吸顶常驻（关闭/分享按钮始终可点）。
+   限高（max-height）定义在基础 .detail 规则与窄屏 @media 里——不要在这里再设 max-height，
+   否则这条更靠后的全局规则会覆盖窄屏的 dvh 值，导致卡片在移动端超出可视区、底部内容被遮挡且无法滑动。 */
+.detail { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
 .detail .d-top { position: sticky; top: 0; z-index: 2; background: var(--panel-solid); }
 .detail .d-desc { padding-bottom: 16px; }
 .detail::-webkit-scrollbar { width: 7px; }
