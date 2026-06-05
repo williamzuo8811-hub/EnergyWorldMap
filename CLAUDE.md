@@ -194,21 +194,6 @@ description), and the **tier-grouped client sub-chips** in the left filter (the 
 by BD tier with 🥇/🥈/🥉 dividers instead of a flat 55-chip strip). The total-investment KPI carries a generic
 **outlier `title`**: when one project ≥25% of the shown total (e.g. Stargate $500B), it hovers "其中「…」≈$X · N%".
 
-The **🔌 product-fit board** (`showProductBoard`, the `🔌 产品` map-tools button) is the *reverse* of the client
-board: instead of company→projects it maps **特锐德's core products → projects**. The product catalog + matcher live
-in **`js/products-meta.js`** (`window.ENERGY_PRODUCTS = { PRODUCTS, match }`) — six core product lines (模块化预制舱
-变电站 / 车载移动变电站 / 算电岛 AI PowerHouse 算力中心高压交直流预制舱供电站 / E-house 预制电气房 / 中低压成套·配网 /
-储能并网舱), each with a `cats`/`kw` rule. `match(p)` derives the applicable
-product keys per **physical** project from its `cat`/`name`/`cap`/`desc` (it returns `[]` for `cat==='client'`, since
-those cross-view entries already carry company-level product fit via `CLIENT_META`); the result is attached as
-`p.products` at build time (next to `p.sub`). Like `clients-meta.js` it is BD metadata — dual-exported (browser global
-+ `module.exports`), loaded after `util.js`, before `app.js`, **not** subject to `validate-data.js`, and unit-tested by
-`scripts/test-products.js`. A project can match several products (multi-fit). The board groups all physical projects by
-product (count / investment / country reach / dominant categories); clicking a product sets `state.product` — a
-filter dimension **orthogonal to category** (`passProduct` in `filtered()`, round-tripped through the hash as `prod=`),
-shows a dismissable `#product-tag` map overlay, and flies to the matching bounds. Each physical project's detail card
-gains a `productFitBlock` (🔌 适配产品 chips + lead scenario) mirroring `clientBdBlock`'s placement.
-
 ## Project data conventions
 
 A project object (see `data.js` header comment for the full field reference):
