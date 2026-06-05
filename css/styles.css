@@ -529,8 +529,8 @@ body.heat-on .heat-legend { display: flex; }
 .map-credit .mc-by { color: var(--txt-faint); }
 body.heat-on .map-credit { display: none; }
 @media (max-width: 920px) {
-  /* 窄屏右下角是浮动按钮 → 署名移到底部居中 */
-  .map-credit { right: auto; left: 50%; transform: translateX(-50%); bottom: 14px; }
+  /* 窄屏底部四角已被 缩放/筛选/统计 占用 → 署名移到地图上部居中（标题栏下方，左上缩放与右上⋯之间）*/
+  .map-credit { right: auto; left: 50%; transform: translateX(-50%); top: 12px; bottom: auto; }
 }
 
 /* 🔥 热力分面（聚焦单一品类，仅热力模式显示）*/
