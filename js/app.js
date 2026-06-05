@@ -404,41 +404,50 @@
 
   // 所属大区：每个大区一组，可展开列出该区国家；点大区芯片按大区筛选，点国家芯片按国家筛选并飞到该国
   const regionEl = document.getElementById('region-chips');
-  regionEl.className = 'region-tree';
-  REGIONS.forEach(r => {
-    const countries = REGION_COUNTRIES[r] || [];
-    const regProj = countries.reduce((s, c) => s + (COUNTRY_COUNT[c] || 0), 0);
-    const group = document.createElement('div');
-    group.className = 'region-group'; group.dataset.region = r;
+  // 左侧"所属大区→国家"树：抽成函数以便语言切换时整树重建（大区名/国家名随之中英切换）
+  function buildRegionTree() {
+    const en = state.lang === 'en';
+    regionEl.className = 'region-tree';
+    regionEl.innerHTML = '';
+    REGIONS.forEach(r => {
+      const countries = REGION_COUNTRIES[r] || [];
+      const regProj = countries.reduce((s, c) => s + (COUNTRY_COUNT[c] || 0), 0);
+      const group = document.createElement('div');
+      group.className = 'region-group'; group.dataset.region = r;
 
-    const row = document.createElement('div');
-    row.className = 'region-row';
-    const pill = document.createElement('span');
-    pill.className = 'pill rg-pill'; pill.textContent = regionName(r); pill.dataset.v = r;
-    pill.tabIndex = 0; pill.setAttribute('role', 'button'); pill.setAttribute('aria-label', regionName(r) + ' 大区筛选');
-    pill.addEventListener('click', () => toggleRegion(r));
-    const meta = document.createElement('span');
-    meta.className = 'rg-meta'; meta.textContent = countries.length + ' 国 · ' + regProj;
-    const caret = document.createElement('span');
-    caret.className = 'rg-caret'; caret.textContent = '▸'; caret.tabIndex = 0; caret.setAttribute('role', 'button');
-    caret.setAttribute('aria-label', '展开 / 收起该区国家');
-    caret.addEventListener('click', () => group.classList.toggle('open'));
-    row.appendChild(pill); row.appendChild(meta); row.appendChild(caret);
+      const row = document.createElement('div');
+      row.className = 'region-row';
+      const pill = document.createElement('span');
+      pill.className = 'pill rg-pill'; pill.textContent = regionName(r); pill.dataset.v = r;
+      pill.tabIndex = 0; pill.setAttribute('role', 'button'); pill.setAttribute('aria-label', regionName(r) + (en ? ' region filter' : ' 大区筛选'));
+      pill.addEventListener('click', () => toggleRegion(r));
+      const meta = document.createElement('span');
+      meta.className = 'rg-meta'; meta.textContent = countries.length + (en ? ' ctry · ' : ' 国 · ') + regProj;
+      const caret = document.createElement('span');
+      caret.className = 'rg-caret'; caret.textContent = '▸'; caret.tabIndex = 0; caret.setAttribute('role', 'button');
+      caret.setAttribute('aria-label', en ? 'Expand / collapse countries' : '展开 / 收起该区国家');
+      caret.addEventListener('click', () => group.classList.toggle('open'));
+      row.appendChild(pill); row.appendChild(meta); row.appendChild(caret);
 
-    const list = document.createElement('div');
-    list.className = 'country-list';
-    countries.forEach(c => {
-      const chip = document.createElement('span');
-      chip.className = 'country-chip'; chip.dataset.country = c; chip.tabIndex = 0; chip.setAttribute('role', 'button');
-      chip.innerHTML = '<span class="cn">' + esc(c) + '</span><i class="cc">' + (COUNTRY_COUNT[c] || 0) + '</i>';
-      chip.addEventListener('click', () => toggleCountry(c));
-      list.appendChild(chip);
+      const list = document.createElement('div');
+      list.className = 'country-list';
+      countries.forEach(c => {
+        const chip = document.createElement('span');
+        chip.className = 'country-chip'; chip.dataset.country = c; chip.tabIndex = 0; chip.setAttribute('role', 'button');
+        chip.innerHTML = '<span class="cn">' + esc(countryName(c)) + '</span><i class="cc">' + (COUNTRY_COUNT[c] || 0) + '</i>';
+        chip.addEventListener('click', () => toggleCountry(c));
+        list.appendChild(chip);
+      });
+      if (!countries.length) { const e = document.createElement('div'); e.className = 'country-empty'; e.textContent = en ? 'None' : '暂无'; list.appendChild(e); }
+
+      group.appendChild(row); group.appendChild(list);
+      regionEl.appendChild(group);
     });
-    if (!countries.length) { const e = document.createElement('div'); e.className = 'country-empty'; e.textContent = '暂无'; list.appendChild(e); }
-
-    group.appendChild(row); group.appendChild(list);
-    regionEl.appendChild(group);
-  });
+    // 重建后把已选大区/国家的高亮态还原
+    document.querySelectorAll('#region-chips .rg-pill').forEach(el => el.classList.toggle('on', state.regions.has(el.dataset.v)));
+    syncCountryUI();
+  }
+  buildRegionTree();
 
   const statusEl = document.getElementById('status-chips');
   STATUS.forEach(s => {
@@ -623,6 +632,7 @@
     if (sortToggle) sortToggle.textContent = state.lang === 'en' ? (state.sort === 'cap' ? 'by capacity ⇄' : 'by investment ⇄') : (state.sort === 'cap' ? '按装机容量 ⇄' : '按投资额 ⇄');
     buildCatLegend();   // 地图浮层文案随语言重建
     buildHeatFacets();
+    buildRegionTree();  // 左侧大区/国家树随语言整树重建（含国名中英切换）
   }
   if (btnLang) btnLang.addEventListener('click', () => {
     state.lang = state.lang === 'en' ? 'zh' : 'en';
@@ -923,7 +933,7 @@
     let picker = '';
     if (comparePickerOpen && canAdd) {
       const list = countryCounts().filter(o => !state.compare.includes(o.c))
-        .map(o => '<button class="cmp-pick" data-pick="' + esc(o.c) + '">' + esc(countryName(o.c)) + '<span>' + o.n + '</span></button>').join('');
+        .map(o => '<button class="cmp-pick" data-pick="' + esc(o.c) + '" data-en="' + esc(COUNTRY_EN[o.c] || '') + '">' + esc(countryName(o.c)) + '<span>' + o.n + '</span></button>').join('');
       picker = '<div class="cmp-picker"><input id="cmp-search" placeholder="' + (state.lang === 'en' ? 'Search country…' : '搜索国家…') + '" aria-label="搜索国家"><div class="cmp-picklist" id="cmp-picklist">' + list + '</div></div>';
     }
     const hint = state.compare.length < 2
@@ -952,7 +962,7 @@
     if (cs) cs.addEventListener('input', () => {
       const q = cs.value.trim().toLowerCase();
       countryPanel.querySelectorAll('#cmp-picklist .cmp-pick').forEach(b => {
-        b.style.display = b.dataset.pick.toLowerCase().indexOf(q) >= 0 ? '' : 'none';
+        b.style.display = (b.dataset.pick + ' ' + (b.dataset.en || '')).toLowerCase().indexOf(q) >= 0 ? '' : 'none';
       });
     });
   }
@@ -1406,5 +1416,5 @@
   })();
 
   // 调试 / 程序化控制句柄
-  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showLeague, showDetail, PROJECTS };
+  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showLeague, showDetail, PROJECTS, applyLang, buildRegionTree, showCompare, openCompare };
 })();
