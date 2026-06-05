@@ -107,6 +107,8 @@ try {
     'data-europe', 'data-nuclear', 'data-northam', 'data-southasia', 'data-china-future', 'data-clients2', 'progress']
     .forEach(f => require(path.join(__dirname, '..', 'js', f + '.js')));
   require(path.join(__dirname, '..', 'js', 'clients-meta.js'));   // window.CLIENT_META（BD 看板用）
+  // products-meta.js 在 Node 走 module.exports，桥接到浏览器同名全局供 app.js 读取
+  global.window.ENERGY_PRODUCTS = require(path.join(__dirname, '..', 'js', 'products-meta.js'));
   require(path.join(__dirname, '..', 'js', 'app.js'));
 } catch (e) {
   console.error('✘ app.js 初始化抛出异常：\n', e && e.stack || e);
@@ -135,8 +137,19 @@ try {
 
 try { APP.showClientBoard(); ok(true, 'showClientBoard()（🎯 客户 BD 看板）不抛错'); }
 catch (e) { fails.push('showClientBoard() 抛错：' + (e && e.message)); }
+try { APP.showProductBoard(); ok(true, 'showProductBoard()（🔌 产品适配看板）不抛错'); }
+catch (e) { fails.push('showProductBoard() 抛错：' + (e && e.message)); }
 try { APP.showLeague(); ok(true, 'showLeague()（🏢 企业榜）不抛错'); }
 catch (e) { fails.push('showLeague() 抛错：' + (e && e.message)); }
+
+// 🔌 产品筛选维度：state.product 经 stateToHash 编码、filtered() 过滤后渲染不抛错
+try {
+  const k = (global.window.ENERGY_PRODUCTS.PRODUCTS[0] || {}).key;
+  APP.state.product = k;
+  ok(APP.stateToHash().indexOf('prod=' + k) >= 0, 'state.product 经 stateToHash 编码为 prod=');
+  APP.render(); ok(true, '产品筛选下 render() 不抛错');
+  APP.state.product = null; APP.render();
+} catch (e) { fails.push('产品筛选维度抛错：' + (e && e.message)); }
 
 /* ---------- 汇总 ---------- */
 console.log('═══════════════════════════════════════════════');
