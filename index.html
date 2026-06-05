@@ -4,19 +4,23 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>全球能源项目世界地图 · Global Energy Projects Map</title>
-  <meta name="description" content="可缩放的全球能源项目世界地图：2600+ 个能源与基建项目，按品类 / 大区 / 状态 / 年份筛选，含投资 KPI、容量硬指标、投资热力图、时间轴回放与国别下钻。An interactive world map of 2,600+ global energy &amp; infrastructure projects.">
+  <meta name="description" content="可缩放的全球能源项目世界地图：3000+ 个能源与基建项目，按品类 / 大区 / 状态 / 年份筛选，含投资 KPI、容量硬指标、投资热力图、时间轴回放与国别下钻。An interactive world map of 3,000+ global energy &amp; infrastructure projects.">
   <meta name="theme-color" content="#060b18">
   <meta name="author" content="EnergyWorldMap">
   <!-- 社交分享卡（Open Graph / Twitter）：让 🔗 分享视图 的链接在微信/Slack/Twitter 中带标题与预览 -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="全球能源项目世界地图 · Global Energy Projects Map">
-  <meta property="og:description" content="2600+ 个全球能源与基建项目的交互世界地图：品类 / 大区 / 状态 / 年份筛选，投资 KPI、容量硬指标、热力图、时间轴回放与国别下钻。">
-  <meta property="og:image" content="assets/og-cover.svg">
+  <meta property="og:description" content="3000+ 个全球能源与基建项目的交互世界地图：品类 / 大区 / 状态 / 年份筛选，投资 KPI、容量硬指标、热力图、时间轴回放与国别下钻。">
+  <meta property="og:image" content="assets/og-cover.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="全球能源项目世界地图 · Global Energy Projects Map">
-  <meta name="twitter:description" content="2600+ 个全球能源与基建项目的交互世界地图：筛选、KPI、热力图、时间轴回放与国别下钻。">
-  <meta name="twitter:image" content="assets/og-cover.svg">
+  <meta name="twitter:description" content="3000+ 个全球能源与基建项目的交互世界地图：筛选、KPI、热力图、时间轴回放与国别下钻。">
+  <meta name="twitter:image" content="assets/og-cover.png">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
   <link rel="stylesheet" href="lib/leaflet.css">
   <link rel="stylesheet" href="lib/MarkerCluster.css">
   <link rel="stylesheet" href="lib/MarkerCluster.Default.css">
@@ -160,29 +164,36 @@
     <div class="drawer-backdrop" id="drawer-backdrop"></div>
   </div>
 
-  <script src="lib/leaflet.js"></script>
-  <script src="lib/leaflet.markercluster.js"></script>
-  <script src="lib/leaflet-heat.js"></script>
-  <script src="js/data.js"></script>
-  <script src="js/data-extra.js"></script>
-  <script src="js/data-brazil.js"></script>
-  <script src="js/data-mideast.js"></script>
-  <script src="js/data-russia-ca.js"></script>
-  <script src="js/data-clients.js"></script>
-  <script src="js/data-brazil-future.js"></script>
-  <script src="js/data-saudi-future.js"></script>
-  <script src="js/data-seasia.js"></script>
-  <script src="js/data-africa.js"></script>
-  <script src="js/data-oceania.js"></script>
-  <script src="js/data-europe.js"></script>
-  <script src="js/data-nuclear.js"></script>
-  <script src="js/data-northam.js"></script>
-  <script src="js/data-southasia.js"></script>
-  <script src="js/data-china-future.js"></script>
-  <script src="js/data-clients2.js"></script>
-  <script src="js/progress.js"></script>
-  <script src="js/util.js"></script>
-  <script src="js/clients-meta.js"></script>
-  <script src="js/app.js"></script>
+  <script defer src="lib/leaflet.js"></script>
+  <script defer src="lib/leaflet.markercluster.js"></script>
+  <script defer src="lib/leaflet-heat.js"></script>
+  <script defer src="js/data.js"></script>
+  <script defer src="js/data-extra.js"></script>
+  <script defer src="js/data-brazil.js"></script>
+  <script defer src="js/data-mideast.js"></script>
+  <script defer src="js/data-russia-ca.js"></script>
+  <script defer src="js/data-clients.js"></script>
+  <script defer src="js/data-brazil-future.js"></script>
+  <script defer src="js/data-saudi-future.js"></script>
+  <script defer src="js/data-seasia.js"></script>
+  <script defer src="js/data-africa.js"></script>
+  <script defer src="js/data-oceania.js"></script>
+  <script defer src="js/data-europe.js"></script>
+  <script defer src="js/data-nuclear.js"></script>
+  <script defer src="js/data-northam.js"></script>
+  <script defer src="js/data-southasia.js"></script>
+  <script defer src="js/data-china-future.js"></script>
+  <script defer src="js/data-clients2.js"></script>
+  <script defer src="js/progress.js"></script>
+  <script defer src="js/i18n-en.js"></script>
+  <script defer src="js/util.js"></script>
+  <script defer src="js/clients-meta.js"></script>
+  <script defer src="js/app.js"></script>
+  <!-- PWA：注册 Service Worker（离线 + 重访秒开）。失败静默，不影响纯静态站点。 -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+    }
+  </script>
 </body>
 </html>

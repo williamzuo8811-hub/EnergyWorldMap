@@ -63,6 +63,7 @@ window.CLIENT_META = {
   tianqi:      { tier: '第三梯队', fit: '中',   type: '海外锂资源业主(天齐)', product: '矿山及化工厂配电系统', scenario: '澳洲锂矿/锂化工相关资产', approach: '从存量改造与工厂配电切入（澳洲合规高）' },
   cecep:       { tier: '第三梯队', fit: '中',   type: '新能源投资商(中节能)', product: '光伏升压站·预制舱开关站', scenario: '光伏、电站运营', approach: '从光伏电站并网配套切入' },
   gcl:         { tier: '第三梯队', fit: '中',   type: '新能源开发/组件/系统(协鑫)', product: '光伏电气包·储能接入·开关站', scenario: '海外光伏与储能项目', approach: '项目型切入，跟随开发/EPC' },
+  crrc:        { tier: '第三梯队', fit: '中',   type: '轨道交通装备(中车)', product: '轨交牵引供电·储能并网舱·站段配电', scenario: '海外地铁/城际/铁路电气化、车辆基地', approach: '随中车海外轨交项目配套牵引供电与储能，切入车辆基地与站段配电' },
   // ===== 其他出海客户（不在 50 家清单，但有海外项目且产品契合）=====
   gds:         { tier: '其他', fit: '高',   type: '海外数据中心(万国/DayOne)', product: 'E-house·中压配电·备用电源', scenario: '海外数据中心园区', approach: '从园区中压配电与备用电源切入' },
   chindata:    { tier: '其他', fit: '高',   type: '海外数据中心(秦淮)', product: 'E-house·中压配电', scenario: '东南亚/南亚数据中心', approach: '从数据中心配电与扩容切入' },

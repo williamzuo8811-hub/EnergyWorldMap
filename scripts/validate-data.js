@@ -25,7 +25,7 @@ const W = (msg) => warns.push(msg);
 
 /* ---------- 1) 解析 index.html 的脚本加载顺序 ---------- */
 const indexHtml = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-const scriptOrder = [...indexHtml.matchAll(/<script\s+src="(js\/[^"]+\.js)"><\/script>/g)].map(m => m[1]);
+const scriptOrder = [...indexHtml.matchAll(/<script[^>]*\ssrc="(js\/[^"]+\.js)"><\/script>/g)].map(m => m[1]);
 const dataRefs = scriptOrder.filter(s => /^js\/(data.*|progress)\.js$/.test(s));
 
 // 磁盘上的数据文件是否都已在 index.html 挂载
@@ -142,6 +142,13 @@ const idSet = new Set(PROJECTS.map(p => p && p.id));
 const orphan = Object.keys(PROGRESS).map(Number).filter(id => !idSet.has(id));
 if (orphan.length) W(`ENERGY_PROGRESS 有 ${orphan.length} 条 id 对不上任何项目（孤儿）：${orphan.slice(0, 15).join(', ')}${orphan.length > 15 ? ' …' : ''}`);
 
+/* ---------- 5a) 英文正文映射（js/i18n-en.js，按 id 合并，与 progress 同模式）孤儿检测 ---------- */
+try { require(path.join(ROOT, 'js/i18n-en.js')); } catch (e) { /* 文件可缺省 */ }
+const EN = global.window.ENERGY_EN || {};
+const enKeys = Object.keys(EN).map(Number);
+const enOrphan = enKeys.filter(id => !idSet.has(id));
+if (enOrphan.length) E(`ENERGY_EN 有 ${enOrphan.length} 条 id 对不上任何项目（孤儿英文正文）：${enOrphan.slice(0, 15).join(', ')}${enOrphan.length > 15 ? ' …' : ''}`);
+
 /* ---------- 5b) 数据健康度（异常值 / 重复坐标 / route 合法性 / 容量解析盲区）---------- */
 // 重复坐标：同一精确 [lng,lat] 被 ≥4 个项目复用，多半是占位坐标
 const coordMap = new Map();
@@ -214,6 +221,10 @@ console.log(`品类（${CAT_KEYS.length}）：` + CAT_KEYS.map(k => `${CATEGORIE
 console.log('大区：' + REGIONS.map(r => `${r} ${by('region')[r] || 0}`).join(' · '));
 console.log('状态：' + STATUS.map(s => `${s} ${by('status')[s] || 0}`).join(' · '));
 console.log(`含数值容量(cap) 的项目：${capPresent}/${PROJECTS.length}（${(capPresent / PROJECTS.length * 100).toFixed(0)}%）`);
+// 英文正文覆盖（内联 detailEn/descEn + js/i18n-en.js 按 id 合并；EN 模式详情卡用得到）
+const enInline = new Set(PROJECTS.filter(p => p && (p.detailEn || p.descEn)).map(p => p.id));
+const enCovered = new Set([...enInline, ...enKeys].filter(id => idSet.has(id)));
+console.log(`英文正文(detailEn/descEn) 覆盖：${enCovered.size}/${idSeen.size}（${(enCovered.size / idSeen.size * 100).toFixed(1)}%；内联 ${enInline.size} + i18n-en ${enKeys.length}）`);
 console.log(`META.lastUpdated=${ENERGY.META && ENERGY.META.lastUpdated}  recentSince=${ENERGY.META && ENERGY.META.recentSince}`);
 
 console.log('\n───────────────────────────────────────────────');

@@ -146,6 +146,7 @@
       { key: 'seg',       label: '中石化炼化',   fn: (h, l, p) => /中石化炼化|炼化工程|Sinopec Engineering|SEG/.test(p.owner || '') },
       { key: 'cooec',     label: '海油工程',     fn: (h, l, p) => /海油工程|COOEC/.test(p.owner || '') },
       { key: 'cncec',     label: '中国化学',     fn: (h, l, p) => /中国化学|CNCEC/.test(p.owner || '') },
+      { key: 'crrc',      label: '中国中车',     fn: (h, l, p) => /中国中车|中车|CRRC/.test(p.owner || '') },
       { key: 'other', label: '其他客户' },
     ],
   };
@@ -166,10 +167,13 @@
   }
 
   /* ---------- 容量解析：把自由文本 cap 抽成结构化数值 ----------
-   * 返回 { mw, mwh, km, kbd, wty, pf }：电功率MW / 储能MWh / 线路km / 油气万桶日 / 产能万吨年 / 智算PFLOPS。
-   * 取首个匹配为准；遇 "A+B" 加和；"N×M 单位" 相乘；MW/GW 用前瞻避免误吞 MWh/GWh；"万kW" 同 "万千瓦"。无则 null。 */
+   * 返回 { mw, mwh, km, kbd, wty, pf, pax, teu, wafer, veh, mva }：
+   *   电功率MW / 储能MWh / 线路km / 油气万桶日 / 产能万吨年 / 智算PFLOPS /
+   *   客运万人次年 / 集装箱万TEU年 / 晶圆万片月 / 整车万辆年 / 变电MVA。
+   * 取首个匹配为准；遇 "A+B" 加和；"N×M 单位" 相乘；MW/GW 用前瞻避免误吞 MWh/GWh；"万kW" 同 "万千瓦"。无则 null。
+   * 注：刻意不解析口径异构 / 日产年产混写的盲区（矿业各金属吨/盎司、油气日产 vs 年产 立方米），避免汇总出误导性总量。 */
   function parseCapacity(cap) {
-    const out = { mw: null, mwh: null, km: null, kbd: null, wty: null, pf: null };
+    const out = { mw: null, mwh: null, km: null, kbd: null, wty: null, pf: null, pax: null, teu: null, wafer: null, veh: null, mva: null };
     if (!cap) return out;
     const s = String(cap).replace(/[，、]/g, ',').replace(/＋/g, '+').replace(/／/g, '/').replace(/[×✕⨯]/g, 'x').replace(/～/g, '~')
       // "250+ MW"/"100+ MW"：去掉数字与单位之间的"≥"语义加号（其后接单位、非数字，故不影响 "A+B" 加和）
@@ -205,6 +209,19 @@
       .concat(collect('PFLOPS|PFlops', 1))
       .concat(collect('P(?![A-Za-z])', 1));
     comp.sort((a, b) => a.i - b.i); out.pf = r(pick(comp));
+    // 客运吞吐（机场/铁路/地铁头条指标）→ 万人次/年：亿人次×10000；万人次×1。"旅客" 同 "人次"。
+    const pax = [].concat(collect('亿\\s*(?:人次|旅客)', 10000)).concat(collect('万\\s*(?:人次|旅客)', 1));
+    pax.sort((a, b) => a.i - b.i); out.pax = r(pick(pax));
+    // 集装箱吞吐（港口码头）→ 万TEU/年：亿×10000；万×1。"标箱" 同 "TEU"。
+    const teu = [].concat(collect('亿\\s*(?:TEU|标箱)', 10000)).concat(collect('万\\s*(?:TEU|标箱)', 1));
+    teu.sort((a, b) => a.i - b.i); out.teu = r(pick(teu));
+    // 晶圆产能（半导体晶圆厂）→ 万片/月：万片×1（"颗/日封测" 等不同口径不纳入）。
+    const wafer = collect('万\\s*片', 1); wafer.sort((a, b) => a.i - b.i); out.wafer = r(pick(wafer));
+    // 整车产能（汽车整车厂）→ 万辆/年：万辆×1（"列" 等轨道车辆不纳入）。
+    const veh = collect('万\\s*辆', 1); veh.sort((a, b) => a.i - b.i); out.veh = r(pick(veh));
+    // 变电容量（变电站/换流站）→ MVA：GVA/吉伏安×1000；万千伏安/万kVA×10；兆伏安/MVA×1（"kV/千伏" 仅电压等级不计）。
+    const mva = [].concat(collect('GVA|吉伏安', 1000)).concat(collect('万千伏安|万\\s*kVA', 10)).concat(collect('兆伏安|MVA', 1));
+    mva.sort((a, b) => a.i - b.i); out.mva = r(pick(mva));
     return out;
   }
 
@@ -248,5 +265,53 @@
     return k || (o || '').trim();
   }
 
-  return { SUB_DEFS, classifySub, parseCapacity, wgs2gcj, outOfChina, normalizeOwner };
+  /* ---------- 中→英标签映射（app.js 与 globe.js 共用，单一真源）---------- */
+  const LABELS_EN = {
+    cat: { renewable: 'Renewables', nuclear: 'Nuclear', grid: 'Grid & T&D', storage: 'Storage', ci: 'Industry', datacenter: 'Data Center', transport: 'Transport', petro: 'Oil·Gas·Chem', mining: 'Mining', client: 'Key Clients' },
+    region: { '中国': 'China', '亚洲': 'Asia', '中东': 'Middle East', '欧洲': 'Europe', '北美': 'N. America', '南美': 'S. America', '非洲': 'Africa', '大洋洲': 'Oceania' },
+    status: { '规划': 'Planned', '在建': 'Building', '投运': 'Operating' },
+  };
+
+  /* ---------- 装机容量(MW) → 友好显示（GW/MW；null→「—」）---------- */
+  function capFmtMW(mw) { return mw == null ? '—' : (mw >= 1000 ? (mw / 1000).toFixed(mw < 10000 ? 1 : 0) + ' GW' : Math.round(mw) + ' MW'); }
+
+  /* ---------- 投资额量级（inv 单位为亿美元）→ 量级串，不含币种符号 ----------
+   * 中文 亿/万亿；英文 B/T（÷10 得 billion，÷10000 得 trillion）。调用方自行前置 ≈$ / $。 */
+  function invMagnitude(n, lang) {
+    n = n || 0;
+    if (lang === 'en') {
+      if (n >= 10000) return (n / 10000).toFixed(1) + 'T';
+      const b = n / 10;
+      return (b >= 100 ? Math.round(b) : Math.round(b * 10) / 10).toLocaleString('en-US') + 'B';
+    }
+    return n >= 10000 ? (n / 10000).toFixed(1) + ' 万亿' : (n < 10 ? (Math.round(n * 10) / 10) : Math.round(n)).toLocaleString('en-US') + ' 亿';
+  }
+
+  /* ---------- 数据装配管线（app.js 与 globe.js 同口径，单一实现）----------
+   * 合并 ENERGY.PROJECTS 与 ENERGY_EXTRA → 按 name 去重（首个占位胜出）→ 挂 progress(按id)
+   * → 合并英文正文 opts.en(按id，仅在源数据未内联 descEn/detailEn 时填充)
+   * → 计算 sub(classifySub) 与全部结构化容量(parseCapacity)。opts.requireCoord=true 时（3D 地球）
+   * 只保留有 coord 的项目（无 coord 者既不入库也不占用该 name 名额）。就地写入各派生字段。 */
+  function buildProjects(ENERGY, EXTRA, PROGRESS, opts) {
+    opts = opts || {};
+    const all = ((ENERGY && ENERGY.PROJECTS) || []).concat(EXTRA || []);
+    const PROG = PROGRESS || {};
+    const EN = opts.en || {};
+    const seen = new Set(), out = [];
+    all.forEach(p => {
+      if (!p || !p.name || seen.has(p.name)) return;
+      if (opts.requireCoord && !p.coord) return;
+      if (!p.progress && PROG[p.id]) p.progress = PROG[p.id];
+      const en = EN[p.id];
+      if (en) { if (!p.descEn && en.descEn) p.descEn = en.descEn; if (!p.detailEn && en.detailEn) p.detailEn = en.detailEn; }
+      p.sub = classifySub(p);
+      const cc = parseCapacity(p.cap);
+      p.capMW = cc.mw; p.capMWh = cc.mwh; p.capKm = cc.km; p.capKbd = cc.kbd; p.capWty = cc.wty; p.capPF = cc.pf;
+      p.capPax = cc.pax; p.capTeu = cc.teu; p.capWafer = cc.wafer; p.capVeh = cc.veh; p.capMva = cc.mva;
+      seen.add(p.name); out.push(p);
+    });
+    return out;
+  }
+
+  return { SUB_DEFS, classifySub, parseCapacity, wgs2gcj, outOfChina, normalizeOwner, LABELS_EN, capFmtMW, invMagnitude, buildProjects };
 });
