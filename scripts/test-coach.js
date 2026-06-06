@@ -156,6 +156,39 @@ try {
   ok(d.step >= d.steps.length, '剧本被推进到结算（render 结算态不抛错）');
 } catch (e) { fails.push('驱动完整剧本抛错：' + (e && e.stack || e)); }
 
+// —— 经典大单战役（手写 · 绑定真实项目）——
+try {
+  ok(Array.isArray(K.CONTENT.signatures) && K.CONTENT.signatures.length >= 2, '经典大单战役 ≥2 个（' + (K.CONTENT.signatures || []).length + '）');
+  const sig = K.CONTENT.signatures[0];
+  K.startSignature(sig);
+  ok(K.state.deal.kind === 'signature', 'signature 剧本 kind=signature');
+  ok(K.state.deal.steps.length >= 8, 'signature 展开全 8 阶段（' + K.state.deal.steps.length + '）');
+  ok(K.state.deal.ctx.t.cust === sig.over.cust, 'signature 客户画像被覆盖（' + K.state.deal.ctx.t.cust + '）');
+  ok(K.tpl(sig.stages[0].brief, K.state.deal.ctx).indexOf('{') < 0, 'signature 旁白占位符已替换');
+  K.render();
+  for (let i = 0; i < 3 && K.state.deal.step < K.state.deal.steps.length; i++) {
+    const st = K.state.deal.steps[K.state.deal.step];
+    if (K.useMC(st)) K.doChoose(0);
+    else { doc.getElementById('free-input').value = '我理解贵司对认证与可靠性的顾虑，按 IEC 标准、海外已有交付业绩，建议先做一个试点单元、配驻场与质保，验证达标再扩大，帮您把风险拆小、守住净零节点。'; K.doSubmit(); }
+    K.advance();
+  }
+  ok(true, 'signature 可推进、各态 render 不抛错');
+} catch (e) { fails.push('signature 抛错：' + (e && e.stack || e)); }
+
+// —— 抗压特训（销售经理抗压能力）——
+try {
+  ok(K.PRESSURE_STAGE && Array.isArray(K.PRESSURE_STAGE.rounds) && K.PRESSURE_STAGE.rounds.length >= 5, '抗压特训 ≥5 回合（' + (K.PRESSURE_STAGE && K.PRESSURE_STAGE.rounds.length) + '）');
+  K.startDeal(K.OPPS[0], K.PRESSURE_STAGE);
+  ok(K.state.deal.kind === 'pressure', '抗压剧本 kind=pressure');
+  K.render();
+  const ctx = K.state.deal.ctx, prRound = K.PRESSURE_STAGE.rounds[0];
+  const composed = K.scoreFree('我理解您的不满，先跟您说声抱歉，沟通没到位是我的问题。您别急，咱们对事不对人，我把价值和总账重新讲清楚，给我十分钟。', prRound, ctx);
+  const lost = K.scoreFree('凭什么说我们贵？你这是无理取闹，没法谈那就算了，随你便。', prRound, ctx);
+  ok(lost.tone.defensive.length > 0, '情绪失控 / 顶撞防御被捕获（' + lost.tone.defensive.join('、') + '）');
+  ok(composed.tone.goodHit.composure === true, '镇定从容被识别');
+  ok(composed.total > lost.total + 25, '镇定从容显著高于情绪失控（' + composed.total + ' vs ' + lost.total + '）');
+} catch (e) { fails.push('抗压特训抛错：' + (e && e.stack || e)); }
+
 /* ---------- 汇总 ---------- */
 console.log('═══════════════════════════════════════════════');
 console.log(' 国际销售话术陪练 · coach.js 初始化冒烟测试');

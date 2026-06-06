@@ -115,22 +115,28 @@ script order (skipping `i18n-en.js`, like the globe — it's Chinese-only), then
 and `js/coach.js`. `coach.js` rebuilds `PROJECTS` with `util.buildProjects` (no `requireCoord`).
 
 - **`js/coach-content.js`** (`window.COACH_CONTENT`, pure data, **not** project data — outside `validate-data.js`):
-  the **8-stage deal funnel** (情报画像→破冰触达→需求诊断 SPIN→价值方案→异议化解→商务谈判→促成签约→交付复购), each stage
-  carrying rounds with a customer line, hints, a scoring **rubric** (weighted 要点 × keyword variants), a **golden-script**
-  model answer, and (for early stages) multiple-choice options; plus the 5-product knowledge base, the **tone dictionary**
-  (six good-expression buckets + groveling/arrogant penalty lists that power the **"不卑不亢" poise score**), the 6 growth
-  **levels** (XP thresholds), a copy-ready **话术库 (pitch library)**, and 资深 sales **心法 tips**. Templates use `{co}/{cust}/
-  {role}/{proj}/{cat}/{usd}/{product}/{scenario}/{pain}/{status}/{approach}` placeholders filled per opportunity. `rubric.kw`
-  entries are plain substrings, `re:<regex>`, or `{placeholder}` (expanded to short match-tokens from the opportunity context).
+  the **8-stage deal funnel** (情报画像→破冰触达→需求诊断 SPIN→价值方案→异议化解→商务谈判→促成签约→交付复购) with ~20 rounds,
+  each round carrying a customer line, hints, a scoring **rubric** (weighted 要点 × keyword variants), a **golden-script**
+  model answer, and (for early stages) multiple-choice options; the two hand-written **经典大单战役 `signatures`** (NEOM Oxagon
+  net-zero data center / Congo CMOC Kisanfu copper-cobalt mine — each bound to a real project `id` via `projId`, with an `over`
+  block overriding the customer persona and bespoke rounds across all 8 funnel keys); the **抗压特训 `pressure`** module
+  (escalating high-pressure rounds — anger / belittling / silence / lowball / ultimatum / blame — plus 抗压心法 tips); the 5-product
+  knowledge base; the **tone dictionary** (seven good-expression buckets incl. `composure` + groveling/arrogant/**defensive**
+  penalty lists that power the **"不卑不亢" poise score** and the stress-mode composure score); the 6 growth **levels** (XP
+  thresholds); a copy-ready **话术库 (pitch library)**; and 资深 sales **心法 tips**. Templates use `{co}/{cust}/{role}/{proj}/
+  {cat}/{usd}/{product}/{scenario}/{pain}/{status}/{approach}` placeholders filled per opportunity. `rubric.kw` entries are plain
+  substrings, `re:<regex>`, or `{placeholder}` (expanded to short match-tokens from the opportunity context).
 - **`js/coach.js`** (engine + UI, one IIFE, debug handle `window.__COACH__`): derives the client from `owner` by replaying
   `SUB_DEFS.client`'s `fn` matchers (`clientKeyOf`), builds the **opportunity pool** ranked by a training-value score
   (CLIENT_META match / flagship / investment / recency), derives a deterministic **persona** (role by category, style by
   `id` hash), runs the deal/single-stage **drill**, and **scores answers fully offline & deterministically**: `scoreFree`
   = rubric-coverage % ± tone bonus/penalty (with a length guard), `scoreChoice` = preset value; both map to 1–5★ + XP.
-  Progress (XP / level / deals / per-stage best / history) persists in `localStorage` (memory fallback under Node/private
-  mode). An **optional AI free-spar** mode (off by default, BYO OpenAI-compatible key stored only in the browser) lets the
-  user free-chat with an AI customer; the deterministic core works with **zero network**. Modes: 闯关成交 / 单项特训 / 话术库 /
-  产品速查 / 成长档案. Guarded against missing DOM so `scripts/test-coach.js` can load it under a stub.
+  Progress (XP / level / deals / per-stage best incl. 抗压指数 / history) persists in `localStorage` (memory fallback under
+  Node/private mode). A deal carries a `kind` (`deal`/`signature`/`drill`/`pressure`) so each mode renders only its own active
+  deal; `startSignature(sig)` runs a marquee deal and `PRESSURE_STAGE` is a synthetic stage built from `COACH_CONTENT.pressure`.
+  An **optional AI free-spar** mode (off by default, BYO OpenAI-compatible key stored only in the browser) lets the user
+  free-chat with an AI customer; the deterministic core works with **zero network**. Modes: 闯关成交 / 经典战役 / 单项特训 /
+  抗压特训 / 话术库 / 产品速查 / 成长档案. Guarded against missing DOM so `scripts/test-coach.js` can load it under a stub.
 
 ### Data globals and merge model
 

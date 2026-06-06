@@ -142,7 +142,8 @@
   OPPS.forEach(o => { OPP_BY_ID[o.p.id] = o; });
 
   // 上下文：t=展示文本（模板替换）；kw=匹配用短词（rubric 占位符展开）
-  function buildContext(opp) {
+  // over/kwOver：经典大单剧本(signature)用，覆盖客户画像/产品/痛点等字段与匹配短词
+  function buildContext(opp, over, kwOver) {
     const p = opp.p, meta = opp.meta;
     const cust = opp.ck ? (CLIENT_LABEL[opp.ck] || U.normalizeOwner(p.owner || '')) : (U.normalizeOwner(p.owner || '') || '该项目业主');
     const per = persona(p);
@@ -162,6 +163,8 @@
       pain: pain.kw, product: prodKw, cust: [cust, U.normalizeOwner(p.owner || '')].filter(Boolean),
       proj: [p.country, catShort(p.cat), '项目'].filter(Boolean), co: [p.country].filter(Boolean), cat: [catShort(p.cat)],
     };
+    if (over) Object.keys(over).forEach(k => { if (over[k] != null) t[k] = over[k]; });
+    if (kwOver) Object.keys(kwOver).forEach(k => { if (kwOver[k]) kw[k] = kwOver[k]; });
     return { opp: opp, p: p, persona: per, t: t, kw: kw };
   }
 
@@ -191,7 +194,8 @@
     });
     const bad = (C.tone.bad || []).filter(w => textLow.indexOf(norm(w)) >= 0);
     const arrogant = (C.tone.arrogant || []).filter(w => textLow.indexOf(norm(w)) >= 0);
-    return { goodTypes: goodTypes, goodHit: goodHit, bad: bad, arrogant: arrogant };
+    const defensive = (C.tone.defensive || []).filter(w => textLow.indexOf(norm(w)) >= 0);
+    return { goodTypes: goodTypes, goodHit: goodHit, bad: bad, arrogant: arrogant, defensive: defensive };
   }
 
   function starsOf(total) { return total >= 90 ? 5 : total >= 75 ? 4 : total >= 58 ? 3 : total >= 40 ? 2 : 1; }
@@ -208,8 +212,8 @@
     });
     let base = totW ? Math.round(gotW / totW * 100) : 60;
     const tn = toneScan(t);
-    const bonus = Math.min(tn.goodTypes * 4, 16);
-    const penalty = tn.bad.length * 14 + tn.arrogant.length * 12;
+    const bonus = Math.min(tn.goodTypes * 4, 18);
+    const penalty = tn.bad.length * 14 + tn.arrogant.length * 12 + (tn.defensive || []).length * 12;
     const len = String(text || '').replace(/\s/g, '').length;
     let lenNote = '';
     if (len < 10) { base = Math.min(base, 35); lenNote = '回答过短，话术需要展开论述。'; }
@@ -260,11 +264,14 @@
     oppQuery: '',
   };
 
+  // 漏斗阶段按 key 索引（signature / drill 的阶段对象虽非同一引用，但 key 相同即可对齐进度条）
+  const FUNNEL_IDX = {}; C.stages.forEach((s, i) => { FUNNEL_IDX[s.key] = i; });
+  const inFunnel = st => FUNNEL_IDX[st.key] != null;
   // 把若干 stage 展开成「步骤序列」：[{stage, round, sIdx}]；sIdx 取该阶段在完整漏斗中的真实序号
-  // （单项特训只传 1 个阶段，仍按其在 C.stages 的位置标号，如「异议化解」恒为第 5 关）。
+  // （单项特训 / 经典大单按 key 对齐，如「异议化解」恒为第 5 关；抗压等漏斗外阶段 sIdx=0）。
   function stepsOf(stages) {
     const steps = [];
-    stages.forEach(st => { const si = C.stages.indexOf(st); (st.rounds || []).forEach(r => steps.push({ stage: st, round: r, sIdx: si < 0 ? 0 : si })); });
+    stages.forEach(st => { const si = FUNNEL_IDX[st.key]; (st.rounds || []).forEach(r => steps.push({ stage: st, round: r, sIdx: si == null ? 0 : si })); });
     return steps;
   }
   const DIFF_LABEL = { easy: '选择题（最轻松）', mix: '混合（推荐）', free: '全开放（高阶）' };
@@ -276,10 +283,22 @@
     return step.sIdx < 4; // mix：前 4 阶段用选择题打基础，之后转开放
   }
 
+  const PRESSURE_STAGE = (C.pressure && C.pressure.stage) || null;
+
   function startDeal(opp, single) {
     const ctx = buildContext(opp);
     const stages = single ? [single] : C.stages;
-    state.deal = { opp: opp, ctx: ctx, steps: stepsOf(stages), step: 0, results: [], single: !!single, stageKey: single ? single.key : null };
+    const kind = single ? (single.key === 'pressure' ? 'pressure' : 'drill') : 'deal';
+    state.deal = { opp: opp, ctx: ctx, steps: stepsOf(stages), step: 0, results: [], single: !!single, kind: kind, stageKey: single ? single.key : null };
+    state.answered = null; state.revealHint = false;
+    prog.dealsRun = (prog.dealsRun || 0) + 1; saveProgress();
+  }
+
+  // 经典大单剧本：绑定真实项目，覆盖客户画像，走手写的全 8 阶段
+  function startSignature(sig) {
+    const opp = OPP_BY_ID[sig.projId] || OPPS[0];
+    const ctx = buildContext(opp, sig.over, sig.kw);
+    state.deal = { opp: opp, ctx: ctx, steps: stepsOf(sig.stages || []), step: 0, results: [], single: false, kind: 'signature', sig: sig };
     state.answered = null; state.revealHint = false;
     prog.dealsRun = (prog.dealsRun || 0) + 1; saveProgress();
   }
@@ -304,8 +323,8 @@
 
   function renderTabs() {
     const tabs = [
-      ['deal', '🎯 闯关成交'], ['drill', '🎚️ 单项特训'], ['lib', '💬 话术库'],
-      ['product', '📦 产品速查'], ['profile', '📈 成长档案'],
+      ['deal', '🎯 闯关成交'], ['signature', '🎓 经典战役'], ['drill', '🎚️ 单项特训'],
+      ['pressure', '🧘 抗压特训'], ['lib', '💬 话术库'], ['product', '📦 产品速查'], ['profile', '📈 成长档案'],
     ];
     const c = $('mode-tabs'); if (!c) return;
     c.innerHTML = tabs.map(t => '<button class="mtab' + (state.mode === t[0] ? ' on' : '') + '" data-act="mode" data-mode="' + t[0] + '">' + t[1] + '</button>').join('');
@@ -316,7 +335,9 @@
     syncControls();
     const m = state.mode;
     if (m === 'deal') renderDeal();
+    else if (m === 'signature') renderSignature();
     else if (m === 'drill') renderDrill();
+    else if (m === 'pressure') renderPressure();
     else if (m === 'lib') renderLib();
     else if (m === 'product') renderProduct();
     else if (m === 'profile') renderProfile();
@@ -330,15 +351,15 @@
 
   /* ---------- 商机简报卡 ---------- */
   function briefCard(ctx, compact) {
-    const p = ctx.p, per = ctx.persona;
+    const p = ctx.p;
     return '<div class="brief">' +
       '<div class="brief-top"><span class="brief-cat" style="--c:' + catColor(p.cat) + '">' + catIcon(p.cat) + ' ' + esc(catShort(p.cat)) + '</span>' +
       '<span class="brief-stat">' + esc(p.status || '') + '</span><span class="brief-usd">' + esc(usd(p)) + '</span></div>' +
       '<div class="brief-name">' + esc(p.name) + '</div>' +
-      '<div class="brief-meta"><b>🌍 ' + esc(p.country || '') + '</b> · 客户 <b>' + esc(ctx.t.cust) + '</b> · 对接 <b>' + esc(per.role) + '</b></div>' +
+      '<div class="brief-meta"><b>🌍 ' + esc(p.country || '') + '</b> · 客户 <b>' + esc(ctx.t.cust) + '</b> · 对接 <b>' + esc(ctx.t.role) + '</b></div>' +
       (compact ? '' :
         '<div class="brief-grid">' +
-        kv('对接人风格', per.styleText) +
+        kv('对接人风格', ctx.t.persona) +
         kv('核心痛点', ctx.t.pain) +
         kv('推荐产品', ctx.t.product) +
         kv('海外场景', ctx.t.scenario) +
@@ -353,9 +374,39 @@
   /* ---------- 闯关成交 ---------- */
   function renderDeal() {
     const d = state.deal;
-    if (!d || d.single) return renderOppPicker();
+    if (!d || d.kind !== 'deal') return renderOppPicker();
     if (d.step >= d.steps.length) return renderSummary();
     renderStep();
+  }
+
+  // 经典大单战役
+  function renderSignature() {
+    const d = state.deal;
+    if (d && d.kind === 'signature') { if (d.step >= d.steps.length) return renderSummary(); return renderStep(); }
+    const cards = (C.signatures || []).map(s =>
+      '<button class="sig-card" data-act="sig" data-key="' + s.key + '">' +
+      '<div class="sig-ico">' + s.icon + '</div>' +
+      '<div class="sig-name">' + esc(s.name) + '</div>' +
+      '<div class="sig-sub">' + esc(s.subtitle) + '</div>' +
+      '<div class="sig-go">▶ 接受挑战 · 全 8 关</div></button>').join('');
+    setHTML('deck',
+      '<div class="deck-head"><h2>🎓 经典大单战役</h2>' +
+      '<p class="deck-tip">手写打磨的真实旗舰大单，从情报到交付走完完整 8 关，每一关都针对该项目的真实痛点——这是检验综合功力的"毕业考"。</p></div>' +
+      '<div class="sig-grid">' + cards + '</div>');
+  }
+
+  // 抗压特训
+  function renderPressure() {
+    const d = state.deal;
+    if (d && d.kind === 'pressure') { if (d.step >= d.steps.length) return renderSummary(); return renderStep(); }
+    const tips = ((C.pressure && C.pressure.tips) || []).map(t => '<li>' + esc(t) + '</li>').join('');
+    setHTML('deck',
+      '<div class="deck-head"><h2>🧘 抗压特训 · 销售经理心态淬炼</h2>' +
+      '<p class="deck-tip">' + esc((C.pressure && C.pressure.intro) || '') + '</p></div>' +
+      '<div class="pressure-hero">' +
+      '<div class="ph-best">抗压指数最佳 <b>' + (prog.stageBest['pressure'] || 0) + '</b> / 100</div>' +
+      '<button class="btn-primary" data-act="pressure-start">🎲 来一场高压对练（6 连击）</button></div>' +
+      '<div class="psec"><h3>抗压心法</h3><ul class="tips">' + tips + '</ul></div>');
   }
 
   function renderOppPicker() {
@@ -409,13 +460,19 @@
   function renderStep() {
     const d = state.deal, ctx = d.ctx, step = d.steps[d.step], st = step.stage, r = step.round;
     const mc = useMC(step);
+    const backLabel = d.kind === 'pressure' ? '‹ 退出抗压' : d.kind === 'drill' ? '‹ 换一关' : d.kind === 'signature' ? '‹ 退出战役' : '‹ 换商机';
+    const ofLabel = inFunnel(st)
+      ? (d.single ? ('第 ' + (step.sIdx + 1) + '/' + C.stages.length + ' 关 · 回合 ' + (d.step + 1) + '/' + d.steps.length)
+        : ('第 ' + (step.sIdx + 1) + '/' + C.stages.length + ' 关'))
+      : ('压力回合 ' + (d.step + 1) + '/' + d.steps.length);
     const head =
       '<div class="deck-head step-head">' +
-      '<button class="btn-back" data-act="abandon">‹ 换商机</button>' +
-      '<h2>' + st.icon + ' ' + esc(st.name) + ' <span class="step-of">第 ' + (step.sIdx + 1) + '/' + C.stages.length + ' 关</span></h2>' +
+      '<button class="btn-back" data-act="abandon">' + backLabel + '</button>' +
+      '<h2>' + st.icon + ' ' + esc(st.name) + ' <span class="step-of">' + ofLabel + '</span></h2>' +
       '<p class="stage-goal">🎯 ' + esc(st.goal) + '</p></div>';
     const stepHTML = (d.single ? '' : stepper(d));
     const brief = briefCard(ctx, true);
+    const briefLine = st.brief ? '<div class="stage-brief">📋 ' + esc(tpl(st.brief, ctx)) + '</div>' : '';
     const ask = '<div class="bubble cust"><div class="who">🗣️ 情境</div><div class="say">' + esc(tpl(r.ask, ctx)) + '</div></div>';
 
     let inputHTML = '';
@@ -435,7 +492,7 @@
         '<button class="btn-ghost" data-act="reveal">🏅 看黄金话术（不计分）</button>' +
         '</div>';
     }
-    setHTML('deck', head + stepHTML + brief + ask + '<div class="answer-zone">' + inputHTML + '</div>');
+    setHTML('deck', head + stepHTML + brief + briefLine + ask + '<div class="answer-zone">' + inputHTML + '</div>');
   }
 
   function starStr(n) { return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n); }
@@ -453,6 +510,8 @@
       let toneNotes = [];
       if (tn.bad.length) toneNotes.push('<span class="bad">⚠ 跪舔/自降身价：' + esc(tn.bad.join('、')) + '</span>');
       if (tn.arrogant.length) toneNotes.push('<span class="bad">⚠ 过于强压/傲慢：' + esc(tn.arrogant.join('、')) + '</span>');
+      if (tn.defensive && tn.defensive.length) toneNotes.push('<span class="bad">⚠ 情绪失控/顶撞防御：' + esc(tn.defensive.join('、')) + '（抗压要稳住）</span>');
+      if (tn.goodHit && tn.goodHit.composure) toneNotes.push('<span class="good">✓ 镇定从容、对事不对人</span>');
       if (tn.goodTypes >= 3) toneNotes.push('<span class="good">✓ 语气专业、不卑不亢（命中 ' + tn.goodTypes + ' 类加分表达）</span>');
       if (a.lenNote) toneNotes.push('<span class="warn">' + esc(a.lenNote) + '</span>');
       body = '<div class="fb-rubric"><b>要点覆盖</b><ul>' + items + '</ul></div>' +
@@ -517,7 +576,7 @@
   /* ---------- 单项特训 ---------- */
   function renderDrill() {
     const d = state.deal;
-    if (d && d.single) { if (d.step >= d.steps.length) return renderSummary(); return renderStep(); }
+    if (d && d.kind === 'drill') { if (d.step >= d.steps.length) return renderSummary(); return renderStep(); }
     const cards = C.stages.map(st =>
       '<button class="drill-card" data-act="drill" data-key="' + st.key + '">' +
       '<div class="dc-ico">' + st.icon + '</div><div class="dc-name">' + esc(st.name) + '</div>' +
@@ -565,7 +624,8 @@
       '<div class="lad ' + (i === lv.idx ? 'cur' : (prog.xp >= l.min ? 'done' : '')) + '">' +
       '<span class="lad-ico">' + l.icon + '</span><b>' + esc(l.name) + '</b><i>' + l.min + ' XP</i>' +
       '<em>' + esc(l.tip) + '</em></div>').join('');
-    const stageRows = C.stages.map(st =>
+    const stageDefs = C.stages.concat(PRESSURE_STAGE ? [PRESSURE_STAGE] : []);
+    const stageRows = stageDefs.map(st =>
       '<div class="prow"><span>' + st.icon + ' ' + esc(st.name) + '</span><i style="width:' + (prog.stageBest[st.key] || 0) + '%"></i><b>' + (prog.stageBest[st.key] || 0) + '</b></div>').join('');
     const hist = (prog.history || []).slice(0, 12).map(h =>
       '<div class="hrow"><span>' + esc(h.name) + '</span><b>' + h.avg + '</b><em>' + esc(h.outcome.replace(/^[^\s]+\s/, '')) + '</em></div>').join('') || '<div class="empty">还没有完整成交记录，去「闯关成交」打第一单吧。</div>';
@@ -628,14 +688,22 @@
     else if (act === 'pick') { const o = OPP_BY_ID[+t.getAttribute('data-id')]; if (o) { startDeal(o); render(); } }
     else if (act === 'rand') { const o = randomOpp(true); if (o) { startDeal(o); render(); } }
     else if (act === 'drill') { const st = C.stages.filter(s => s.key === t.getAttribute('data-key'))[0]; if (st) { startDeal(randomOpp(true), st); render(); } }
+    else if (act === 'sig') { const s = (C.signatures || []).filter(x => x.key === t.getAttribute('data-key'))[0]; if (s) { startSignature(s); render(); } }
+    else if (act === 'pressure-start') { if (PRESSURE_STAGE) { startDeal(randomOpp(true), PRESSURE_STAGE); render(); } }
     else if (act === 'submit') { doSubmit(); }
     else if (act === 'choose') { doChoose(+t.getAttribute('data-i')); }
     else if (act === 'hint') { state.revealHint = !state.revealHint; render(); }
     else if (act === 'reveal') { doReveal(); }
     else if (act === 'next') { advance(); }
     else if (act === 'retry') { state.answered = null; state.revealHint = false; render(); }
-    else if (act === 'abandon' || act === 'newdeal') { state.deal = null; state.answered = null; state.mode = 'deal'; render(); }
-    else if (act === 'replay') { startDeal(state.deal.opp, state.deal.single ? state.deal.steps[0].stage : null); render(); }
+    else if (act === 'abandon' || act === 'newdeal') { state.deal = null; state.answered = null; render(); }
+    else if (act === 'replay') {
+      const d = state.deal;
+      if (d.kind === 'signature') startSignature(d.sig);
+      else if (d.single) startDeal(d.opp, d.steps[0].stage);
+      else startDeal(d.opp);
+      render();
+    }
     else if (act === 'copy') { doCopy(t.getAttribute('data-txt')); }
     else if (act === 'wipe') { if (confirmSafe('确定清空全部成长档案与进度？此操作不可恢复。')) { prog = { xp: 0, dealsClosed: 0, dealsRun: 0, stageBest: {}, history: [] }; saveProgress(); render(); } }
     else if (act === 'ai-save') { doAiSave(); }
@@ -716,8 +784,8 @@
     PROJECTS: PROJECTS, OPPS: OPPS, CONTENT: C, state: state,
     clientKeyOf: clientKeyOf, buildContext: buildContext, persona: persona, tpl: tpl,
     scoreFree: scoreFree, scoreChoice: scoreChoice, toneScan: toneScan, levelOf: levelOf,
-    stepsOf: stepsOf, startDeal: startDeal, randomOpp: randomOpp, render: render,
-    useMC: useMC, doSubmit: doSubmit, doChoose: doChoose, advance: advance,
+    stepsOf: stepsOf, startDeal: startDeal, startSignature: startSignature, randomOpp: randomOpp, render: render,
+    useMC: useMC, doSubmit: doSubmit, doChoose: doChoose, advance: advance, PRESSURE_STAGE: PRESSURE_STAGE,
   };
 
   if (typeof document !== 'undefined' && document.addEventListener) {
