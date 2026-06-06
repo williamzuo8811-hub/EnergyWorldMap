@@ -123,9 +123,12 @@ and `js/coach.js`. `coach.js` rebuilds `PROJECTS` with `util.buildProjects` (no 
   (escalating high-pressure rounds — anger / belittling / silence / lowball / ultimatum / blame — plus 抗压心法 tips); the 5-product
   knowledge base; the **tone dictionary** (seven good-expression buckets incl. `composure` + groveling/arrogant/**defensive**
   penalty lists that power the **"不卑不亢" poise score** and the stress-mode composure score); the 6 growth **levels** (XP
-  thresholds); a copy-ready **话术库 (pitch library)**; and 资深 sales **心法 tips**. Templates use `{co}/{cust}/{role}/{proj}/
-  {cat}/{usd}/{product}/{scenario}/{pain}/{status}/{approach}` placeholders filled per opportunity. `rubric.kw` entries are plain
-  substrings, `re:<regex>`, or `{placeholder}` (expanded to short match-tokens from the opportunity context).
+  thresholds); a copy-ready **话术库 (pitch library)**; and 资深 sales **心法 tips**; plus a **localization/谈资 layer** —
+  `culture` (business etiquette / rapport / negotiation / taboo / small-talk, by 大区 default + 重点国家 overrides),
+  `standards` (voltage·freq / codes / certification / local-content, same region+country model), and `catTopics`
+  (per-category hot topics / what the customer cares about / technical talking points / ice-breakers). Templates use
+  `{co}/{cust}/{role}/{proj}/{cat}/{usd}/{product}/{scenario}/{pain}/{status}/{approach}` placeholders filled per opportunity.
+  `rubric.kw` entries are plain substrings, `re:<regex>`, or `{placeholder}` (expanded to short match-tokens from the opportunity context).
 - **`js/coach.js`** (engine + UI, one IIFE, debug handle `window.__COACH__`): derives the client from `owner` by replaying
   `SUB_DEFS.client`'s `fn` matchers (`clientKeyOf`), builds the **opportunity pool** ranked by a training-value score
   (CLIENT_META match / flagship / investment / recency), derives a deterministic **persona** (role by category, style by
@@ -135,8 +138,10 @@ and `js/coach.js`. `coach.js` rebuilds `PROJECTS` with `util.buildProjects` (no 
   Node/private mode). A deal carries a `kind` (`deal`/`signature`/`drill`/`pressure`) so each mode renders only its own active
   deal; `startSignature(sig)` runs a marquee deal and `PRESSURE_STAGE` is a synthetic stage built from `COACH_CONTENT.pressure`.
   An **optional AI free-spar** mode (off by default, BYO OpenAI-compatible key stored only in the browser) lets the user
-  free-chat with an AI customer; the deterministic core works with **zero network**. Modes: 闯关成交 / 经典战役 / 单项特训 /
-  抗压特训 / 话术库 / 产品速查 / 成长档案. Guarded against missing DOM so `scripts/test-coach.js` can load it under a stub.
+  free-chat with an AI customer; the deterministic core works with **zero network**. `localPack(p)` resolves a project's
+  country→region culture/standards (+ category 谈资) and is surfaced both as a collapsible box inside each deal step and as a
+  standalone **当地·谈资** reference page (country picker × category). Modes: 闯关成交 / 经典战役 / 单项特训 / 抗压特训 /
+  当地·谈资 / 话术库 / 产品速查 / 成长档案. Guarded against missing DOM so `scripts/test-coach.js` can load it under a stub.
 
 ### Data globals and merge model
 

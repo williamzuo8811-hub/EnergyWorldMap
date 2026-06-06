@@ -141,6 +141,12 @@
   const OPP_BY_ID = {};
   OPPS.forEach(o => { OPP_BY_ID[o.p.id] = o; });
 
+  // 国家→大区映射 + 按项目数排序的国家清单（供「当地·谈资」速查的国家选择）
+  const CAT_KEYS = Object.keys(CATEGORIES);
+  const COUNTRY_REGION = {}, COUNTRY_CNT = {};
+  PROJECTS.forEach(p => { if (p.country) { if (!COUNTRY_REGION[p.country]) COUNTRY_REGION[p.country] = p.region; COUNTRY_CNT[p.country] = (COUNTRY_CNT[p.country] || 0) + 1; } });
+  const COUNTRIES = Object.keys(COUNTRY_CNT).sort((a, b) => COUNTRY_CNT[b] - COUNTRY_CNT[a]);
+
   // 上下文：t=展示文本（模板替换）；kw=匹配用短词（rubric 占位符展开）
   // over/kwOver：经典大单剧本(signature)用，覆盖客户画像/产品/痛点等字段与匹配短词
   function buildContext(opp, over, kwOver) {
@@ -171,6 +177,41 @@
   // 模板替换 {key}
   function tpl(str, ctx) {
     return String(str == null ? '' : str).replace(/\{(\w+)\}/g, (m, k) => (ctx && ctx.t && ctx.t[k] != null) ? ctx.t[k] : m);
+  }
+
+  /* ---------- 当地适配 & 谈资：按 country 覆盖 region 默认，cat 取分品类谈资 ---------- */
+  function mergeDefs(map, country, region) {
+    const base = (map && (map[region] || map._default)) || {};
+    const over = (map && country && map[country]) || null;
+    return Object.assign({}, base, over || {});
+  }
+  function localPack(p) {
+    const co = p.country || '', rg = p.region || '';
+    return {
+      culture: mergeDefs(C.culture, co, rg),
+      standards: mergeDefs(C.standards, co, rg),
+      topics: (C.catTopics && (C.catTopics[p.cat] || C.catTopics._default)) || {},
+      cultureSrc: (C.culture && co && C.culture[co]) ? co : (rg || '通用'),
+      standardsSrc: (C.standards && co && C.standards[co]) ? co : (rg || '通用'),
+    };
+  }
+  // 当地适配 + 谈资的展示 HTML（被对练步骤的折叠盒与「当地·谈资」速查页共用）
+  function localPackHTML(p) {
+    const lp = localPack(p), c = lp.culture, s = lp.standards, tp = lp.topics;
+    const sec = (title, rows) => '<div class="lp-sec"><div class="lp-h">' + title + '</div>' +
+      rows.filter(r => r[1]).map(r => '<div class="lp-row"><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>').join('') + '</div>';
+    return '<div class="localbox">' +
+      sec('🤝 商务文化 · ' + esc(lp.cultureSrc), [['礼仪', c.etiquette], ['建立信任', c.rapport], ['谈判风格', c.nego], ['禁忌', c.taboo]]) +
+      sec('📐 当地标准 / 准入 · ' + esc(lp.standardsSrc), [['电压 / 频率', s.volt], ['标准体系', s.codes], ['认证 / 准入', s.cert], ['本地含量 / 合规', s.local]]) +
+      sec('🗣️ ' + esc(catShort(p.cat)) + ' 谈资（聊这些显专业）', [['行业热点', tp.hot], ['客户最关心', tp.care], ['技术谈资', tp.talk], ['破冰话题', tp.opener]]) +
+      (c.smalltalk ? '<div class="lp-smalltalk">☕ 寒暄谈资：' + esc(c.smalltalk) + '</div>' : '') +
+      '</div>';
+  }
+  // 对练步骤里的折叠盒（点开才显，避免喧宾夺主）
+  function localBox(ctx) {
+    const open = state.revealLocal;
+    const head = '<button class="local-toggle" data-act="local">🌍 当地文化 · 标准 · 🗣️ 谈资 <span>' + (open ? '▾ 收起' : '▸ 展开，跟客户聊得更专业') + '</span></button>';
+    return '<div class="localwrap">' + head + (open ? localPackHTML(ctx.p) : '') + '</div>';
   }
 
   /* ============================================================
@@ -258,10 +299,12 @@
     mode: 'deal',          // deal 闯关 | drill 单项特训 | lib 话术库 | product 产品速查 | profile 成长档案
     diff: 'mix',           // easy 选择题 | mix 混合 | free 全开放
     ai: false,             // AI 自由陪练开关
-    deal: null,            // 当前剧本：{opp,ctx,steps,step,results,single,stageKey}
+    deal: null,            // 当前剧本：{opp,ctx,steps,step,results,single,kind}
     revealHint: false,
+    revealLocal: false,    // 对练步骤里「当地文化·标准·谈资」折叠盒是否展开
     answered: null,        // 当前回合作答结果（评分对象），null=未答
     oppQuery: '',
+    localCountry: '', localCat: '',  // 「当地·谈资」速查页的选择
   };
 
   // 漏斗阶段按 key 索引（signature / drill 的阶段对象虽非同一引用，但 key 相同即可对齐进度条）
@@ -324,7 +367,8 @@
   function renderTabs() {
     const tabs = [
       ['deal', '🎯 闯关成交'], ['signature', '🎓 经典战役'], ['drill', '🎚️ 单项特训'],
-      ['pressure', '🧘 抗压特训'], ['lib', '💬 话术库'], ['product', '📦 产品速查'], ['profile', '📈 成长档案'],
+      ['pressure', '🧘 抗压特训'], ['local', '🌍 当地·谈资'], ['lib', '💬 话术库'],
+      ['product', '📦 产品速查'], ['profile', '📈 成长档案'],
     ];
     const c = $('mode-tabs'); if (!c) return;
     c.innerHTML = tabs.map(t => '<button class="mtab' + (state.mode === t[0] ? ' on' : '') + '" data-act="mode" data-mode="' + t[0] + '">' + t[1] + '</button>').join('');
@@ -338,6 +382,7 @@
     else if (m === 'signature') renderSignature();
     else if (m === 'drill') renderDrill();
     else if (m === 'pressure') renderPressure();
+    else if (m === 'local') renderLocal();
     else if (m === 'lib') renderLib();
     else if (m === 'product') renderProduct();
     else if (m === 'profile') renderProfile();
@@ -492,7 +537,7 @@
         '<button class="btn-ghost" data-act="reveal">🏅 看黄金话术（不计分）</button>' +
         '</div>';
     }
-    setHTML('deck', head + stepHTML + brief + briefLine + ask + '<div class="answer-zone">' + inputHTML + '</div>');
+    setHTML('deck', head + stepHTML + brief + briefLine + localBox(ctx) + ask + '<div class="answer-zone">' + inputHTML + '</div>');
   }
 
   function starStr(n) { return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n); }
@@ -571,6 +616,26 @@
     if (avg >= 62) return '稳扎稳打地拿下了！再打磨异议化解与谈判的"条件交换"，离金牌更近一步。';
     if (avg >= 45) return '推进住了但客户仍有顾虑。回看哪几关掉了分，多用量化价值与共同行动计划补强。';
     return '别气馁——丢单是最好的老师。对照黄金话术逐关复盘，换个商机再来，进步很快。';
+  }
+
+  // 当地适配 & 谈资速查（独立参考页：选国家 + 品类）
+  function renderLocal() {
+    const dft = state.deal ? state.deal.opp.p : ((OPPS[0] && OPPS[0].p) || { country: '沙特阿拉伯', region: '中东', cat: 'renewable' });
+    if (!state.localCountry) state.localCountry = dft.country;
+    if (!state.localCat) state.localCat = dft.cat;
+    const co = state.localCountry, cat = state.localCat;
+    const region = COUNTRY_REGION[co] || dft.region || '中东';
+    const pseudo = { country: co, region: region, cat: cat };
+    const catChips = CAT_KEYS.map(k => '<button class="lp-chip' + (k === cat ? ' on' : '') + '" data-act="localcat" data-cat="' + k + '" style="--c:' + catColor(k) + '">' + catIcon(k) + ' ' + esc(catShort(k)) + '</button>').join('');
+    const dl = '<datalist id="co-list">' + COUNTRIES.map(c => '<option value="' + esc(c) + '"></option>').join('') + '</datalist>';
+    setHTML('deck',
+      '<div class="deck-head"><h2>🌍 当地适配 & 谈资速查</h2>' +
+      '<p class="deck-tip">选国家与能源品类，临场前快速过一遍当地商务文化、标准 / 准入与可聊的谈资——跟客户交流更对路、更显专业、更有"谈资"。</p></div>' +
+      '<div class="lp-bar"><input id="local-country" class="opp-search" list="co-list" placeholder="🔍 输入国家，如 沙特阿拉伯 / 印度 / 巴西…" value="' + esc(co) + '">' + dl + '</div>' +
+      '<div class="lp-chips">' + catChips + '</div>' +
+      localPackHTML(pseudo));
+    const inp = $('local-country');
+    if (inp && inp.addEventListener) inp.addEventListener('change', e => { const v = (e.target.value || '').trim(); if (v) { state.localCountry = v; renderLocal(); } });
   }
 
   /* ---------- 单项特训 ---------- */
@@ -693,6 +758,8 @@
     else if (act === 'submit') { doSubmit(); }
     else if (act === 'choose') { doChoose(+t.getAttribute('data-i')); }
     else if (act === 'hint') { state.revealHint = !state.revealHint; render(); }
+    else if (act === 'local') { state.revealLocal = !state.revealLocal; render(); }
+    else if (act === 'localcat') { state.localCat = t.getAttribute('data-cat'); renderLocal(); }
     else if (act === 'reveal') { doReveal(); }
     else if (act === 'next') { advance(); }
     else if (act === 'retry') { state.answered = null; state.revealHint = false; render(); }
@@ -724,7 +791,7 @@
     const a = scoreChoice(ch);
     commitResult(a, step); render();
   }
-  function advance() { state.deal.step++; state.answered = null; state.revealHint = false; render(); }
+  function advance() { state.deal.step++; state.answered = null; state.revealHint = false; state.revealLocal = false; render(); }
   function doReveal() {
     // 看黄金话术（不计分）：直接进入反馈态但标记 0 XP、低分提示
     const step = state.deal.steps[state.deal.step];
@@ -783,6 +850,7 @@
   window.__COACH__ = {
     PROJECTS: PROJECTS, OPPS: OPPS, CONTENT: C, state: state,
     clientKeyOf: clientKeyOf, buildContext: buildContext, persona: persona, tpl: tpl,
+    localPack: localPack, localPackHTML: localPackHTML, COUNTRIES: COUNTRIES, COUNTRY_REGION: COUNTRY_REGION,
     scoreFree: scoreFree, scoreChoice: scoreChoice, toneScan: toneScan, levelOf: levelOf,
     stepsOf: stepsOf, startDeal: startDeal, startSignature: startSignature, randomOpp: randomOpp, render: render,
     useMC: useMC, doSubmit: doSubmit, doChoose: doChoose, advance: advance, PRESSURE_STAGE: PRESSURE_STAGE,

@@ -189,6 +189,30 @@ try {
   ok(composed.total > lost.total + 25, '镇定从容显著高于情绪失控（' + composed.total + ' vs ' + lost.total + '）');
 } catch (e) { fails.push('抗压特训抛错：' + (e && e.stack || e)); }
 
+// —— 当地文化 / 当地标准 / 分品类谈资 ——
+try {
+  ok(K.CONTENT.culture && K.CONTENT.standards && K.CONTENT.catTopics, '文化 / 标准 / 谈资 内容层存在');
+  ok(K.COUNTRIES.length > 50, '国家清单装配（' + K.COUNTRIES.length + '）');
+  // 沙特：country 覆盖 region 默认，命中本地化(LCGPA/Saudization)与 60Hz
+  const saudi = K.localPack({ country: '沙特阿拉伯', region: '中东', cat: 'datacenter' });
+  ok(saudi.cultureSrc === '沙特阿拉伯', '沙特命中国家级文化覆盖');
+  ok(/60Hz/.test(saudi.standards.volt) && /SASO|SABER/.test(saudi.standards.codes + saudi.standards.cert), '沙特标准含 60Hz 与 SASO/SABER');
+  ok(/愿景 2030|NEOM|C 罗/.test(saudi.culture.smalltalk), '沙特谈资含愿景2030/NEOM');
+  ok(/PUE|算力|液冷|2N/.test(saudi.topics.hot + saudi.topics.talk), '数据中心谈资含 PUE/液冷/算力');
+  // 刚果金 + 矿业：弱电网 + 移动变谈资
+  const congo = K.localPack({ country: '刚果（金）', region: '非洲', cat: 'mining' });
+  ok(congo.cultureSrc === '刚果（金）', '刚果金命中国家级文化覆盖');
+  ok(/移动变|停产|保供电/.test(congo.topics.care + congo.topics.talk), '矿业谈资含移动变/停产/保供电');
+  // 无覆盖国家回退大区默认
+  const fb = K.localPack({ country: '某不存在国', region: '南美', cat: 'renewable' });
+  ok(fb.cultureSrc === '南美' && /葡语|足球/.test(fb.culture.taboo + fb.culture.smalltalk), '未覆盖国家回退大区默认');
+  // 展示 HTML 不抛错、占位无残留
+  ok(typeof K.localPackHTML({ country: '印度', region: '南亚', cat: 'grid' }) === 'string', 'localPackHTML 生成不抛错');
+  // 「当地·谈资」速查页 render 不抛错
+  K.state.mode = 'local'; K.render(); K.state.mode = 'deal';
+  ok(true, 'renderLocal() 不抛错');
+} catch (e) { fails.push('当地文化/标准/谈资 抛错：' + (e && e.stack || e)); }
+
 /* ---------- 汇总 ---------- */
 console.log('═══════════════════════════════════════════════');
 console.log(' 国际销售话术陪练 · coach.js 初始化冒烟测试');
