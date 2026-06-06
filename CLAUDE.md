@@ -127,10 +127,12 @@ and `js/coach.js`. `coach.js` rebuilds `PROJECTS` with `util.buildProjects` (no 
   `culture` (business etiquette / rapport / negotiation / taboo / small-talk, by 大区 default + 重点国家 overrides),
   `standards` (voltage·freq / codes / certification / local-content, same region+country model), and `catTopics`
   (per-category hot topics / what the customer cares about / technical talking points / ice-breakers); plus a **销售军规
-  methodology layer** distilled from 特锐德's own sales-training decks + real call-script transcripts — `method` (12 frameworks:
-  三类营销 / 把大象装冰箱大客户开发三步 / 营销五诀 / 客户采购决策 7 步 / 大客户开发金字塔 / 客户忠诚度 8 指标 / 综合评标法 /
-  五种话 / 自检清单 / 三张表 / 顾问式沟通范式 / 根据地+生态圈) and `cases` (real 特锐德 中标案例 + 火神山 10-day delivery, as
-  credibility "业绩弹药"); the `pitchLib` also carries real-dialogue 金句 (请教式开场 / 量化痛点·案例佐证·推进). Templates use `{co}/{cust}/{role}/{proj}/
+  methodology layer** distilled from 特锐德's own sales-training decks + real call-script transcripts — `method` (13 frameworks:
+  三类营销 / 客情经营 / 把大象装冰箱大客户开发三步 / 营销五诀 / 客户采购决策 7 步 / 大客户开发金字塔 / 客户忠诚度 8 指标 /
+  综合评标法 / 五种话 / 自检清单 / 三张表 / 顾问式沟通范式 / 根据地+生态圈) and `cases` (real 特锐德 中标案例 + 火神山 10-day
+  delivery, as credibility "业绩弹药"); the `pitchLib` also carries real-dialogue 金句. The **交付复购 stage** includes a scored
+  客情经营 round, whose rubric (and the 客情经营 framework) bakes in an **overseas anti-bribery/compliance guardrail** —
+  relationship built on professionalism & helping the customer succeed, not gifts/dinners. Templates use `{co}/{cust}/{role}/{proj}/
   {cat}/{usd}/{product}/{scenario}/{pain}/{status}/{approach}` placeholders filled per opportunity. `rubric.kw` entries are plain
   substrings, `re:<regex>`, or `{placeholder}` (expanded to short match-tokens from the opportunity context).
 - **`js/coach.js`** (engine + UI, one IIFE, debug handle `window.__COACH__`): derives the client from `owner` by replaying

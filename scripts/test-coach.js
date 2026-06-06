@@ -219,6 +219,8 @@ try {
   ok(Array.isArray(K.CONTENT.cases) && K.CONTENT.cases.length >= 7, '战绩弹药案例 ≥7（' + (K.CONTENT.cases || []).length + '）');
   ok(K.CONTENT.method.every(m => m.name && m.essence && Array.isArray(m.points) && m.points.length), '每个方法论含 name/essence/points');
   ok(K.CONTENT.method.some(m => m.key === 'consult') && K.CONTENT.method.some(m => m.key === 'base'), '新增「顾问式沟通范式」与「根据地+生态圈」方法论');
+  ok(K.CONTENT.method.some(m => m.key === 'guanxi'), '新增「客情经营」方法论');
+  ok(K.CONTENT.stages[7].rounds.some(r => r.id === 'deliver-relation'), '交付阶段新增「客情经营」可打分回合');
   ok(K.CONTENT.cases.some(c => /火神山/.test(c.name)), '新增「火神山」业绩弹药');
   ok(K.CONTENT.pitchLib.some(g => /请教式开场/.test(g.stage)), '话术库新增「请教式开场」金句组');
   K.state.mode = 'method'; K.render(); K.state.mode = 'deal';
