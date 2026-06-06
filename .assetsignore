@@ -1,0 +1,11 @@
+# Cloudflare Workers Static Assets 排除清单（gitignore 语法，相对资源根=仓库根）。
+# 这些是工程/文档/工具文件，不属于部署的静态站点，避免上传与对外暴露。
+.github/
+.claude/
+scripts/
+docs/
+*.md
+*.ps1
+.gitignore
+.assetsignore
+wrangler.jsonc
