@@ -9,3 +9,10 @@ Desktop.ini
 # 临时/缓存
 *.tmp
 node_modules/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
