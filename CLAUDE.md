@@ -58,6 +58,12 @@ verify in a browser — there is no build step.
 - `node scripts/test-globe.js` — after editing `js/globe.js`. Loads util + data + `lib/world-110m.js`
   under a minimal DOM + `Globe` stub and asserts the IIFE init, the extruded-column (`buildPoints`) and
   cross-border-arc (`buildArcs`) assembly, `render()` and `focusProject()` run without throwing (no WebGL needed).
+- `node scripts/test-coach.js` — after editing `js/coach.js` or `js/coach-content.js`. Loads util + data +
+  `clients-meta.js` + `coach-content.js` + `coach.js` under a minimal DOM stub and asserts the IIFE init,
+  `window.__COACH__` exposure, the opportunity-pool assembly (from `PROJECTS` × `CLIENT_META`), persona /
+  context derivation, the **offline deterministic scorer** (`scoreFree` rubric coverage + tone dictionary —
+  a quality pitch must out-score a groveling one; `scoreChoice`), `levelOf`, and a full / single-stage
+  `startDeal()` + `render()` running without throwing.
 
 ## Architecture
 
@@ -96,6 +102,35 @@ client-exclusion rule in the investment KPI as `app.js`); clicking a column open
 The library `lib/globe.gl.min.js` is a vendored standalone UMD bundle (globe.gl + three.js, global `Globe`) and
 `lib/world-110m.js` a precomputed GeoJSON global (`window.WORLD_GEO`) — **do not edit either**; everything is offline
 (no CDN, no build), like the rest of the project.
+
+### Sales-pitch sparring (`coach.html` + `js/coach.js` + `js/coach-content.js`)
+
+A third standalone page, the **国际销售话术陪练 (International Sales Sparring Academy)** — linked from the 2D map's
+map-tools (`🎓 销售陪练`) and the globe's top bar (`🎓 陪练`). It turns the dataset into a **B2B sales simulator**:
+the user plays a **特锐德 (TGOOD)** international sales manager selling modular substations / mobile substations /
+E-house / MV switchgear / storage skids; the ~3,100 projects become the **opportunity pool** and `CLIENT_META`'s 54
+overseas key clients supply the **customer persona + official BD playbook**. Like the globe it is fully independent of
+`app.js` but **reuses the exact data layer**: `coach.html` loads the same `js/data*.js` + `js/progress.js` + `js/util.js`
+script order (skipping `i18n-en.js`, like the globe — it's Chinese-only), then `js/clients-meta.js`, `js/coach-content.js`,
+and `js/coach.js`. `coach.js` rebuilds `PROJECTS` with `util.buildProjects` (no `requireCoord`).
+
+- **`js/coach-content.js`** (`window.COACH_CONTENT`, pure data, **not** project data — outside `validate-data.js`):
+  the **8-stage deal funnel** (情报画像→破冰触达→需求诊断 SPIN→价值方案→异议化解→商务谈判→促成签约→交付复购), each stage
+  carrying rounds with a customer line, hints, a scoring **rubric** (weighted 要点 × keyword variants), a **golden-script**
+  model answer, and (for early stages) multiple-choice options; plus the 5-product knowledge base, the **tone dictionary**
+  (six good-expression buckets + groveling/arrogant penalty lists that power the **"不卑不亢" poise score**), the 6 growth
+  **levels** (XP thresholds), a copy-ready **话术库 (pitch library)**, and 资深 sales **心法 tips**. Templates use `{co}/{cust}/
+  {role}/{proj}/{cat}/{usd}/{product}/{scenario}/{pain}/{status}/{approach}` placeholders filled per opportunity. `rubric.kw`
+  entries are plain substrings, `re:<regex>`, or `{placeholder}` (expanded to short match-tokens from the opportunity context).
+- **`js/coach.js`** (engine + UI, one IIFE, debug handle `window.__COACH__`): derives the client from `owner` by replaying
+  `SUB_DEFS.client`'s `fn` matchers (`clientKeyOf`), builds the **opportunity pool** ranked by a training-value score
+  (CLIENT_META match / flagship / investment / recency), derives a deterministic **persona** (role by category, style by
+  `id` hash), runs the deal/single-stage **drill**, and **scores answers fully offline & deterministically**: `scoreFree`
+  = rubric-coverage % ± tone bonus/penalty (with a length guard), `scoreChoice` = preset value; both map to 1–5★ + XP.
+  Progress (XP / level / deals / per-stage best / history) persists in `localStorage` (memory fallback under Node/private
+  mode). An **optional AI free-spar** mode (off by default, BYO OpenAI-compatible key stored only in the browser) lets the
+  user free-chat with an AI customer; the deterministic core works with **zero network**. Modes: 闯关成交 / 单项特训 / 话术库 /
+  产品速查 / 成长档案. Guarded against missing DOM so `scripts/test-coach.js` can load it under a stub.
 
 ### Data globals and merge model
 

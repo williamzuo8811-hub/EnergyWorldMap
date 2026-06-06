@@ -26,3 +26,5 @@ jobs:
         run: node scripts/test-globe.js
       - name: 国际大客户 BD 元数据校验
         run: node scripts/test-clients-meta.js
+      - name: 国际销售话术陪练 coach.js 初始化冒烟测试
+        run: node scripts/test-coach.js

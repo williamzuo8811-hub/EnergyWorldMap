@@ -14,7 +14,7 @@
 'use strict';
 const CACHE = 'ewm-cache-v1';
 // app shell：保证离线也能打开页面；其余重资源在首访 fetch 时按需缓存
-const SHELL = ['./', 'index.html', 'globe.html', 'manifest.json', 'favicon.svg', 'assets/icon-192.png', 'assets/icon-512.png'];
+const SHELL = ['./', 'index.html', 'globe.html', 'coach.html', 'manifest.json', 'favicon.svg', 'assets/icon-192.png', 'assets/icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil((async () => {
