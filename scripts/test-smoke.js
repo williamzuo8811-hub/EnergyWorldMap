@@ -104,7 +104,7 @@ try {
   global.window.ENERGY_UTIL = require(path.join(__dirname, '..', 'js', 'util.js'));
   ['data', 'data-extra', 'data-brazil', 'data-mideast', 'data-russia-ca', 'data-clients',
     'data-brazil-future', 'data-saudi-future', 'data-seasia', 'data-africa', 'data-oceania',
-    'data-europe', 'data-nuclear', 'data-northam', 'data-southasia', 'data-china-future', 'data-clients2', 'progress']
+    'data-europe', 'data-nuclear', 'data-northam', 'data-southasia', 'data-china-future', 'data-clients2', 'data-refresh2606', 'progress']
     .forEach(f => require(path.join(__dirname, '..', 'js', f + '.js')));
   require(path.join(__dirname, '..', 'js', 'clients-meta.js'));   // window.CLIENT_META（BD 看板用）
   require(path.join(__dirname, '..', 'js', 'app.js'));

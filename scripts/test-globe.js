@@ -69,7 +69,7 @@ try {
   global.window.ENERGY_UTIL = require(path.join(__dirname, '..', 'js', 'util.js'));
   ['data', 'data-extra', 'data-brazil', 'data-mideast', 'data-russia-ca', 'data-clients',
     'data-brazil-future', 'data-saudi-future', 'data-seasia', 'data-africa', 'data-oceania',
-    'data-europe', 'data-nuclear', 'data-northam', 'data-southasia', 'data-china-future', 'data-clients2', 'progress']
+    'data-europe', 'data-nuclear', 'data-northam', 'data-southasia', 'data-china-future', 'data-clients2', 'data-refresh2606', 'progress']
     .forEach(f => require(path.join(__dirname, '..', 'js', f + '.js')));
   require(path.join(__dirname, '..', 'lib', 'world-110m.js'));   // window.WORLD_GEO
   require(path.join(__dirname, '..', 'js', 'globe.js'));
