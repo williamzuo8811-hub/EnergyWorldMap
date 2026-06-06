@@ -305,6 +305,9 @@
       const en = EN[p.id];
       if (en) { if (!p.descEn && en.descEn) p.descEn = en.descEn; if (!p.detailEn && en.detailEn) p.detailEn = en.detailEn; }
       p.sub = classifySub(p);
+      // 「中国」并入「东亚」展示：中国大陆本属东亚，去掉独立大区、折叠进东亚。
+      // 必须放在 classifySub 之后——「东数西算枢纽」子类按 region==='中国' 匹配；源数据仍可标 '中国'，加载时统一改写为 '东亚'。
+      if (p.region === '中国') p.region = '东亚';
       const cc = parseCapacity(p.cap);
       p.capMW = cc.mw; p.capMWh = cc.mwh; p.capKm = cc.km; p.capKbd = cc.kbd; p.capWty = cc.wty; p.capPF = cc.pf;
       p.capPax = cc.pax; p.capTeu = cc.teu; p.capWafer = cc.wafer; p.capVeh = cc.veh; p.capMva = cc.mva;

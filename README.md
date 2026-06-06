@@ -89,7 +89,7 @@ powershell -ExecutionPolicy Bypass -File serve.ps1 -Port 4173
   name: '某海上风电场',            // 中文名称
   en: 'XXX Offshore Wind',         // 英文/原文名（可空）
   country: '中国',                 // 国家/地区
-  region: '中国',                  // 大区：中国/东亚/东南亚/南亚/中亚/中东/欧洲/北美/南美/非洲/大洋洲
+  region: '东亚',                  // 大区：东亚/东南亚/南亚/中亚/中东/欧洲/北美/南美/非洲/大洋洲（源数据可仍标 '中国'，加载时并入 '东亚'）
   cat: 'renewable',                // 品类键（见下表）
   coord: [121.5, 31.0],            // [经度, 纬度]（WGS-84，高德底图会自动 GCJ-02 纠偏）
   cap: '1.2 GW',                   // 容量/规模
