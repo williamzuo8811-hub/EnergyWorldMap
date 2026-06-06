@@ -18,8 +18,9 @@
   const { buildProjects, LABELS_EN, capFmtMW, invMagnitude } = window.ENERGY_UTIL;
   const LAND = (window.WORLD_GEO && window.WORLD_GEO.features) || [];
 
-  /* ---------- 数据装配（与 app.js 同口径，共用 util.buildProjects；3D 只保留有 coord 的项目）---------- */
-  const PROJECTS = buildProjects(window.ENERGY, window.ENERGY_EXTRA, window.ENERGY_PROGRESS, { requireCoord: true, en: window.ENERGY_EN });
+  /* ---------- 数据装配（与 app.js 同口径，共用 util.buildProjects；3D 只保留有 coord 的项目）----------
+   * 不传 en：globe 详情卡正文始终用中文 desc/detail，从不读 descEn/detailEn，故无需加载 i18n-en.js。 */
+  const PROJECTS = buildProjects(window.ENERGY, window.ENERGY_EXTRA, window.ENERGY_PROGRESS, { requireCoord: true });
 
   const years = PROJECTS.map(p => p.year).filter(y => typeof y === 'number');
   const MIN_YEAR = Math.min.apply(null, years);
