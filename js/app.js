@@ -62,9 +62,22 @@
     { key: 'amap',   name: '高德（中国）',     crs: 'gcj02', layer: amap },
     { key: 'dark',   name: '暗色科技（国际）', crs: 'wgs84', layer: esriDark },
   ];
-  let currentCRS = 'wgs84';
-  let activeBaseKey = 'osm';
-  BASES[0].layer.addTo(map);
+  // 国内访客默认高德底图：海外瓦片（OSM/Esri）在大陆加载慢甚至打不开，按浏览器时区/语言识别中国大陆访客，
+  // 默认改用国内服务器的高德底图（crs:'gcj02'，toLatLng 已用 wgs2gcj 纠偏对齐）。海外访客仍默认 OSM。
+  function preferAmap() {
+    try {
+      const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || '');
+      if (/^(Asia\/(Shanghai|Chongqing|Chungking|Urumqi|Harbin)|PRC)$/i.test(tz)) return true;
+      const langs = (navigator.languages && navigator.languages.length ? navigator.languages
+        : [navigator.language || '']).join(',').toLowerCase();
+      // 简体中文(zh-CN / zh-Hans / 裸 zh) 视为大陆；排除繁体地区(zh-TW/HK/MO/Hant)
+      return /(^|,)zh(-cn|-hans|-hans-cn)?(,|$)/.test(langs) && !/zh-(tw|hk|mo|hant)/.test(langs);
+    } catch (e) { return false; }
+  }
+  const initBase = BASES.find(b => b.key === (preferAmap() ? 'amap' : 'osm')) || BASES[0];
+  let currentCRS = initBase.crs;
+  let activeBaseKey = initBase.key;
+  initBase.layer.addTo(map);
 
   function switchBase(key) {
     if (key === activeBaseKey) return;
