@@ -56,23 +56,39 @@
   // 高德地图：服务器在国内、加载快；坐标系为 GCJ-02（火星坐标），靠 crs:'gcj02' 让 toLatLng 用 wgs2gcj 纠偏对齐
   const amap = L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}',
     { subdomains: ['1', '2', '3', '4'], maxZoom: 18, attribution: '© 高德地图 AutoNavi' });
+  // 天地图（国测局）：服务器在国内、加载快，且【全球】都有详细国界/城市标注；坐标系 CGCS2000≈WGS84，无需纠偏。
+  // 需在 https://console.tianditu.gov.cn 免费申请 key（建议绑定本站域名；客户端 key 本就公开在瓦片 URL 里，
+  // 绑定域名后只能本站使用）。留空则不启用、国内默认回退高德；填入后天地图自动成为国内默认底图。
+  const TIANDITU_KEY = '5c7265edc9cf67f8cdb9817e6091c1f4';
+  let tianditu = null, tdtBase = null;
+  if (TIANDITU_KEY) {
+    const tdtUrl = t => 'https://t{s}.tianditu.gov.cn/' + t + '_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=' + t +
+      '&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=' + TIANDITU_KEY;
+    const tdtOpt = { subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'], maxZoom: 18, attribution: '© 天地图 NASG' };
+    tdtBase = L.tileLayer(tdtUrl('vec'), tdtOpt);                              // 矢量底图
+    tianditu = L.layerGroup([tdtBase, L.tileLayer(tdtUrl('cva'), tdtOpt)]);   // 底图 + 中文注记
+  }
 
   const BASES = [
-    { key: 'osm',    name: 'OSM（国际）',     crs: 'wgs84', layer: osm },
-    { key: 'amap',   name: '高德（中国）',     crs: 'gcj02', layer: amap },
-    { key: 'dark',   name: '暗色科技（国际）', crs: 'wgs84', layer: esriDark },
+    { key: 'osm',    name: 'OSM（国际）',     crs: 'wgs84', layer: osm,      tileRef: osm },
+    { key: 'amap',   name: '高德（中国）',     crs: 'gcj02', layer: amap,     tileRef: amap },
+    { key: 'dark',   name: '暗色科技（国际）', crs: 'wgs84', layer: esriDark, tileRef: esriDarkBase },
   ];
-  // 国内访客默认高德底图：海外瓦片（OSM/Esri）在大陆加载慢甚至打不开，默认改用国内服务器的高德底图
-  // （crs:'gcj02'，toLatLng 已用 wgs2gcj 纠偏对齐）。海外访客仍默认 OSM。
+  // 天地图可用时（已配置 key），作为国内首选默认底图，插入到高德之前
+  if (tianditu) BASES.splice(1, 0, { key: 'tianditu', name: '天地图（中国·全球）', crs: 'wgs84', layer: tianditu, tileRef: tdtBase });
+  // 国内访客默认国内底图：海外瓦片（OSM/Esri）在大陆加载慢甚至打不开，默认改用国内服务器的底图
+  // （天地图 WGS84 无需纠偏 / 高德 crs:'gcj02' 已用 wgs2gcj 纠偏对齐）。海外访客仍默认 OSM。
   // 只按【时区】判断是否身处中国大陆（统一为 UTC+8 的 Asia/Shanghai 等）——地理信号可靠；
   // 不再用浏览器语言判断：海外华人常把语言设成 zh-CN，会被误判（如澳洲访客一打开就看到高德）。
-  function preferAmap() {
+  function inChina() {
     try {
       const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || '');
       return /^(Asia\/(Shanghai|Chongqing|Chungking|Urumqi|Harbin)|PRC)$/i.test(tz);
     } catch (e) { return false; }
   }
-  const initBase = BASES.find(b => b.key === (preferAmap() ? 'amap' : 'osm')) || BASES[0];
+  // 国内默认底图：配置了天地图 key 就用天地图（全球详细），否则回退高德；海外仍默认 OSM。
+  const cnDefaultKey = tianditu ? 'tianditu' : 'amap';
+  const initBase = BASES.find(b => b.key === (inChina() ? cnDefaultKey : 'osm')) || BASES[0];
   let currentCRS = initBase.crs;
   let activeBaseKey = initBase.key;
   initBase.layer.addTo(map);
@@ -87,6 +103,15 @@
     currentCRS = next.crs;
     document.querySelectorAll('#basemap-switch .bm').forEach(el => el.classList.toggle('on', el.dataset.key === key));
     render();
+  }
+
+  // 天地图安全网：若它是初始底图却加载失败（key 未生效 / 域名白名单未匹配 / 网络问题），自动回退高德，
+  // 避免国内访客看到空白底图。tileerror 仅在真实 HTTP 错误时触发（加载慢不算），故不会误伤慢网络。
+  if (initBase.key === 'tianditu' && tdtBase) {
+    let tdtOk = false, tdtErr = 0;
+    tdtBase.once('load', () => { tdtOk = true; });
+    tdtBase.on('tileerror', () => { tdtErr++; });
+    setTimeout(() => { if (!tdtOk && tdtErr > 0) switchBase('amap'); }, 5000);
   }
 
   // 投影：项目 [lng,lat](WGS84) → Leaflet [lat,lng]（按底图 CRS 纠偏）
@@ -1428,7 +1453,7 @@
     if (!loaderEl) return;
     let done = false;
     const hide = () => { if (done) return; done = true; loaderEl.classList.add('hidden'); setTimeout(() => loaderEl.remove(), 480); };
-    initBase.layer.once('load', hide);   // 首批实际底图瓦片绘制完成（国内默认高德 / 海外默认 OSM）
+    (initBase.tileRef || initBase.layer).once('load', hide);   // 首批实际底图瓦片绘制完成（图层组用其底图层监听）
     map.whenReady(() => setTimeout(hide, 400)); // 视图就绪后短暂保留，避免闪烁
     setTimeout(hide, 2600);              // 离线/瓦片失败兜底，确保不卡 loading
   })();
