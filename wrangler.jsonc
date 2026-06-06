@@ -1,0 +1,18 @@
+{
+  // Cloudflare Workers 静态资源部署配置。
+  // 作用：让仓库连接的 "Workers Builds" CI 能成功 `npx wrangler deploy`。
+  // 此前因仓库无任何 wrangler 配置，deploy 一启动即失败（0 秒红叉）。
+  //
+  // 本仓库是零构建纯静态站（HTML + CSS + 原生 JS），无需 build/bundler：
+  // wrangler 直接把仓库根目录作为静态资源（Workers Static Assets）上传，
+  // 不含 Worker 脚本（assets-only）。站点全为相对路径，根部署即可用。
+  //
+  // Cloudflare Workers Builds 默认 deploy 命令 `npx wrangler deploy` 即可，
+  // 构建命令留空（无 package.json，沿用项目「无包管理器」约定）。
+  "name": "energyworldmap",
+  "compatibility_date": "2024-11-01",
+  "assets": {
+    // 仓库根即站点根；非站点文件（scripts/docs/*.md 等）由 .assetsignore 排除。
+    "directory": "."
+  }
+}
