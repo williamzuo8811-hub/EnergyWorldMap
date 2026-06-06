@@ -437,7 +437,7 @@
       pill.tabIndex = 0; pill.setAttribute('role', 'button'); pill.setAttribute('aria-label', regionName(r) + (en ? ' region filter' : ' 大区筛选'));
       pill.addEventListener('click', () => toggleRegion(r));
       const meta = document.createElement('span');
-      meta.className = 'rg-meta'; meta.textContent = countries.length + (en ? ' ctry · ' : ' 国 · ') + regProj;
+      meta.className = 'rg-meta'; meta.textContent = countries.length + (en ? ' ctry/reg · ' : ' 国/地区 · ') + regProj;
       const caret = document.createElement('span');
       caret.className = 'rg-caret'; caret.textContent = '▸'; caret.tabIndex = 0; caret.setAttribute('role', 'button');
       caret.setAttribute('aria-label', en ? 'Expand / collapse countries' : '展开 / 收起该区国家');
