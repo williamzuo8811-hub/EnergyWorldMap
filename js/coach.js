@@ -367,8 +367,8 @@
   function renderTabs() {
     const tabs = [
       ['deal', '🎯 闯关成交'], ['signature', '🎓 经典战役'], ['drill', '🎚️ 单项特训'],
-      ['pressure', '🧘 抗压特训'], ['local', '🌍 当地·谈资'], ['lib', '💬 话术库'],
-      ['product', '📦 产品速查'], ['profile', '📈 成长档案'],
+      ['pressure', '🧘 抗压特训'], ['local', '🌍 当地·谈资'], ['method', '🧭 销售军规'],
+      ['lib', '💬 话术库'], ['product', '📦 产品速查'], ['profile', '📈 成长档案'],
     ];
     const c = $('mode-tabs'); if (!c) return;
     c.innerHTML = tabs.map(t => '<button class="mtab' + (state.mode === t[0] ? ' on' : '') + '" data-act="mode" data-mode="' + t[0] + '">' + t[1] + '</button>').join('');
@@ -383,6 +383,7 @@
     else if (m === 'drill') renderDrill();
     else if (m === 'pressure') renderPressure();
     else if (m === 'local') renderLocal();
+    else if (m === 'method') renderMethod();
     else if (m === 'lib') renderLib();
     else if (m === 'product') renderProduct();
     else if (m === 'profile') renderProfile();
@@ -664,6 +665,26 @@
       '<div class="deck-head"><h2>💬 话术库 · 即取即用</h2>' +
       '<p class="deck-tip">按成交阶段整理的金句，已套用当前商机「' + esc(ctx.p.name) + '」。点"复制"直接拿去用。</p></div>' +
       '<div class="lib-wrap">' + groups + '</div>');
+  }
+
+  /* ---------- 销售军规 · 方法论 + 战绩弹药 ---------- */
+  function renderMethod() {
+    const cards = (C.method || []).map(m =>
+      '<div class="mth-card"><div class="mth-h"><span class="mth-ico">' + m.icon + '</span><b>' + esc(m.name) + '</b></div>' +
+      '<div class="mth-ess">' + esc(m.essence) + '</div>' +
+      '<ul class="mth-pts">' + (m.points || []).map(p => '<li>' + esc(p) + '</li>').join('') + '</ul></div>').join('');
+    const cs = (C.cases || []).map(c =>
+      '<div class="case-card"><div class="case-h"><b>' + esc(c.name) + '</b><span class="case-amt">' + esc(c.amount) + '</span></div>' +
+      '<div class="case-prod">🔧 ' + esc(c.product) + '</div>' +
+      '<div class="case-win"><b>中标要素：</b>' + esc(c.win) + '</div>' +
+      '<div class="case-lesson">💡 ' + esc(c.lesson) + '</div></div>').join('');
+    setHTML('deck',
+      '<div class="deck-head"><h2>🧭 销售军规 · 特锐德实战方法论</h2>' +
+      '<p class="deck-tip">提炼自特锐德一线营销培训：三类营销、把大象装冰箱、营销五诀、客户采购 7 步、综合评标、客户忠诚度…… 把"打法"内化，闯关与实战都更有章法。</p></div>' +
+      '<div class="mth-grid">' + cards + '</div>' +
+      '<div class="deck-head" style="margin-top:20px"><h2>🏅 战绩弹药 · 可引用业绩</h2>' +
+      '<p class="deck-tip">真实中标案例与中标要素——跟客户谈"业绩与履约"时，这些就是你的弹药（为国内项目，出海沟通可类比引用）。</p></div>' +
+      '<div class="case-grid">' + cs + '</div>');
   }
 
   /* ---------- 产品速查 ---------- */

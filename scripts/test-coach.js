@@ -213,6 +213,19 @@ try {
   ok(true, 'renderLocal() 不抛错');
 } catch (e) { fails.push('当地文化/标准/谈资 抛错：' + (e && e.stack || e)); }
 
+// —— 销售军规：方法论 + 战绩弹药（提炼自特锐德培训资料）——
+try {
+  ok(Array.isArray(K.CONTENT.method) && K.CONTENT.method.length >= 8, '方法论框架 ≥8（' + (K.CONTENT.method || []).length + '）');
+  ok(Array.isArray(K.CONTENT.cases) && K.CONTENT.cases.length >= 5, '战绩弹药案例 ≥5（' + (K.CONTENT.cases || []).length + '）');
+  ok(K.CONTENT.method.every(m => m.name && m.essence && Array.isArray(m.points) && m.points.length), '每个方法论含 name/essence/points');
+  K.state.mode = 'method'; K.render(); K.state.mode = 'deal';
+  ok(true, 'renderMethod() 不抛错');
+  const intelIds = K.CONTENT.stages[0].rounds.map(r => r.id);
+  ok(intelIds.indexOf('intel-early') >= 0, '情报阶段新增「先入为主」选择题回合');
+  const vb = K.CONTENT.stages[3].rounds.filter(r => r.id === 'value-bideval')[0];
+  ok(vb && Array.isArray(vb.rubric), '价值阶段新增「综合评标」开放回合（含 rubric）');
+} catch (e) { fails.push('销售军规 抛错：' + (e && e.stack || e)); }
+
 /* ---------- 汇总 ---------- */
 console.log('═══════════════════════════════════════════════');
 console.log(' 国际销售话术陪练 · coach.js 初始化冒烟测试');

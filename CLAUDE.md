@@ -126,9 +126,12 @@ and `js/coach.js`. `coach.js` rebuilds `PROJECTS` with `util.buildProjects` (no 
   thresholds); a copy-ready **话术库 (pitch library)**; and 资深 sales **心法 tips**; plus a **localization/谈资 layer** —
   `culture` (business etiquette / rapport / negotiation / taboo / small-talk, by 大区 default + 重点国家 overrides),
   `standards` (voltage·freq / codes / certification / local-content, same region+country model), and `catTopics`
-  (per-category hot topics / what the customer cares about / technical talking points / ice-breakers). Templates use
-  `{co}/{cust}/{role}/{proj}/{cat}/{usd}/{product}/{scenario}/{pain}/{status}/{approach}` placeholders filled per opportunity.
-  `rubric.kw` entries are plain substrings, `re:<regex>`, or `{placeholder}` (expanded to short match-tokens from the opportunity context).
+  (per-category hot topics / what the customer cares about / technical talking points / ice-breakers); plus a **销售军规
+  methodology layer** distilled from 特锐德's own sales-training decks — `method` (10 frameworks: 三类营销 / 把大象装冰箱
+  大客户开发三步 / 营销五诀 / 客户采购决策 7 步 / 大客户开发金字塔 / 客户忠诚度 8 指标 / 综合评标法 / 五种话 / 自检清单 /
+  三张表) and `cases` (real 特锐德 中标案例 with 中标要素, as credibility "业绩弹药"). Templates use `{co}/{cust}/{role}/{proj}/
+  {cat}/{usd}/{product}/{scenario}/{pain}/{status}/{approach}` placeholders filled per opportunity. `rubric.kw` entries are plain
+  substrings, `re:<regex>`, or `{placeholder}` (expanded to short match-tokens from the opportunity context).
 - **`js/coach.js`** (engine + UI, one IIFE, debug handle `window.__COACH__`): derives the client from `owner` by replaying
   `SUB_DEFS.client`'s `fn` matchers (`clientKeyOf`), builds the **opportunity pool** ranked by a training-value score
   (CLIENT_META match / flagship / investment / recency), derives a deterministic **persona** (role by category, style by
@@ -141,7 +144,7 @@ and `js/coach.js`. `coach.js` rebuilds `PROJECTS` with `util.buildProjects` (no 
   free-chat with an AI customer; the deterministic core works with **zero network**. `localPack(p)` resolves a project's
   country→region culture/standards (+ category 谈资) and is surfaced both as a collapsible box inside each deal step and as a
   standalone **当地·谈资** reference page (country picker × category). Modes: 闯关成交 / 经典战役 / 单项特训 / 抗压特训 /
-  当地·谈资 / 话术库 / 产品速查 / 成长档案. Guarded against missing DOM so `scripts/test-coach.js` can load it under a stub.
+  当地·谈资 / 销售军规 / 话术库 / 产品速查 / 成长档案. Guarded against missing DOM so `scripts/test-coach.js` can load it under a stub.
 
 ### Data globals and merge model
 
