@@ -263,6 +263,29 @@ button, input, textarea { font-family: inherit; }
 .lp-chip:hover { color: var(--txt); border-color: var(--border-strong); }
 .lp-chip.on { color: #04111e; background: var(--c, var(--accent)); border-color: transparent; font-weight: 700; }
 
+/* ---------- 业绩弹药 / 本地服务（嵌入当地·谈资盒）---------- */
+.lp-refs { grid-column: 1/-1; border-color: rgba(255,212,95,0.3); background: rgba(255,212,95,0.05); }
+.ref-branch { font-size: 11.5px; color: var(--good); margin-bottom: 7px; }
+.ref-row { font-size: 11.5px; padding: 5px 0; border-top: 1px dashed var(--border); }
+.ref-row:first-of-type { border-top: none; }
+.ref-row b { color: var(--gold); }
+.ref-row span { color: var(--txt-faint); display: block; margin: 1px 0; }
+.ref-row em { color: var(--txt-dim); font-style: normal; line-height: 1.5; }
+
+/* ---------- 公司速查：facts / 分支机构 / 海外业绩库 ---------- */
+.facts { margin: 4px 0 8px; padding-left: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; }
+.facts li { font-size: 12px; color: var(--gold); }
+.branches { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+.branch { font-size: 11px; color: var(--txt-dim); background: var(--panel-2); border: 1px solid var(--border); border-radius: 16px; padding: 4px 10px; }
+.oc-wrap { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.oc-group { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 13px; }
+.oc-region { font-size: 12.5px; font-weight: 800; color: var(--accent); margin-bottom: 9px; }
+.oc-row { font-size: 11.5px; padding: 6px 0; border-top: 1px dashed var(--border); }
+.oc-row:first-of-type { border-top: none; }
+.oc-row b { color: var(--txt); }
+.oc-row span { color: var(--txt-faint); display: block; margin: 1px 0; }
+.oc-row em { color: var(--txt-dim); font-style: normal; line-height: 1.5; }
+
 /* ---------- 阶段情境旁白 ---------- */
 .stage-brief { font-size: 12px; color: var(--txt-dim); line-height: 1.65; background: rgba(255,255,255,0.03);
   border: 1px dashed var(--border); border-radius: 10px; padding: 9px 13px; margin: 0 0 12px; }
@@ -363,4 +386,5 @@ button, input, textarea { font-family: inherit; }
   .brief-grid { grid-template-columns: 1fr; }
   .profile-top { grid-template-columns: 1fr; }
   .localbox { grid-template-columns: 1fr; }
+  .facts { grid-template-columns: 1fr; }
 }

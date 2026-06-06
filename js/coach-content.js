@@ -28,11 +28,31 @@ window.COACH_CONTENT = (function () {
   const company = {
     name: '特锐德 TGOOD',
     role: '国际销售经理',
-    intro: '中国领先的电力设备与系统集成商，主营模块化预制舱式变电站、车载移动变电站、E-house、中低压成套开关设备与储能并网舱，已为全球多国电力、新能源、矿业、油气、基建项目交付电气解决方案。',
-    edge: ['工厂预制、现场即装即用，交付周期比传统土建变电站缩短 30%~50%',
-      '车载移动变电站可整车机动、数小时复电，专治弱电网与应急保供电',
-      '模块化设计便于扩容与迁移，适配海外远程、高温、高海拔等严苛工况',
-      '一次+二次集成，配套 IEC / 当地并网认证，降低业主入网与协调成本'],
+    intro: '2004 年成立的中德合资企业，总部青岛，2009 年登陆创业板（第一股 300001）。全球最大的预制式模块化变电站供应商之一，输配电系统与产品可达 252kV；中国铁路箱变 50% 份额第一、电网与新能源箱变第一。2014 年起全球化，业绩遍布 50+ 个国家与地区，海外预制舱交付超 1000 个项目。',
+    facts: [
+      '中德合资 · 创业板第一股 300001（2009 上市）',
+      '全球最大预制式模块化变电站供应商之一，输配电达 252kV',
+      '中国铁路箱变 50% 份额第一，电网与新能源箱变第一',
+      '业绩遍布 50+ 国家 / 地区，海外预制舱交付超 1000 个项目',
+      '核心竞争力：交货期短 · 方案灵活 · 高性价比',
+    ],
+    edge: ['工厂预制、现场即装即用，交付周期比传统土建变电站大幅缩短（build-to-buy 替代 4~6 个月土建）',
+      '车载移动变电站整车机动、数小时复电，专治弱电网与应急保供电',
+      '执行标准灵活：IEC / AS / GOST / SANS / EN / SS / BS，一套能力适配各国并网与认证',
+      '环境适应强：高温 / 低温 / 高盐雾 / 高紫外 / 高风速 / 高海拔，防火两小时 / C5 防腐 / 抗震 / 微正压 / 恒温',
+      '一次 + 二次集成，配套 KEMA / 国际短路联盟试验报告、EN1090 焊接与结构认证',
+      '本地化服务：9 大海外分支机构 + 沙特 / 加拿大建厂、澳洲多州承包商执照，降低"远程没人管"的顾虑'],
+    branches: [
+      { region: '大洋洲', label: '澳洲 · 布里斯班' },
+      { region: '中亚', label: '中亚 · 哈萨克斯坦' },
+      { region: '南美', label: '南美 · 哥伦比亚' },
+      { region: '东南亚', label: '东南亚 · 越南 / 马来西亚' },
+      { region: '欧洲', label: '俄罗斯 · 莫斯科 / 德国' },
+      { region: '中东', label: '中东 · 沙特阿拉伯（在建工厂）' },
+      { region: '非洲', label: '南非 · 约翰内斯堡' },
+      { region: '北美', label: '北美 · 加拿大（在建工厂）' },
+      { region: '东亚', label: '国际总部 · 中国香港' },
+    ],
   };
 
   /* ---------------- 5 大产品线速查 ---------------- */
@@ -1167,5 +1187,48 @@ window.COACH_CONTENT = (function () {
     { name: '武汉火神山医院 · 应急电气', amount: '10 天交付', product: '预制舱 / 箱式电气设备', win: '疫情下 10 天建成交付，工厂预制、模块化、快速建站、安全可靠——全国知名的"中国速度"样板', lesson: '极限工期下"模块化预制 = 快速建站"的活广告，谈交付速度时的王牌佐证' },
   ];
 
-  return { company, products, tone, levels, stages, signatures, pressure, culture, standards, catTopics, method, cases, pitchLib, tips };
+  /* ---------------- 海外业绩库 · 真实交付项目（按国家 / 大区 / 品类匹配，给客户谈业绩与"坏了谁来修"时引用）----------------
+   * 提炼自《特锐德海外重点项目总结》《国际业务概况》，覆盖输变电 / 新能源 / 矿业 / 油气 / 大交通 / 核电。 */
+  const overseasCases = [
+    // 大洋洲 · 澳大利亚
+    { name: 'Longreach 光伏升压站', country: '澳大利亚', region: '大洋洲', cat: 'renewable', customer: 'RCR Limited', scope: '22kV 充气柜 + E-House', hi: '按 NBC 建筑、两小时防火与 AS3000 设计，镀锌钢支腿基础、整体运输降本' },
+    { name: 'Tailem Bend 光伏升压站', country: '澳大利亚', region: '大洋洲', cat: 'renewable', customer: 'UGL Limited', scope: '33kV 充气柜 + E-House', hi: '海边项目 C5 氟碳漆防腐，满足澳洲 AS3000' },
+    { name: 'Warwick 光伏升压站', country: '澳大利亚', region: '大洋洲', cat: 'renewable', customer: 'Lendlease / Ergon Energy', scope: '38kV 8DA10 + E-House', hi: 'BIL200kV、Ronis 钥匙连锁，用户侧 + 电网侧四套箱体' },
+    { name: 'Prominent Hill 铜矿 110kV 整站', country: '澳大利亚', region: '大洋洲', cat: 'mining', customer: 'OZ Minerals', scope: '110kV HGIS + 10kV E-House', hi: '★ 特锐德海外第一个 EPC 项目，AS3000 / NBC' },
+    { name: 'Endeavour Energy 框架协议', country: '澳大利亚', region: '大洋洲', cat: 'grid', customer: 'Endeavour Energy', scope: '110kV 户外 HGIS', hi: '★ 三年框架、预计采购 100+ 台，旧站改造' },
+    { name: 'Robertson Barracks 光伏', country: '澳大利亚', region: '大洋洲', cat: 'renewable', customer: 'Lendlease', scope: '22kV 环网柜 + Kiosk', hi: '达尔文多雨风沙地区防雨特殊设计、Fortress 连锁' },
+    // 中亚
+    { name: 'Avelar 110kV 立体双层站', country: '哈萨克斯坦', region: '中亚', cat: 'renewable', customer: 'Avelar Solar', scope: '110kV GIS + E-House', hi: '★ 哈萨克斯坦第一套立体双层站，省地，GOST 认证 + 低温设计' },
+    { name: 'Maersk Oil Dunga 油田', country: '哈萨克斯坦', region: '中亚', cat: 'petro', customer: 'Sabium / Maersk', scope: '10kV 大型 E-House', hi: '配工业空调适配油田运行环境' },
+    { name: '哈中管道变电站', country: '哈萨克斯坦', region: '中亚', cat: 'petro', customer: 'Kazakhstan-China Pipeline', scope: '35/10kV 模块化变电站', hi: '油气管道站场供电' },
+    { name: 'KazMineral 铜矿撬装变', country: '哈萨克斯坦', region: '中亚', cat: 'mining', customer: 'ABB / KazMineral', scope: '35kV 撬装变', hi: '矿山撬装变，IEC + GOST' },
+    { name: 'Lukoil 气田站场', country: '乌兹别克斯坦', region: '中亚', cat: 'petro', customer: 'Enter Engineering / Lukoil', scope: '10kV 空气柜 + E-House(IP54)', hi: '站用变 + 防护型 E-House，外观随客户配色' },
+    { name: 'Kumtor 金矿 110kV 整站', country: '吉尔吉斯斯坦', region: '中亚', cat: 'mining', customer: 'Kumtor Gold', scope: '110kV HGIS + 撬装变', hi: '高压顶置降占地，GOST K 认证、低温设计' },
+    // 欧洲（俄罗斯 / 德国）
+    { name: 'St.Petersburg 110kV GIS 整站', country: '俄罗斯', region: '欧洲', cat: 'grid', customer: 'St.Petersburg Electric Grid', scope: '110kV GIS + 10kV', hi: '四套预制舱、GOST、新城中心低温设计' },
+    { name: 'Vedenschina 35kV 整站', country: '俄罗斯', region: '欧洲', cat: 'grid', customer: 'Irkutsk Energo', scope: '35kV 整站预制舱', hi: 'GB 标准、低温雨雪环境特殊设计' },
+    { name: 'Gazprom 10kV 模块化变电站', country: '俄罗斯', region: '欧洲', cat: 'petro', customer: 'Gazprom / CPECC', scope: '10kV 模块化变电站', hi: '油气项目配套' },
+    // 东南亚
+    { name: 'Linde 110kV 海工 E-House', country: '新加坡', region: '东南亚', cat: 'petro', customer: 'ABB China / Linde', scope: '110kV ABB GIS + E-House', hi: 'EN1090 欧标 + 海工防腐，青岛港完成拼装、SPMT 整体交付' },
+    { name: 'CyPark 光伏 E-House', country: '马来西亚', region: '东南亚', cat: 'renewable', customer: 'CyPark', scope: '35kV + E-House(IP54)', hi: 'C5 防腐、工厂预制减现场工作量' },
+    { name: '雅万高铁远动箱变', country: '印度尼西亚', region: '东南亚', cat: 'transport', customer: '中铁 / 中土集团', scope: '远动箱变', hi: '雅加达—万隆高铁配套' },
+    // 南美
+    { name: '哥伦比亚电网车载变', country: '哥伦比亚', region: '南美', cat: 'grid', customer: '哥伦比亚电网', scope: '110/10kV 车载移动变', hi: '车载变快速复电' },
+    { name: '厄瓜多尔车载变', country: '厄瓜多尔', region: '南美', cat: 'grid', customer: 'Ecopetrol', scope: '132kV 车载移动变', hi: '132kV 车载变，IEC + 当地验收' },
+    { name: '中电建阿根廷模块化变电站', country: '阿根廷', region: '南美', cat: 'grid', customer: '中国电建', scope: '110/33kV 模块化变电站', hi: '随中企出海配套' },
+    { name: 'CSN UPV 升压站', country: '巴西', region: '南美', cat: 'ci', customer: 'CSN', scope: '升压站', hi: '钢铁企业配套升压站' },
+    { name: '首钢秘鲁 10kV 变电站', country: '秘鲁', region: '南美', cat: 'mining', customer: '首钢集团', scope: '10kV 模块化变电站', hi: '矿业配套' },
+    // 非洲
+    { name: '科特迪瓦 252kV 车载变', country: '科特迪瓦', region: '非洲', cat: 'grid', customer: 'CMEC / 科特迪瓦政府', scope: '252kV 车载移动变', hi: '252kV 高压车载变，南瑞二次' },
+    { name: 'Lagos-Ibadan 铁路远动箱变', country: '尼日利亚', region: '非洲', cat: 'transport', customer: '中土集团', scope: '远动箱变', hi: '拉各斯—伊巴丹铁路配套' },
+    { name: '吉布提铁路远动箱变', country: '吉布提', region: '非洲', cat: 'transport', customer: '中土集团', scope: '远动箱变', hi: '亚吉铁路配套' },
+    { name: 'Awasa 工业园供配电', country: '埃塞俄比亚', region: '非洲', cat: 'ci', customer: '园区业主', scope: '工业园供配电', hi: '工业园配套' },
+    // 中东 / 南亚
+    { name: 'Haifa 港供配电', country: '以色列', region: '中东', cat: 'transport', customer: '港口业主', scope: '港口供配电', hi: '港口码头配套' },
+    { name: 'Chashma 核电', country: '巴基斯坦', region: '南亚', cat: 'nuclear', customer: '中核 CNNC', scope: '核电厂电气', hi: '核电项目交付' },
+    // 东亚（香港）
+    { name: '香港有轨电车 10kV 整站', country: '中国香港', region: '东亚', cat: 'transport', customer: 'CMEC / 香港有轨电车', scope: '10kV 整站 E-House', hi: '城市中心紧凑、降噪、整体运输' },
+  ];
+
+  return { company, products, tone, levels, stages, signatures, pressure, culture, standards, catTopics, method, cases, overseasCases, pitchLib, tips };
 })();
