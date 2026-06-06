@@ -195,6 +195,33 @@
       standardsSrc: (C.standards && co && C.standards[co]) ? co : (rg || '通用'),
     };
   }
+  // 海外业绩库匹配：按 国家 > 大区 > 品类 给"业绩弹药"，越贴合排越前
+  function overseasRefs(p, limit) {
+    const list = (C.overseasCases || []), co = p.country || '', rg = p.region || '', cat = p.cat || '';
+    return list.map(r => {
+      let s = 0;
+      if (co && r.country === co) s += 100;
+      if (rg && r.region === rg) s += 30;
+      if (cat && r.cat === cat) s += 20;
+      return { r: r, s: s };
+    }).filter(x => x.s > 0).sort((a, b) => b.s - a.s).slice(0, limit || 5).map(x => x.r);
+  }
+  // 最近的海外分支机构（按大区）
+  function nearestBranch(p) {
+    const bs = (C.company && C.company.branches) || [];
+    const hit = bs.filter(b => b.region === p.region)[0];
+    return hit ? hit.label : '';
+  }
+  // 业绩弹药 + 本地服务区块（嵌入当地·谈资盒）
+  function refsSection(p) {
+    const refs = overseasRefs(p, 4), br = nearestBranch(p);
+    if (!refs.length && !br) return '';
+    const items = refs.map(r => '<div class="ref-row"><b>' + esc(r.name) + '</b><span>' + esc(r.country) + ' · ' + esc(catShort(r.cat)) + ' · ' + esc(r.customer) + '</span><em>' + esc(r.hi) + '</em></div>').join('');
+    return '<div class="lp-sec lp-refs"><div class="lp-h">🏅 我方业绩弹药 / 本地服务</div>' +
+      (br ? '<div class="ref-branch">📍 本地服务：特锐德 ' + esc(br) + ' 设有分支机构 / 服务能力</div>' : '') +
+      (items || '<div class="ref-row"><em>同类工况海外业绩见「产品速查 · 海外业绩库」</em></div>') + '</div>';
+  }
+
   // 当地适配 + 谈资的展示 HTML（被对练步骤的折叠盒与「当地·谈资」速查页共用）
   function localPackHTML(p) {
     const lp = localPack(p), c = lp.culture, s = lp.standards, tp = lp.topics;
@@ -205,6 +232,7 @@
       sec('📐 当地标准 / 准入 · ' + esc(lp.standardsSrc), [['电压 / 频率', s.volt], ['标准体系', s.codes], ['认证 / 准入', s.cert], ['本地含量 / 合规', s.local]]) +
       sec('🗣️ ' + esc(catShort(p.cat)) + ' 谈资（聊这些显专业）', [['行业热点', tp.hot], ['客户最关心', tp.care], ['技术谈资', tp.talk], ['破冰话题', tp.opener]]) +
       (c.smalltalk ? '<div class="lp-smalltalk">☕ 寒暄谈资：' + esc(c.smalltalk) + '</div>' : '') +
+      refsSection(p) +
       '</div>';
   }
   // 对练步骤里的折叠盒（点开才显，避免喧宾夺主）
@@ -687,7 +715,7 @@
       '<div class="case-grid">' + cs + '</div>');
   }
 
-  /* ---------- 产品速查 ---------- */
+  /* ---------- 产品速查（公司速查 + 产品 + 海外业绩库）---------- */
   function renderProduct() {
     const cards = (C.products || []).map(pr =>
       '<div class="prod-card"><div class="pc-h"><span class="pc-ico">' + pr.icon + '</span><b>' + esc(pr.name) + '</b></div>' +
@@ -695,12 +723,27 @@
       '<ul class="pc-val">' + pr.value.map(v => '<li>✓ ' + esc(v) + '</li>').join('') + '</ul>' +
       '<div class="pc-scene">📍 适用：' + esc(pr.scene) + '</div>' +
       '<div class="pc-proof">🔎 ' + esc(pr.proof) + '</div></div>').join('');
+    const facts = (C.company.facts || []).map(f => '<li>★ ' + esc(f) + '</li>').join('');
     const edge = (C.company.edge || []).map(e => '<li>✓ ' + esc(e) + '</li>').join('');
+    const branches = (C.company.branches || []).map(b => '<span class="branch">📍 ' + esc(b.label) + '</span>').join('');
+    // 海外业绩库按大区分组
+    const byRegion = {};
+    (C.overseasCases || []).forEach(r => { (byRegion[r.region] = byRegion[r.region] || []).push(r); });
+    const ocases = Object.keys(byRegion).map(rg =>
+      '<div class="oc-group"><div class="oc-region">🌍 ' + esc(rg) + '</div>' +
+      byRegion[rg].map(r => '<div class="oc-row"><b>' + esc(r.name) + '</b>' +
+        '<span>' + esc(r.country) + ' · ' + esc(catShort(r.cat)) + ' · ' + esc(r.customer) + ' · ' + esc(r.scope) + '</span>' +
+        '<em>' + esc(r.hi) + '</em></div>').join('') + '</div>').join('');
     setHTML('deck',
       '<div class="deck-head"><h2>📦 产品速查 · ' + esc(C.company.name) + '</h2>' +
       '<p class="deck-tip">' + esc(C.company.intro) + '</p>' +
-      '<ul class="edge">' + edge + '</ul></div>' +
-      '<div class="prod-grid">' + cards + '</div>');
+      '<ul class="facts">' + facts + '</ul>' +
+      '<ul class="edge">' + edge + '</ul>' +
+      '<div class="branches">' + branches + '</div></div>' +
+      '<div class="prod-grid">' + cards + '</div>' +
+      '<div class="deck-head" style="margin-top:20px"><h2>🌍 海外业绩库 · 真实交付（业绩弹药）</h2>' +
+      '<p class="deck-tip">真实海外交付项目，按大区 / 国家 / 品类整理。谈"业绩与本地服务""坏了谁来修"时，挑同国家 / 同行业的直接引用最有说服力。</p></div>' +
+      '<div class="oc-wrap">' + ocases + '</div>');
   }
 
   /* ---------- 成长档案 ---------- */
@@ -872,6 +915,7 @@
     PROJECTS: PROJECTS, OPPS: OPPS, CONTENT: C, state: state,
     clientKeyOf: clientKeyOf, buildContext: buildContext, persona: persona, tpl: tpl,
     localPack: localPack, localPackHTML: localPackHTML, COUNTRIES: COUNTRIES, COUNTRY_REGION: COUNTRY_REGION,
+    overseasRefs: overseasRefs, nearestBranch: nearestBranch,
     scoreFree: scoreFree, scoreChoice: scoreChoice, toneScan: toneScan, levelOf: levelOf,
     stepsOf: stepsOf, startDeal: startDeal, startSignature: startSignature, randomOpp: randomOpp, render: render,
     useMC: useMC, doSubmit: doSubmit, doChoose: doChoose, advance: advance, PRESSURE_STAGE: PRESSURE_STAGE,

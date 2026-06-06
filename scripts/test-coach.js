@@ -206,8 +206,15 @@ try {
   // 无覆盖国家回退大区默认
   const fb = K.localPack({ country: '某不存在国', region: '南美', cat: 'renewable' });
   ok(fb.cultureSrc === '南美' && /葡语|足球/.test(fb.culture.taboo + fb.culture.smalltalk), '未覆盖国家回退大区默认');
-  // 展示 HTML 不抛错、占位无残留
-  ok(typeof K.localPackHTML({ country: '印度', region: '南亚', cat: 'grid' }) === 'string', 'localPackHTML 生成不抛错');
+  // 海外业绩库 + 业绩弹药匹配（按国家/大区/品类）
+  ok(Array.isArray(K.CONTENT.overseasCases) && K.CONTENT.overseasCases.length >= 25, '海外业绩库 ≥25 项（' + (K.CONTENT.overseasCases || []).length + '）');
+  const auRefs = K.overseasRefs({ country: '澳大利亚', region: '大洋洲', cat: 'renewable' }, 5);
+  ok(auRefs.length >= 2 && auRefs[0].country === '澳大利亚', '澳洲光伏商机匹配到本国业绩弹药（' + auRefs.length + '）');
+  ok(/澳洲|布里斯班/.test(K.nearestBranch({ region: '大洋洲' })), '大洋洲商机匹配到澳洲分支机构');
+  ok(K.overseasRefs({ country: '吉尔吉斯斯坦', region: '中亚', cat: 'mining' }, 5).some(r => /Kumtor|金矿/.test(r.name)), '中亚矿业匹配到 Kumtor 金矿业绩');
+  // 展示 HTML 不抛错、占位无残留、含业绩区块
+  const lph = K.localPackHTML({ country: '澳大利亚', region: '大洋洲', cat: 'renewable' });
+  ok(typeof lph === 'string' && /业绩弹药/.test(lph), 'localPackHTML 生成含业绩弹药区块');
   // 「当地·谈资」速查页 render 不抛错
   K.state.mode = 'local'; K.render(); K.state.mode = 'deal';
   ok(true, 'renderLocal() 不抛错');
