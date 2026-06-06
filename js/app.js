@@ -609,6 +609,30 @@
   const btnCompare = document.getElementById('btn-compare');
   if (btnCompare) btnCompare.addEventListener('click', openCompare);
 
+  /* ---------- 英文正文(detailEn/descEn)按需加载 ----------
+   * js/i18n-en.js 约 1.4MB，只有英文详情卡正文用得到（英文名/标签均已内联在源数据）。
+   * 已从 index.html 首屏脚本链移除，改为：切到英文 / 带 ?lang=en 深链时才异步注入，
+   * 载入后按 id 把正文并入既有 PROJECTS（与 util.buildProjects 同口径），再补渲染已打开的详情卡。 */
+  let _enState = window.ENERGY_EN ? 'done' : 'idle'; // 若被同步加载（向后兼容）则已并入，视为完成
+  let _enPromise = null;
+  function ensureEnglishData() {
+    if (_enState === 'done') return Promise.resolve();
+    if (_enPromise) return _enPromise;
+    _enState = 'loading';
+    _enPromise = new Promise(resolve => {
+      const s = document.createElement('script');
+      s.src = 'js/i18n-en.js'; s.async = true;
+      s.onload = () => {
+        const EN = window.ENERGY_EN || {};
+        PROJECTS.forEach(p => { const en = EN[p.id]; if (en) { if (!p.descEn && en.descEn) p.descEn = en.descEn; if (!p.detailEn && en.detailEn) p.detailEn = en.detailEn; } });
+        _enState = 'done'; resolve();
+      };
+      s.onerror = () => { _enState = 'idle'; _enPromise = null; resolve(); }; // 失败回退中文，不阻塞
+      document.head.appendChild(s);
+    });
+    return _enPromise;
+  }
+
   // 中 / EN 语言切换
   const btnLang = document.getElementById('btn-lang');
   function applyLang() {
@@ -630,6 +654,10 @@
     state.lang = state.lang === 'en' ? 'zh' : 'en';
     applyLang(); render();
     if (_detailP && detailEl.classList.contains('show')) showDetail(_detailP); // 详情卡随语言即时重渲染
+    // 切到英文：异步拉取英文正文，到位后补渲染详情卡（正文之外的英文内容已即时生效）
+    if (state.lang === 'en') ensureEnglishData().then(() => {
+      if (_detailP && detailEl.classList.contains('show')) showDetail(_detailP);
+    });
   }
   if (btnLang) btnLang.addEventListener('click', toggleLang);
 
@@ -1391,13 +1419,18 @@
     showCompare();
   }
 
+  // ?lang=en 深链：英文正文按需载入后补渲染已打开的详情卡（首屏其余英文内容已即时生效）
+  if (state.lang === 'en') ensureEnglishData().then(() => {
+    if (_detailP && detailEl.classList.contains('show')) showDetail(_detailP);
+  });
+
   /* ---------- 首屏加载态：地图瓦片就绪（或超时兜底）后淡出 ---------- */
   (function () {
     const loaderEl = document.getElementById('app-loader');
     if (!loaderEl) return;
     let done = false;
     const hide = () => { if (done) return; done = true; loaderEl.classList.add('hidden'); setTimeout(() => loaderEl.remove(), 480); };
-    osm.once('load', hide);              // 首批 OSM 瓦片绘制完成（默认底图）
+    initBase.layer.once('load', hide);   // 首批实际底图瓦片绘制完成（国内默认高德 / 海外默认 OSM）
     map.whenReady(() => setTimeout(hide, 400)); // 视图就绪后短暂保留，避免闪烁
     setTimeout(hide, 2600);              // 离线/瓦片失败兜底，确保不卡 loading
   })();
