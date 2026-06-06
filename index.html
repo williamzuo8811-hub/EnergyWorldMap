@@ -21,6 +21,12 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
+  <!-- 预解析/预连接地图瓦片服务器：缩短首批瓦片的 DNS/TLS 握手（国内默认高德，海外 OSM）-->
+  <link rel="preconnect" href="https://webrd01.is.autonavi.com">
+  <link rel="dns-prefetch" href="//webrd02.is.autonavi.com">
+  <link rel="dns-prefetch" href="//webrd03.is.autonavi.com">
+  <link rel="dns-prefetch" href="//webrd04.is.autonavi.com">
+  <link rel="dns-prefetch" href="//tile.openstreetmap.org">
   <link rel="stylesheet" href="lib/leaflet.css">
   <link rel="stylesheet" href="lib/MarkerCluster.css">
   <link rel="stylesheet" href="lib/MarkerCluster.Default.css">
@@ -185,7 +191,8 @@
   <script defer src="js/data-china-future.js"></script>
   <script defer src="js/data-clients2.js"></script>
   <script defer src="js/progress.js"></script>
-  <script defer src="js/i18n-en.js"></script>
+  <!-- i18n-en.js（英文正文 ~1.4MB）不在此同步加载：只有英文详情卡正文用得到（英文名/标签均已内联），
+       改由 app.js 在切到英文 / 带 ?lang=en 深链时按需注入，避免拖慢中文访客首屏可交互时间。 -->
   <script defer src="js/util.js"></script>
   <script defer src="js/clients-meta.js"></script>
   <script defer src="js/app.js"></script>
