@@ -1025,7 +1025,7 @@
         '<div class="lg-main"><div class="lg-name">' + esc(o) + ' ' + domCats + '</div>' +
         '<div class="lg-track"><div class="lg-fill" style="width:' + (d.n / maxN * 100) + '%"></div></div></div>' +
         '<div class="lg-meta"><b>' + d.n + '</b><span>' + tr('项目数') + '</span></div>' +
-        '<div class="lg-meta"><b>≈$' + fmtInv(d.inv) + '</b><span>' + d.countries.size + ' ' + (state.lang === 'en' ? 'countries' : '国') + '</span></div></div>';
+        '<div class="lg-meta"><b>≈$' + fmtInv(d.inv) + '</b><span>' + d.countries.size + ' ' + (state.lang === 'en' ? 'ctry/reg' : '国/地区') + '</span></div></div>';
     }).join('');
     countryPanel.classList.remove('wide');
     countryPanel.innerHTML =
@@ -1084,7 +1084,7 @@
           (m.scenario ? '<div class="bd-line bd-dim">🌍 ' + esc(m.scenario) + '</div>' : '') +
           '<div class="lg-track"><div class="lg-fill" style="width:' + (s.n / maxN * 100) + '%;background:' + TIER_COLOR[tier] + '"></div></div></div>' +
           '<div class="lg-meta"><b>' + s.n + '</b><span>' + (en ? 'proj' : '项目') + '</span></div>' +
-          '<div class="lg-meta"><b>' + s.countries.size + '</b><span>' + (en ? 'countries' : '国') + '</span></div></div>';
+          '<div class="lg-meta"><b>' + s.countries.size + '</b><span>' + (en ? 'ctry/reg' : '国/地区') + '</span></div></div>';
       }).join('');
     });
 
@@ -1302,7 +1302,7 @@
       '<text x="60" y="360" font-size="14" letter-spacing="1" fill="#5f718f">' + (en ? 'BY CATEGORY (count)' : '分品类（项目数）') + '</text>' +
       '<text x="620" y="360" font-size="14" letter-spacing="1" fill="#5f718f">' + (en ? (sortCap ? 'TOP (by capacity)' : 'TOP (by investment)') : (sortCap ? '重点项目 TOP（按装机）' : '重点项目 TOP（按投资）')) + '</text>' +
       catRows + topRows +
-      '<text x="60" y="652" font-size="13" fill="#5f718f">' + items.length + (en ? ' projects · ' : ' 个项目 · ') + countries + (en ? ' countries' : ' 国') + '  ·  ' + X(en ? 'Generated from Global Energy Projects Map' : '由「全球能源项目世界地图」生成') + '</text>' +
+      '<text x="60" y="652" font-size="13" fill="#5f718f">' + items.length + (en ? ' projects · ' : ' 个项目 · ') + countries + (en ? ' countries/regions' : ' 国/地区') + '  ·  ' + X(en ? 'Generated from Global Energy Projects Map' : '由「全球能源项目世界地图」生成') + '</text>' +
       '</svg>';
   }
   function saveBlob(blob, name) {
