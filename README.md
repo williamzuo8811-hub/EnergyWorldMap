@@ -68,7 +68,7 @@ powershell -ExecutionPolicy Bypass -File serve.ps1 -Port 4173
 │   ├── data-europe.js        # ★ 欧洲专项：64 个项目（西欧/北欧/南欧/中东欧，8 大品类）
 │   ├── data-nuclear.js       # ★ 核电专项：35 个项目（全球大型堆/SMR/四代堆/聚变，cat='nuclear'）
 │   ├── data-northam.js       # ★ 北美专项：170 个项目（美/加/墨近一年+未来5年，9 大品类，id 2900+）
-│   ├── data-southasia.js     # ★ 南亚专项：224 个项目（印/巴/孟/斯/尼/不/阿近一年+未来5年，9 大品类，region='亚洲'，id 3100+）
+│   ├── data-southasia.js     # ★ 南亚专项：224 个项目（印/巴/孟/斯/尼/不/阿近一年+未来5年，9 大品类，region='南亚'，id 3100+）
 │   ├── data-china-future.js  # ★ 中国十五五专项：227 个项目（近一年动态+2026-2030 规划管线，9 大品类，region='中国'，id 3400+）
 │   ├── progress.js     # 各项目"📍 最新进展"映射（id → 进展文本，537 条，按 id 合并）
 │   └── app.js          # 交互逻辑（地图、底图切换、筛选、统计、详情；两份数据按名称去重合并）
@@ -89,7 +89,7 @@ powershell -ExecutionPolicy Bypass -File serve.ps1 -Port 4173
   name: '某海上风电场',            // 中文名称
   en: 'XXX Offshore Wind',         // 英文/原文名（可空）
   country: '中国',                 // 国家/地区
-  region: '中国',                  // 大区：中国/亚洲/中东/欧洲/北美/南美/非洲/大洋洲
+  region: '中国',                  // 大区：中国/东亚/东南亚/南亚/中亚/中东/欧洲/北美/南美/非洲/大洋洲
   cat: 'renewable',                // 品类键（见下表）
   coord: [121.5, 31.0],            // [经度, 纬度]（WGS-84，高德底图会自动 GCJ-02 纠偏）
   cap: '1.2 GW',                   // 容量/规模

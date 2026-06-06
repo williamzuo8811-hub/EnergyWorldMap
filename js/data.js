@@ -11,7 +11,7 @@
  *   name      中文名称
  *   en        英文/原文名称（可空）
  *   country   所在国家/地区
- *   region    所属大区：中国 / 亚洲 / 中东 / 欧洲 / 北美 / 南美 / 非洲 / 大洋洲
+ *   region    所属大区：中国 / 东亚 / 东南亚 / 南亚 / 中亚 / 中东 / 欧洲 / 北美 / 南美 / 非洲 / 大洋洲
  *   cat       品类键（见 CATEGORIES）
  *   coord     [经度, 纬度]（WGS-84；高德底图会自动做 GCJ-02 纠偏）
  *   cap       容量 / 规模描述
@@ -44,7 +44,7 @@ window.ENERGY = (function () {
     client:     { name: '国际大客户',       short: '国际大客户',  color: '#a3e635', icon: '🤝' },
   };
 
-  const REGIONS = ['中国', '亚洲', '中东', '欧洲', '北美', '南美', '非洲', '大洋洲'];
+  const REGIONS = ['中国', '东亚', '东南亚', '南亚', '中亚', '中东', '欧洲', '北美', '南美', '非洲', '大洋洲'];
   const STATUS  = ['规划', '在建', '投运'];
 
   const PROJECTS = [
@@ -69,7 +69,7 @@ window.ENERGY = (function () {
       detail: '位于美国内华达州拉斯维加斯东北的联邦土地上，690 MW 光伏配套 380 MW/1.4 GWh 电池储能，2024 年全面投运。它是美国当时最大的光储一体化项目之一，向拉斯维加斯都会区供应清洁电力并提供夜间出力支撑。' },
     { id: 16, name: 'Vineyard Wind 1', en: 'Vineyard Wind 1', country: '美国', region: '北美', cat: 'renewable', coord: [-70.5, 41.1], cap: '806 MW', inv: 40, invText: '约 40 亿美元', status: '在建', year: 2024, updated: '2025-06', owner: 'Avangrid / CIP', flagship: false, desc: '美国首个商业规模海上风电场。',
       detail: '位于马萨诸塞州玛莎葡萄园岛以南海域，装机 806 MW，是美国首个商业规模的海上风电场，由 Avangrid 与哥本哈根基础设施基金（CIP）合建。项目自 2023 年底首台机组发电后分批并网，为新英格兰地区约 40 万户家庭供电，是美国海上风电产业起步的标志。' },
-    { id: 17, name: 'Khavda 可再生能源园区', en: 'Khavda RE Park', country: '印度', region: '亚洲', cat: 'renewable', coord: [68.9, 23.9], cap: '规划 30 GW', inv: 200, invText: '约 200 亿美元', status: '在建', year: 2024, updated: '2025-10', owner: 'Adani', flagship: true, desc: '全球最大在建可再生能源园区。',
+    { id: 17, name: 'Khavda 可再生能源园区', en: 'Khavda RE Park', country: '印度', region: '南亚', cat: 'renewable', coord: [68.9, 23.9], cap: '规划 30 GW', inv: 200, invText: '约 200 亿美元', status: '在建', year: 2024, updated: '2025-10', owner: 'Adani', flagship: true, desc: '全球最大在建可再生能源园区。',
       detail: '位于印度古吉拉特邦卡奇地区接近巴基斯坦边境的盐碱荒地，规划风光总装机约 30 GW、占地约 538 平方公里，建成后将是全球最大的可再生能源园区。由阿达尼集团主导开发，并配套大规模储能与外送线路，是印度能源转型的旗舰工程。',
       descEn: 'World\'s largest renewable-energy park under construction.',
       detailEn: 'On salt flats in Kutch, Gujarat near the Pakistan border, the Khavda park plans ~30 GW of combined wind and solar over ~538 km², set to become the world\'s largest renewable-energy park. Led by the Adani Group with large-scale storage and transmission, it is a flagship of India\'s energy transition.' },
@@ -101,7 +101,7 @@ window.ENERGY = (function () {
       detail: '2026 年 2 月由 Xcel Energy 与 Google 公布、采用 Form Energy 铁空气电池技术，规模 300 MW/30 GWh，是迄今按吉瓦时计全球最大的电池储能项目。铁空气电池可实现约 100 小时的长时储能，主要为明尼苏达的数据中心与电网提供多日级别的可靠供电。' },
     { id: 39, name: '马斯达尔 24/7 光储项目', en: 'Masdar 24/7 Solar+Storage', country: '阿联酋', region: '中东', cat: 'storage', coord: [54.4, 24.4], cap: '5.2 GW PV + 19 GWh 电池', inv: 60, invText: '约 60 亿美元', status: '在建', year: 2025, updated: '2025-12', owner: 'Masdar / EWEC', flagship: true, desc: '全球首个吉瓦级全天候光储。',
       detail: '由阿联酋马斯达尔与 EWEC 推进，配置约 5.2 GW 光伏与约 19 GWh 电池储能，目标实现 1 GW 级的全天候（24/7）稳定出力，是全球首个该量级的光储一体化项目。它将证明纯光伏+电池也能提供接近基荷的可靠电力。' },
-    { id: 40, name: '拉达克 BESS 储能', en: 'Ladakh BESS', country: '印度', region: '亚洲', cat: 'storage', coord: [77.6, 34.2], cap: '约 12 GWh', inv: 15, invText: '约 15 亿美元', status: '在建', year: 2025, updated: '2025-10', owner: 'SECI / 印度国企', flagship: false, desc: '高原超大电池储能。',
+    { id: 40, name: '拉达克 BESS 储能', en: 'Ladakh BESS', country: '印度', region: '南亚', cat: 'storage', coord: [77.6, 34.2], cap: '约 12 GWh', inv: 15, invText: '约 15 亿美元', status: '在建', year: 2025, updated: '2025-10', owner: 'SECI / 印度国企', flagship: false, desc: '高原超大电池储能。',
       detail: '位于印度高海拔的拉达克地区，规模约 12 GWh，配套当地大型可再生能源基地，用于平抑出力波动并支撑长距离外送。它是印度规模最大的电池储能项目之一，对高原电网稳定具有示范意义。' },
     { id: 41, name: 'Oasis de Atacama 储能', en: 'Oasis de Atacama', country: '智利', region: '南美', cat: 'storage', coord: [-69.3, -23.6], cap: '约 11 GWh', inv: 20, invText: '约 20 亿美元', status: '在建', year: 2025, updated: '2025-09', owner: 'Grenergy', flagship: false, desc: '阿塔卡马沙漠超大储能。',
       detail: '由西班牙 Grenergy 在智利阿塔卡马沙漠建设，分期配置约 11 GWh 电池储能，与大型光伏配套。它把白天充沛的太阳能储存到夜间释放，是拉美规模最大的储能项目之一，助力智利电网摆脱对化石调峰电源的依赖。' },
@@ -115,7 +115,7 @@ window.ENERGY = (function () {
       detail: '台积电在亚利桑那凤凰城建设多座先进制程晶圆厂，累计承诺投资已追加至约 1650 亿美元，是美国历史上最大的外商半导体投资。单座晶圆厂的用电、用水规模相当于一座中型城市，正推动当地电网与供水系统大规模扩容，并带动完整的半导体供应链落地。' },
     { id: 47, name: 'Intel 俄亥俄晶圆厂', en: 'Intel Ohio Fab', country: '美国', region: '北美', cat: 'ci', coord: [-82.7, 40.1], cap: '先进制程园区', inv: 280, invText: '约 280 亿美元', status: '在建', year: 2024, updated: '2025-09', owner: 'Intel', flagship: false, desc: '"硅心脏"超大晶圆园区。',
       detail: '位于俄亥俄州哥伦布附近，英特尔规划建设号称"硅心脏"的超大晶圆制造园区，初期投资约 280 亿美元。受半导体市场调整影响投产节奏有所推迟，但项目仍是美国本土先进制程制造与电网增容的重大工程。' },
-    { id: 49, name: '塔塔 Dholera 半导体厂', en: 'Tata Dholera Fab', country: '印度', region: '亚洲', cat: 'ci', coord: [72.2, 22.2], cap: '印度首座大型晶圆厂', inv: 110, invText: '约 110 亿美元', status: '在建', year: 2024, updated: '2025-08', owner: 'Tata / PSMC', flagship: false, desc: '印度首座大型晶圆厂。',
+    { id: 49, name: '塔塔 Dholera 半导体厂', en: 'Tata Dholera Fab', country: '印度', region: '南亚', cat: 'ci', coord: [72.2, 22.2], cap: '印度首座大型晶圆厂', inv: 110, invText: '约 110 亿美元', status: '在建', year: 2024, updated: '2025-08', owner: 'Tata / PSMC', flagship: false, desc: '印度首座大型晶圆厂。',
       detail: '塔塔集团联合中国台湾力积电（PSMC）在古吉拉特邦多勒拉建设印度首座大型晶圆厂，投资约 110 亿美元。作为印度芯片自主战略的旗舰，项目配套专用电力、超纯水与产业新城，对当地电网与基础设施带来巨大增量需求。' },
 
     /* ============ 数据中心 ============ */
@@ -127,7 +127,7 @@ window.ENERGY = (function () {
       detail: '位于阿布扎比，由阿联酋 G42 联合英伟达、OpenAI、思科、甲骨文等打造，规划约 5 GW 算力，是美国境外规模最大的 AI 数据中心集群，2026 年起分期投用。依托当地廉价能源与资本，阿联酋意在成为中东人工智能与算力枢纽。' },
     { id: 53, name: '北弗吉尼亚数据中心走廊', en: 'Northern Virginia Data Center Alley', country: '美国', region: '北美', cat: 'datacenter', coord: [-77.49, 39.04], cap: '全球最大集群 >5 GW', inv: 500, invText: '累计数百亿美元', status: '投运', year: 2024, updated: '2026-03', owner: 'AWS / 微软 / Google 等', flagship: true, desc: '全球数据中心最密集区域。',
       detail: '弗吉尼亚州劳登县阿什本一带聚集了全球最密集的数据中心集群，承载着全球相当大比例的互联网流量，总用电已超 5 GW 并持续扩张。AWS、微软、谷歌等在此密集布局，其电力需求已迫使当地电网与电源规划进行大规模调整。' },
-    { id: 54, name: '柔佛数据中心集群', en: 'Johor Data Center Hub', country: '马来西亚', region: '亚洲', cat: 'datacenter', coord: [103.76, 1.49], cap: '在建数 GW', inv: 200, invText: '约 200 亿美元', status: '在建', year: 2024, updated: '2025-11', owner: '多家云厂商', flagship: false, desc: '东南亚增长最快的数据中心枢纽。',
+    { id: 54, name: '柔佛数据中心集群', en: 'Johor Data Center Hub', country: '马来西亚', region: '东南亚', cat: 'datacenter', coord: [103.76, 1.49], cap: '在建数 GW', inv: 200, invText: '约 200 亿美元', status: '在建', year: 2024, updated: '2025-11', owner: '多家云厂商', flagship: false, desc: '东南亚增长最快的数据中心枢纽。',
       detail: '马来西亚柔佛紧邻新加坡，承接新加坡因土地与电力受限而外溢的数据中心需求，在建容量已达数 GW，是东南亚增长最快的数据中心枢纽。各大云厂商与 AI 公司在此密集投资，带动当地电力、光伏与配套基础设施快速扩张。' },
     { id: 55, name: '利雅得 AI 数据中心（HUMAIN）', en: 'Riyadh AI Data Centers', country: '沙特阿拉伯', region: '中东', cat: 'datacenter', coord: [46.7, 24.7], cap: '规划数 GW', inv: 150, invText: '约 150 亿美元', status: '在建', year: 2025, updated: '2025-11', owner: 'HUMAIN / 多家云厂商', flagship: false, desc: '中东 AI 算力中心。',
       detail: '沙特主权基金支持的 HUMAIN 联合英伟达、AMD 等在利雅得等地建设大规模 AI 数据中心，规划数 GW 算力。依托廉价能源与资本，沙特意在把算力打造成"2030 愿景"下的新经济支柱。' },
@@ -139,7 +139,7 @@ window.ENERGY = (function () {
       detail: '位于秘鲁首都利马以北，由中远海运控股建设运营，是南美西海岸首个智慧、绿色深水大港，2024 年 11 月开港。它开通了直达上海的航线，把秘鲁到中国的海运时间缩短约 10 天，重塑南美—亚洲贸易格局并带动港口岸电等绿色基建。' },
     { id: 62, name: '利雅得萨勒曼国王国际机场', en: 'King Salman Intl Airport', country: '沙特阿拉伯', region: '中东', cat: 'transport', coord: [46.7, 24.96], cap: '远期年吞吐 1.85 亿人次', inv: 300, invText: '约 300 亿美元', status: '在建', year: 2025, updated: '2025-09', owner: '沙特 PIF', flagship: true, desc: '规划中全球最大机场之一。',
       detail: '由沙特主权基金 PIF 主导，规划六条跑道、远期年吞吐量高达 1.85 亿人次，建成后将是全球最大的机场之一。它是利雅得打造全球航空与物流枢纽、支撑"2030 愿景"经济多元化的核心基建。' },
-    { id: 63, name: '隆城国际机场', en: 'Long Thanh Intl Airport', country: '越南', region: '亚洲', cat: 'transport', coord: [107.0, 10.8], cap: '一期年 2500 万→远期 1 亿人次', inv: 78, invText: '约 78 亿美元（一期）', status: '在建', year: 2026, updated: '2026-01', owner: 'ACV', flagship: true, desc: '越南最大空港。',
+    { id: 63, name: '隆城国际机场', en: 'Long Thanh Intl Airport', country: '越南', region: '东南亚', cat: 'transport', coord: [107.0, 10.8], cap: '一期年 2500 万→远期 1 亿人次', inv: 78, invText: '约 78 亿美元（一期）', status: '在建', year: 2026, updated: '2026-01', owner: 'ACV', flagship: true, desc: '越南最大空港。',
       detail: '位于胡志明市以东同奈省，一期工程计划 2026 年完工、年吞吐 2500 万人次，远期扩至 1 亿人次，建成后将是越南最大机场。它将分流新山一机场压力、强化越南区域航空枢纽地位，并带动周边产业与电力配套。' },
     { id: 64, name: '西悉尼国际机场', en: 'Western Sydney Airport', country: '澳大利亚', region: '大洋洲', cat: 'transport', coord: [150.7, -33.88], cap: '首期年 1000 万人次', inv: 75, invText: '约 110 亿澳元', status: '在建', year: 2026, updated: '2026-01', owner: 'WSA Co', flagship: false, desc: '悉尼第二机场。',
       detail: '位于悉尼西郊，计划 2026 年下半年投运，首期年吞吐约 1000 万人次，是悉尼第二个国际机场。机场配套新建专用地铁线与道路、电力网络，缓解金斯福德·史密斯机场的运力瓶颈并带动悉尼西部发展。' },
@@ -147,7 +147,7 @@ window.ENERGY = (function () {
       detail: '位于华沙与罗兹之间，规划两条平行跑道、并整合高速铁路枢纽与公路网，投资约 300 亿欧元、2026 年开工，服务约 2100 万人口腹地。它将成为中东欧最大的航空与高铁综合枢纽，并提供高铁"以铁代航"的连接。' },
     { id: 66, name: '加州高速铁路', en: 'California High-Speed Rail', country: '美国', region: '北美', cat: 'transport', coord: [-119.0, 35.4], cap: '一期 Bakersfield–Merced', inv: 1000, invText: '超 1000 亿美元', status: '在建', year: 2025, updated: '2025-12', owner: 'CAHSR', flagship: false, desc: '美国首条真正意义高铁。',
       detail: '规划连接旧金山与洛杉矶，目前在中央谷地 119 英里区段全面施工，绝大多数结构已在建或完工，是美国首条真正意义上的高速铁路。项目工期与预算屡受挑战，但被视为美国客运铁路现代化的关键尝试。', route: [[-119.0, 35.4], [-120.5, 37.3]] },
-    { id: 68, name: '瓜达尔港', en: 'Gwadar Port', country: '巴基斯坦', region: '亚洲', cat: 'transport', coord: [62.33, 25.12], cap: '深水良港+自贸区', inv: 16, invText: '约 16 亿美元', status: '在建', year: 2024, updated: '2025-03', owner: '中国海外港口 / 巴方', flagship: false, desc: '中巴经济走廊出海口。',
+    { id: 68, name: '瓜达尔港', en: 'Gwadar Port', country: '巴基斯坦', region: '南亚', cat: 'transport', coord: [62.33, 25.12], cap: '深水良港+自贸区', inv: 16, invText: '约 16 亿美元', status: '在建', year: 2024, updated: '2025-03', owner: '中国海外港口 / 巴方', flagship: false, desc: '中巴经济走廊出海口。',
       detail: '位于巴基斯坦俾路支省阿拉伯海沿岸，是中巴经济走廊（CPEC）的出海门户，配套自由贸易区、电厂与海水淡化设施。建成后可为中国西部提供更短的印度洋出海通道，并带动当地能源与基础设施发展。' },
 
     /* ============ 石油化工 · LNG ============ */

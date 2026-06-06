@@ -233,7 +233,7 @@ A project object (see `data.js` header comment for the full field reference):
 ```js
 {
   id, name, en, country,
-  region,            // one of REGIONS: 中国/亚洲/中东/欧洲/北美/南美/非洲/大洋洲
+  region,            // one of REGIONS: 中国/东亚/东南亚/南亚/中亚/中东/欧洲/北美/南美/非洲/大洋洲
   cat,               // one of CATEGORIES keys: renewable/grid/storage/ci/datacenter/transport/petro/mining/client
   coord: [lng, lat], // WGS-84
   cap, inv, invText, // inv is a number in 亿美元 (100M USD) used for sizing/stats; invText is display string

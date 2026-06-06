@@ -268,7 +268,7 @@
   /* ---------- 中→英标签映射（app.js 与 globe.js 共用，单一真源）---------- */
   const LABELS_EN = {
     cat: { renewable: 'Renewables', nuclear: 'Nuclear', grid: 'Grid & T&D', storage: 'Storage', ci: 'Industry', datacenter: 'Data Center', transport: 'Transport', petro: 'Oil·Gas·Chem', mining: 'Mining', client: 'Key Clients' },
-    region: { '中国': 'China', '亚洲': 'Asia', '中东': 'Middle East', '欧洲': 'Europe', '北美': 'N. America', '南美': 'S. America', '非洲': 'Africa', '大洋洲': 'Oceania' },
+    region: { '中国': 'China', '东亚': 'East Asia', '东南亚': 'SE Asia', '南亚': 'South Asia', '中亚': 'Central Asia', '中东': 'Middle East', '欧洲': 'Europe', '北美': 'N. America', '南美': 'S. America', '非洲': 'Africa', '大洋洲': 'Oceania' },
     status: { '规划': 'Planned', '在建': 'Building', '投运': 'Operating' },
   };
 
