@@ -303,7 +303,10 @@ try {
 
 // —— 销售军规：方法论 + 战绩弹药（提炼自特锐德培训资料）——
 try {
-  ok(Array.isArray(K.CONTENT.method) && K.CONTENT.method.length >= 12, '方法论框架 ≥12（' + (K.CONTENT.method || []).length + '）');
+  ok(Array.isArray(K.CONTENT.method) && K.CONTENT.method.length >= 16, '方法论框架 ≥16（' + (K.CONTENT.method || []).length + '）');
+  ok(['battle', 'finance', 'tender', 'redline'].every(k => K.CONTENT.method.some(m => m.key === k)), '新增 竞品对标/融资/招投标/合规红线 四框架');
+  ok(K.CONTENT.stages[4].rounds.some(r => r.id === 'obj-technical'), '异议阶段新增「技术异议」回合');
+  ok(K.CONTENT.stages[5].rounds.some(r => r.id === 'nego-finance'), '谈判阶段新增「融资条款」回合');
   ok(Array.isArray(K.CONTENT.cases) && K.CONTENT.cases.length >= 7, '战绩弹药案例 ≥7（' + (K.CONTENT.cases || []).length + '）');
   ok(K.CONTENT.method.every(m => m.name && m.essence && Array.isArray(m.points) && m.points.length), '每个方法论含 name/essence/points');
   ok(K.CONTENT.method.some(m => m.key === 'consult') && K.CONTENT.method.some(m => m.key === 'base'), '新增「顾问式沟通范式」与「根据地+生态圈」方法论');
