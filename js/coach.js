@@ -673,6 +673,10 @@
       '<span class="brief-stat">' + esc(p.status || '') + '</span><span class="brief-usd">' + esc(usd(p)) + '</span></div>' +
       '<div class="brief-name">' + esc(p.name) + '</div>' +
       '<div class="brief-meta"><b>🌍 ' + esc(p.country || '') + '</b> · 客户 <b>' + esc(ctx.t.cust) + '</b> · 对接 <b>' + esc(ctx.t.role) + '</b></div>' +
+      '<div class="brief-links">' +
+      '<a href="index.html#project=' + encodeURIComponent(p.id) + '" target="_blank" rel="noopener">🗺️ 地图看该项目</a>' +
+      '<a href="index.html#cty=' + encodeURIComponent(p.country || '') + '" target="_blank" rel="noopener">🌍 该国能源版图</a>' +
+      '<a href="globe.html" target="_blank" rel="noopener">🌐 3D 地球</a></div>' +
       (compact ? '' :
         '<div class="brief-grid">' +
         kv('对接人风格', ctx.t.persona) +
