@@ -435,7 +435,7 @@
 
   // 6 维能力雷达 SVG
   const RADAR_DIMS = [['专业', 'expertise'], ['客户导向', 'customer'], ['价值表达', 'value'], ['不卑不亢', 'poise'], ['推进力', 'drive'], ['抗压', 'resilience']];
-  function radarSVG(sk) {
+  function radarContent(sk, stroke) {
     const cx = 110, cy = 102, R = 70, N = 6;
     const pt = (i, r) => { const a = -Math.PI / 2 + i * 2 * Math.PI / N; return [Math.round(cx + Math.cos(a) * r), Math.round(cy + Math.sin(a) * r)]; };
     let grid = '';
@@ -443,7 +443,55 @@
     let axes = ''; RADAR_DIMS.forEach((d, i) => { const p = pt(i, R); axes += '<line x1="' + cx + '" y1="' + cy + '" x2="' + p[0] + '" y2="' + p[1] + '" stroke="rgba(120,160,220,0.12)"/>'; });
     const poly = RADAR_DIMS.map((d, i) => pt(i, R * clamp((sk[d[1]] || 0) / 100, 0.05, 1)).join(',')).join(' ');
     let labels = ''; RADAR_DIMS.forEach((d, i) => { const p = pt(i, R + 17); labels += '<text x="' + p[0] + '" y="' + p[1] + '" font-size="9.5" fill="#93a4c4" text-anchor="middle" dominant-baseline="middle">' + d[0] + ' ' + (sk[d[1]] || 0) + '</text>'; });
-    return '<svg viewBox="0 0 220 204" class="radar">' + grid + axes + '<polygon points="' + poly + '" fill="rgba(33,199,255,0.25)" stroke="var(--accent)" stroke-width="2"/>' + labels + '</svg>';
+    return grid + axes + '<polygon points="' + poly + '" fill="rgba(33,199,255,0.25)" stroke="' + (stroke || 'var(--accent)') + '" stroke-width="2"/>' + labels;
+  }
+  function radarSVG(sk) { return '<svg viewBox="0 0 220 204" class="radar">' + radarContent(sk) + '</svg>'; }
+
+  /* ---------- 结果分享卡（SVG → PNG 信息图）---------- */
+  function buildShareSVG(s) {
+    const W = 600, hasR = !!s.skills, rows = (s.rows || []).slice(0, 9), rowH = 26, rowsTop = 250;
+    const radarTop = rowsTop + rows.length * rowH + 14, H = hasR ? radarTop + 214 : Math.max(440, rowsTop + rows.length * rowH + 60);
+    let rowsSVG = '';
+    rows.forEach((r, i) => {
+      const y = rowsTop + i * rowH, pct = Math.max(2, Math.min(100, r.val));
+      rowsSVG += '<text x="40" y="' + (y + 13) + '" fill="#93a4c4" font-size="13">' + esc(r.label) + '</text>' +
+        '<rect x="190" y="' + (y + 4) + '" width="310" height="10" rx="5" fill="rgba(255,255,255,0.08)"/>' +
+        '<rect x="190" y="' + (y + 4) + '" width="' + (pct * 3.1) + '" height="10" rx="5" fill="url(#g1)"/>' +
+        '<text x="512" y="' + (y + 13) + '" fill="#e8eefb" font-size="13" font-weight="700">' + esc(r.val) + '</text>';
+    });
+    const radar = hasR ? '<svg x="190" y="' + radarTop + '" width="220" height="204" viewBox="0 0 220 204">' + radarContent(s.skills, '#21c7ff') + '</svg>' : '';
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' +
+      '<defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#21c7ff"/><stop offset="1" stop-color="#2ee6a6"/></linearGradient>' +
+      '<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0a1430"/><stop offset="1" stop-color="#04070f"/></linearGradient></defs>' +
+      '<rect width="' + W + '" height="' + H + '" fill="url(#bg)"/><rect width="' + W + '" height="6" fill="url(#g1)"/>' +
+      '<text x="40" y="54" fill="#e8eefb" font-size="19" font-weight="800">🎓 国际销售话术陪练 · 特锐德</text>' +
+      '<text x="40" y="102" fill="#ffd45f" font-size="29" font-weight="800">' + esc(s.title) + '</text>' +
+      '<text x="40" y="136" fill="#93a4c4" font-size="14">' + esc(s.subtitle) + '</text>' +
+      '<text x="40" y="208" fill="#21c7ff" font-size="60" font-weight="800">' + esc(s.big) + '</text>' +
+      '<text x="' + (60 + String(s.big).length * 36) + '" y="208" fill="#93a4c4" font-size="14">' + esc(s.bigLabel || '') + '</text>' +
+      rowsSVG + radar +
+      '<text x="40" y="' + (H - 24) + '" fill="#5f718f" font-size="12">' + esc(s.footnote || '') + '</text>' +
+      '<text x="' + (W - 40) + '" y="' + (H - 24) + '" text-anchor="end" fill="#5f718f" font-size="12">爱思考的杨帆William 制作</text></svg>';
+  }
+  function dlData(href, name) { try { const a = document.createElement('a'); a.href = href; a.download = name; a.click(); } catch (e) { /* ignore */ } }
+  function exportShareCard() {
+    const s = state.lastSummary; if (!s) { flash('暂无可分享的结果'); return; }
+    const svg = buildShareSVG(s);
+    if (typeof Image === 'undefined' || typeof document === 'undefined' || !document.createElement) return;
+    const hasR = !!s.skills, W = 600, rows = (s.rows || []).slice(0, 9), H = hasR ? 250 + rows.length * 26 + 14 + 214 : Math.max(440, 250 + rows.length * 26 + 60);
+    const fallback = () => dlData('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg), 'tgood-coach-card.svg');
+    try {
+      const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+      const img = new Image();
+      img.onload = function () {
+        try {
+          const cv = document.createElement('canvas'); cv.width = W * 2; cv.height = H * 2;
+          const cx = cv.getContext('2d'); cx.scale(2, 2); cx.drawImage(img, 0, 0); URL.revokeObjectURL(url);
+          cv.toBlob(function (b) { if (!b) return fallback(); dlData(URL.createObjectURL(b), 'tgood-coach-card.png'); flash('已生成分享卡 PNG'); });
+        } catch (e) { fallback(); }
+      };
+      img.onerror = fallback; img.src = url;
+    } catch (e) { fallback(); }
   }
 
   // 错题本：低分回合按 id 重练
@@ -874,6 +922,7 @@
       return '<div class="sumbar"><span>' + (st.icon || '') + ' ' + esc(st.name) + '</span><i style="width:' + r.total + '%"></i><b>' + r.total + '</b></div>';
     }).join('');
     const meterHTML = m ? '<div class="sum-meters">' + meterBar(m) + '</div>' : '';
+    state.lastSummary = { title: outcome, subtitle: ctx.p.name + ' · ' + ctx.t.cust, big: fin, bigLabel: m ? '综合成交指数' : '综合得分', rows: res.map(r => { const st = C.stages.filter(s => s.key === r.stage)[0] || { name: r.stage }; return { label: st.name || r.stage, val: r.total }; }), footnote: '本单 +' + bonus + ' XP · ' + levelOf(prog.xp).cur.name + ' · 累计 ' + (prog.dealsClosed || 0) + ' 单成交' };
     setHTML('deck',
       '<div class="summary ' + oc + '">' +
       '<div class="sum-outcome">' + outcome + '</div>' +
@@ -883,6 +932,7 @@
       '<div class="sum-bars">' + bars + '</div>' +
       '<div class="sum-msg">' + esc(summaryMsg(fin)) + '</div>' +
       '<div class="act-row"><button class="btn-primary" data-act="replay">↺ 复盘重打</button>' +
+      '<button class="btn-ghost" data-act="share">📸 分享卡</button>' +
       '<button class="btn-ghost" data-act="newdeal">🎯 换个商机</button></div></div>');
   }
   function summaryMsg(avg) {
@@ -1035,6 +1085,7 @@
     awardBadges({});
     const bars = res.map(r => { const st = C.stages.filter(s => s.key === r.stage)[0] || { name: r.stage, icon: '•' }; return '<div class="sumbar"><span>' + (st.icon || '') + ' ' + esc(st.name) + '</span><i style="width:' + r.total + '%"></i><b>' + r.total + '</b></div>'; }).join('');
     const diff = prog.diagnostic ? (avg - prog.diagnostic.score) : 0;
+    state.lastSummary = { title: lvl, subtitle: '结业认证考试 · 8 关综合', big: avg, bigLabel: '认证得分', rows: res.map(r => { const st = C.stages.filter(s => s.key === r.stage)[0] || { name: r.stage }; return { label: st.name || r.stage, val: r.total }; }), skills: prog.skills, footnote: (prog.diagnostic ? '入营诊断 ' + prog.diagnostic.score + ' → ' + avg : '') + ' · ' + levelOf(prog.xp).cur.name };
     setHTML('deck',
       '<div class="summary ' + cls + '">' +
       '<div class="sum-outcome">' + lvl + '</div>' +
@@ -1043,7 +1094,9 @@
       '<div class="radar-wrap">' + radarSVG(prog.skills) + '</div>' +
       '<div class="sum-bars">' + bars + '</div>' +
       '<div class="sum-msg">' + esc(passed ? '恭喜通过！把弱项关卡与错题再刷几轮，向更高认证冲刺。' : '差一点——去单项特训 / 错题本补强后再来考，进步很快。') + '</div>' +
-      '<div class="act-row"><button class="btn-primary" data-act="exam-start">↺ 再考一次</button><button class="btn-ghost" data-act="exam-exit">← 回成长档案</button></div></div>');
+      '<div class="act-row"><button class="btn-primary" data-act="exam-start">↺ 再考一次</button>' +
+      '<button class="btn-ghost" data-act="share">📸 认证卡</button>' +
+      '<button class="btn-ghost" data-act="exam-exit">← 回成长档案</button></div></div>');
   }
 
   /* ---------- 成长档案 ---------- */
@@ -1086,7 +1139,8 @@
       '<div class="psec"><h3>成长阶梯</h3><div class="ladder">' + ladder + '</div></div>' +
       '<div class="psec"><h3>近期成交</h3><div class="hist">' + hist + '</div></div>' +
       '<div class="psec"><h3>资深销售心法</h3><ul class="tips">' + tips + '</ul></div>' +
-      '<div class="act-row"><button class="btn-ghost danger" data-act="wipe">⚠ 清空成长档案</button></div>');
+      '<div class="act-row"><button class="btn-ghost" data-act="share-prof">📸 导出能力卡</button>' +
+      '<button class="btn-ghost danger" data-act="wipe">⚠ 清空成长档案</button></div>');
   }
 
   /* ============================================================
@@ -1147,6 +1201,8 @@
     else if (act === 'abandon' || act === 'newdeal') { clearDeal(); state.deal = null; state.answered = null; render(); }
     else if (act === 'resume') { resumeDeal(); }
     else if (act === 'dropsave') { clearDeal(); render(); }
+    else if (act === 'share') { exportShareCard(); }
+    else if (act === 'share-prof') { const lv = levelOf(prog.xp); state.lastSummary = { title: lv.cur.icon + ' ' + lv.cur.name, subtitle: '国际销售特训营 · 成长档案', big: prog.xp, bigLabel: 'XP', rows: C.stages.map(s => ({ label: s.name, val: prog.stageBest[s.key] || 0 })), skills: prog.skills, footnote: '成交 ' + (prog.dealsClosed || 0) + ' · 徽章 ' + prog.badges.length + '/' + BADGES.length + ' · 🔥 ' + (prog.dayStreak || 0) + ' 天' + (prog.cert ? ' · ' + prog.cert.level : '') }; exportShareCard(); }
     else if (act === 'replay') {
       const d = state.deal;
       if (d.kind === 'signature') startSignature(d.sig);
@@ -1254,6 +1310,7 @@
     maybeInjectCurveball: maybeInjectCurveball, updateMeter: updateMeter, reactionLine: reactionLine,
     updateSkills: updateSkills, startExam: startExam, startMistake: startMistake, ALL_ROUNDS: ALL_ROUNDS, prog: function () { return prog; },
     startEnglish: startEnglish, dealSnapshot: dealSnapshot, saveDeal: saveDeal, loadSavedDeal: loadSavedDeal, resumeDeal: resumeDeal, clearDeal: clearDeal,
+    buildShareSVG: buildShareSVG, exportShareCard: exportShareCard,
   };
 
   if (typeof document !== 'undefined' && document.addEventListener) {

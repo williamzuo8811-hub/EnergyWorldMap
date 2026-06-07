@@ -155,7 +155,9 @@ and `js/coach.js`. `coach.js` rebuilds `PROJECTS` with `util.buildProjects` (no 
   from rolling recent scores (`recentAvg`), and first-time users (`prog.dealsRun===0`) get an onboarding banner on the picker.
   9 **成就徽章** (`BADGES` / `awardBadges`, evaluated after each deal/exam) and a daily-practice **连续打卡** streak (`updateDayStreak`)
   surface in 成长档案. An in-progress deal is snapshotted to `localStorage` on every step (`dealSnapshot`/`saveDeal`, rounds
-  rebuilt by id from `ALL_ROUNDS`); a reload offers **▶ 继续对练** on the picker (`resumeDeal`), cleared on finish/abandon. A deal carries a `kind` (`deal`/`signature`/`drill`/`pressure`) so each mode renders only its own active
+  rebuilt by id from `ALL_ROUNDS`); a reload offers **▶ 继续对练** on the picker (`resumeDeal`), cleared on finish/abandon.
+  Deal-summary / exam-cert / profile results export a **分享卡 PNG** infographic (`buildShareSVG`→canvas raster, SVG fallback;
+  cert/profile cards embed the 能力雷达). A deal carries a `kind` (`deal`/`signature`/`drill`/`pressure`) so each mode renders only its own active
   deal; `startSignature(sig)` runs a marquee deal and `PRESSURE_STAGE` is a synthetic stage built from `COACH_CONTENT.pressure`.
   Full deals (闯关 / 经典战役) carry a **trust / 守价 / 推进 meter** that accumulates from each answer's score + tone (`updateMeter`)
   and blends 60/40 with the rubric average into the final **成交指数** (so the whole trajectory, not a single round, decides
