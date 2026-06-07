@@ -254,42 +254,80 @@
     return textLow.indexOf(norm(kw)) >= 0;
   }
 
-  // 语气扫描：good 六类各计是否出现 + bad / arrogant 计数
-  function toneScan(textLow) {
+  /* ---------- 同义词归一：让换一种说法也能命中要点（在文本尾部补回规范词）---------- */
+  const SYN = {
+    '可靠': ['稳定', '靠谱', '可信赖', '不掉链子', '稳'], '工期': ['交期', '交付周期', '进度', '工时', '周期', '节点'],
+    '降低': ['减少', '下降', '省下', '节省', '压缩', '降下来', '少花'], '提升': ['提高', '增强', '改善', '拉高', '更高'],
+    '下一步': ['后续', '接下来', '推进', '往下走'], '案例': ['先例', '样板', '实例', '范例'],
+    '业绩': ['战绩', '成绩单', '过往项目', '交付经验'], '理解': ['明白', '懂您', '体谅', '我懂'],
+    '价值': ['好处', '收益', '回报'], '认证': ['资质', '准入', '合规'], '停产': ['停工', '停线', '减产'],
+    '保供电': ['不停电', '持续供电', '供电保障'], '预制舱': ['预制式', '模块化变电站', '预制变电站'],
+    '移动变': ['车载变', '移动式变电站', '移动变电站'], '建议': ['提议', '不如', '我们可以'],
+    '本周': ['这周', '近期', '尽快'], '技术交流': ['技术对接', '技术沟通', '方案交流'],
+  };
+  function expandSyn(textLow) {
+    let extra = '';
+    for (const canon in SYN) {
+      if (textLow.indexOf(canon) >= 0) continue;
+      const vs = SYN[canon];
+      for (let i = 0; i < vs.length; i++) { if (textLow.indexOf(norm(vs[i])) >= 0) { extra += ' ' + canon; break; } }
+    }
+    return extra ? textLow + extra : textLow;
+  }
+  // 反作弊：是否与黄金话术存在较长连续重叠（疑似照抄）
+  function sharesLongSubstr(a, b, n) {
+    if (!a || !b || a.length < n) return false;
+    for (let i = 0; i + n <= a.length; i += 3) { if (b.indexOf(a.slice(i, i + n)) >= 0) return true; }
+    return false;
+  }
+  // 否定上下文：扣分词若被"不/没/绝不/拒绝…"否定，则不计扣分（避免"绝不跪舔"误判）
+  function negatedAt(t, i) {
+    const pre = t.slice(Math.max(0, i - 4), i);
+    return /[不没无非别勿]/.test(pre) || /绝不|拒绝|并非|从不|不会/.test(pre);
+  }
+
+  // 语气扫描：good 七类各计是否出现（用同义扩展文本）+ bad/arrogant/defensive 计数（含否定豁免）
+  function toneScan(t, tx) {
+    tx = tx || t;
     const g = C.tone.good; let goodTypes = 0; const goodHit = {};
     Object.keys(g).forEach(key => {
-      const hit = (g[key].kw || []).some(w => textLow.indexOf(norm(w)) >= 0);
+      const hit = (g[key].kw || []).some(w => tx.indexOf(norm(w)) >= 0);
       goodHit[key] = hit; if (hit) goodTypes++;
     });
-    const bad = (C.tone.bad || []).filter(w => textLow.indexOf(norm(w)) >= 0);
-    const arrogant = (C.tone.arrogant || []).filter(w => textLow.indexOf(norm(w)) >= 0);
-    const defensive = (C.tone.defensive || []).filter(w => textLow.indexOf(norm(w)) >= 0);
-    return { goodTypes: goodTypes, goodHit: goodHit, bad: bad, arrogant: arrogant, defensive: defensive };
+    const scan = arr => (arr || []).filter(w => { const i = t.indexOf(norm(w)); return i >= 0 && !negatedAt(t, i); });
+    return { goodTypes: goodTypes, goodHit: goodHit, bad: scan(C.tone.bad), arrogant: scan(C.tone.arrogant), defensive: scan(C.tone.defensive) };
   }
 
   function starsOf(total) { return total >= 90 ? 5 : total >= 75 ? 4 : total >= 58 ? 3 : total >= 40 ? 2 : 1; }
   function xpOf(total, stars) { return Math.round(total / 12) + (stars >= 5 ? 3 : stars >= 4 ? 1 : 0); }
 
-  // 开放题评分
+  // 开放题评分（同义归一 + 反作弊 + 否定豁免）
   function scoreFree(text, round, ctx) {
-    const t = norm(text);
+    const raw = String(text || ''), t = norm(raw), tx = expandSyn(t);
     const rub = round.rubric || [];
-    let totW = 0, gotW = 0; const detail = [];
+    let totW = 0, gotW = 0, gotCount = 0; const detail = [];
     rub.forEach(c => {
-      totW += c.w; const hit = (c.kw || []).some(k => kwMatch(t, k, ctx));
-      if (hit) gotW += c.w; detail.push({ label: c.label, hit: hit, w: c.w });
+      totW += c.w; const hit = (c.kw || []).some(k => kwMatch(tx, k, ctx));
+      if (hit) { gotW += c.w; gotCount++; } detail.push({ label: c.label, hit: hit, w: c.w });
     });
     let base = totW ? Math.round(gotW / totW * 100) : 60;
-    const tn = toneScan(t);
+    const tn = toneScan(t, tx);
     const bonus = Math.min(tn.goodTypes * 4, 18);
     const penalty = tn.bad.length * 14 + tn.arrogant.length * 12 + (tn.defensive || []).length * 12;
-    const len = String(text || '').replace(/\s/g, '').length;
-    let lenNote = '';
-    if (len < 10) { base = Math.min(base, 35); lenNote = '回答过短，话术需要展开论述。'; }
-    else if (len < 24) { lenNote = '可以再展开一点，把价值与下一步说足。'; }
-    const total = clamp(base + bonus - penalty, 0, 100);
+    const cleanLen = raw.replace(/\s/g, '').replace(/[，。,.!！?？、；;：:“”‘’（）()\-—]/g, '').length;
+    const flags = []; let lenNote = '', copied = false, stuffed = false;
+    if (cleanLen < 10) { base = Math.min(base, 35); lenNote = '回答过短，话术需要展开论述。'; }
+    else if (cleanLen < 24) { lenNote = '可以再展开一点，把价值与下一步说足。'; }
+    // 反作弊①：像在罗列关键词（命中多但字太少）——堆词刷分既限基础分、也封顶总分
+    if (gotCount >= 3 && cleanLen < gotCount * 8) { stuffed = true; base = Math.min(base, 50); flags.push('更像在罗列关键词——请用完整、自然的话术表达，别靠堆词刷分。'); }
+    // 反作弊②：照抄黄金话术
+    const goldT = norm(tpl(round.gold || '', ctx));
+    if (sharesLongSubstr(t, goldT, 16)) { copied = true; flags.push('疑似照抄黄金话术——练习请用自己的话说出来，才能真正内化。'); }
+    let total = clamp(base + bonus - penalty, 0, 100);
+    if (stuffed) total = Math.min(total, 50);
+    if (copied) total = Math.min(total, 72);
     const stars = starsOf(total);
-    return { total: total, base: base, detail: detail, tone: tn, bonus: bonus, penalty: penalty, lenNote: lenNote, stars: stars, xp: xpOf(total, stars), mode: 'free' };
+    return { total: total, base: base, detail: detail, tone: tn, bonus: bonus, penalty: penalty, lenNote: lenNote, flags: flags, stars: stars, xp: xpOf(total, stars), mode: 'free', userText: raw };
   }
   // 选择题评分
   function scoreChoice(choice) {
@@ -588,16 +626,19 @@
       if (tn.goodHit && tn.goodHit.composure) toneNotes.push('<span class="good">✓ 镇定从容、对事不对人</span>');
       if (tn.goodTypes >= 3) toneNotes.push('<span class="good">✓ 语气专业、不卑不亢（命中 ' + tn.goodTypes + ' 类加分表达）</span>');
       if (a.lenNote) toneNotes.push('<span class="warn">' + esc(a.lenNote) + '</span>');
+      (a.flags || []).forEach(f => toneNotes.push('<span class="warn">⚠ ' + esc(f) + '</span>'));
       body = '<div class="fb-rubric"><b>要点覆盖</b><ul>' + items + '</ul></div>' +
         (toneNotes.length ? '<div class="fb-tone">' + toneNotes.join('') + '</div>' : '');
     }
     const verdict = a.total >= 75 ? '<span class="v good">表现优秀</span>' : a.total >= 55 ? '<span class="v warn">合格，可更好</span>' : '<span class="v bad">需要重练</span>';
     const next = (state.deal.step >= state.deal.steps.length - 1) ? '完成本剧本 →' : '进入下一关 →';
+    const aiBtn = (state.ai && a.mode === 'free') ? '<button class="btn-ghost" data-act="ai-review">🤖 AI 复核与改写</button>' : '';
     return '<div class="feedback">' +
       '<div class="fb-head"><span class="stars">' + starStr(a.stars) + '</span><span class="score">' + a.total + ' 分</span>' + verdict + '<span class="xp">+' + a.xp + ' XP</span></div>' +
       body + gold +
+      (state.ai && a.mode === 'free' ? '<div class="ai-review" id="ai-review"></div>' : '') +
       '<div class="act-row">' +
-      (a.total < 55 ? '<button class="btn-ghost" data-act="retry">↺ 重练这关</button>' : '') +
+      (a.total < 55 ? '<button class="btn-ghost" data-act="retry">↺ 重练这关</button>' : '') + aiBtn +
       '<button class="btn-primary" data-act="next">' + next + '</button></div></div>';
   }
   function bestChoice(r) { let b = (r.choices || [])[0]; (r.choices || []).forEach(c => { if ((c.score || 0) > (b.score || 0)) b = c; }); return b ? b.t : ''; }
@@ -789,7 +830,7 @@
       '请用中文、以真实客户口吻回应销售的每句话：可以质疑、压价、提顾虑，但若对方话术专业、有量化价值与下一步，就逐步给予认可。每次回复 1~3 句，简洁真实。' +
       '在回复末尾另起一行用【教练】给销售一句不超过 30 字的改进点评。';
   }
-  function aiChat(messages, ctx, cb) {
+  function aiChat(messages, ctx, cb, sys) {
     const cfg = aiConfig();
     if (!cfg.base || !cfg.key) { cb('（未配置 AI：请在左侧填入 API 地址与 Key。）'); return; }
     if (typeof fetch === 'undefined') { cb('（当前环境不支持网络请求。）'); return; }
@@ -797,7 +838,7 @@
     fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg.key },
-      body: JSON.stringify({ model: cfg.model, messages: [{ role: 'system', content: aiSystemPrompt(ctx) }].concat(messages), temperature: 0.7 }),
+      body: JSON.stringify({ model: cfg.model, messages: [{ role: 'system', content: sys || aiSystemPrompt(ctx) }].concat(messages), temperature: 0.7 }),
     }).then(r => r.json()).then(j => {
       const txt = j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
       cb(txt || '（AI 无回复，请检查模型与配置。）');
@@ -839,6 +880,15 @@
     else if (act === 'wipe') { if (confirmSafe('确定清空全部成长档案与进度？此操作不可恢复。')) { prog = { xp: 0, dealsClosed: 0, dealsRun: 0, stageBest: {}, history: [] }; saveProgress(); render(); } }
     else if (act === 'ai-save') { doAiSave(); }
     else if (act === 'ai-send') { doAiSend(); }
+    else if (act === 'ai-review') { doAiReview(); }
+  }
+  function doAiReview() {
+    if (!state.deal || !state.answered) return;
+    const step = state.deal.steps[state.deal.step], ctx = state.deal.ctx;
+    const box = $('ai-review'); if (box) box.innerHTML = '<div class="ai-c">🤖 AI 复核中…</div>';
+    const sys = '你是资深国际销售教练，只做点评、不扮演客户。用中文输出，犀利、简洁、可落地。';
+    const prompt = '客户情境：「' + tpl(step.round.ask, ctx) + '」\n学员回答：「' + (state.answered.userText || '') + '」\n黄金话术参考：「' + tpl(step.round.gold || '', ctx) + '」\n请给三条、每条不超过 40 字：1) ✅ 做得好的一点；2) 🔧 最该改进的一点；3) ✍️ 一句改写示范。';
+    aiChat([{ role: 'user', content: prompt }], ctx, reply => { const b = $('ai-review'); if (b) b.innerHTML = '<div class="ai-c"><b>🤖 AI 复核</b><br>' + esc(reply).replace(/\n/g, '<br>') + '</div>'; }, sys);
   }
   function confirmSafe(msg) { try { return (typeof confirm === 'function') ? confirm(msg) : true; } catch (e) { return true; } }
 

@@ -107,7 +107,16 @@ try {
   ok(b.tone.bad.length > 0, '跪舔用词被语气词典捕获（' + b.tone.bad.join('、') + '）');
   const tooShort = K.scoreFree('好的', round, ctx);
   ok(tooShort.total <= 35, '过短回答被限分（' + tooShort.total + '）');
-} catch (e) { fails.push('scoreFree 抛错：' + (e && e.message)); }
+  // —— 评分公正化：否定豁免 / 同义词 / 反作弊 ——
+  const negR = K.scoreFree('我们绝不跪舔、不会亏本贱卖，坚持物有所值，建议本周技术交流。', round, ctx);
+  ok(negR.tone.bad.length === 0, '否定语境不误判为跪舔（绝不跪舔 / 不会亏本）');
+  const synR = K.scoreFree('该项目最怕弱电网下停线，我方预制式变电站工厂预制、现场几周就位，可把交期压缩、减少停工损失，提议这周技术对接。', round, ctx);
+  ok(synR.total >= 55, '同义表达也能拿合格分（' + synR.total + '）');
+  const stuffR = K.scoreFree('弱电网 预制舱 停产 缩短 工期 案例 下一步', round, ctx);
+  ok((stuffR.flags || []).some(f => /罗列|堆词/.test(f)) && stuffR.total <= 62, '堆砌关键词被识别并限分（' + stuffR.total + '）');
+  const copyR = K.scoreFree(K.tpl(round.gold, ctx), round, ctx);
+  ok((copyR.flags || []).some(f => /照抄/.test(f)) && copyR.total <= 72, '照抄黄金话术被识别并限分（' + copyR.total + '）');
+} catch (e) { fails.push('scoreFree 抛错：' + (e && e.stack || e)); }
 
 // —— 离线评分：选择题 ——
 try {

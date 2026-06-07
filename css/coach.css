@@ -185,6 +185,8 @@ button, input, textarea { font-family: inherit; }
 .fb-tone .good { color: var(--good); }
 .fb-tone .bad { color: var(--bad); }
 .fb-tone .warn { color: var(--warn); }
+.feedback .ai-review { margin-top: 10px; }
+.feedback .ai-review:empty { display: none; }
 
 /* ---------- 商机选择 ---------- */
 .opp-bar { display: flex; gap: 9px; margin-bottom: 14px; }

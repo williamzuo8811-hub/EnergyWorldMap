@@ -142,7 +142,10 @@ and `js/coach.js`. `coach.js` rebuilds `PROJECTS` with `util.buildProjects` (no 
   `SUB_DEFS.client`'s `fn` matchers (`clientKeyOf`), builds the **opportunity pool** ranked by a training-value score
   (CLIENT_META match / flagship / investment / recency), derives a deterministic **persona** (role by category, style by
   `id` hash), runs the deal/single-stage **drill**, and **scores answers fully offline & deterministically**: `scoreFree`
-  = rubric-coverage % ± tone bonus/penalty (with a length guard), `scoreChoice` = preset value; both map to 1–5★ + XP.
+  = rubric-coverage % (with **synonym expansion** so paraphrases hit) ± tone bonus/penalty (**negation-aware** so "绝不跪舔"
+  isn't penalised) − **anti-gaming** caps (keyword-stuffing → ≤50, copying the golden script → ≤72) and a length guard;
+  `scoreChoice` = preset value; both map to 1–5★ + XP. An optional **AI 复核** button (when AI is configured) returns a
+  natural "做得好 / 该改进 / 改写示范" critique on top of the deterministic score.
   Progress (XP / level / deals / per-stage best incl. 抗压指数 / history) persists in `localStorage` (memory fallback under
   Node/private mode). A deal carries a `kind` (`deal`/`signature`/`drill`/`pressure`) so each mode renders only its own active
   deal; `startSignature(sig)` runs a marquee deal and `PRESSURE_STAGE` is a synthetic stage built from `COACH_CONTENT.pressure`.
