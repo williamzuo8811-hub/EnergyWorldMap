@@ -160,8 +160,11 @@ and `js/coach.js`. `coach.js` rebuilds `PROJECTS` with `util.buildProjects` (no 
   An **optional AI free-spar** mode (off by default, BYO OpenAI-compatible key stored only in the browser) lets the user
   free-chat with an AI customer; the deterministic core works with **zero network**. `localPack(p)` resolves a project's
   country→region culture/standards (+ category 谈资) and is surfaced both as a collapsible box inside each deal step and as a
-  standalone **当地·谈资** reference page (country picker × category). Modes: 闯关成交 / 经典战役 / 单项特训 / 抗压特训 /
-  当地·谈资 / 销售军规 / 话术库 / 产品速查 / 成长档案. Guarded against missing DOM so `scripts/test-coach.js` can load it under a stub.
+  standalone **当地·谈资** reference page (country picker × category). The **英文实战** mode (`COACH_CONTENT.english`,
+  `startEnglish`) runs an all-English foreign-customer scenario (an Australian solar-farm owner, 5 funnel rounds) scored by the
+  same engine — `COACH_CONTENT.tone.en` is merged into the tone buckets at init (`mergeEnTone`) so English answers are scored
+  bilingually. Modes: 闯关成交 / 经典战役 / 单项特训 / 抗压特训 / 英文实战 / 当地·谈资 / 销售军规 / 话术库 / 产品速查 /
+  成长档案. Guarded against missing DOM so `scripts/test-coach.js` can load it under a stub.
 
 ### Data globals and merge model
 

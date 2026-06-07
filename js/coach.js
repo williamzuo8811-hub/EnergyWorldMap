@@ -30,6 +30,13 @@
   const CLIENT_LABEL = {};
   (SUB_DEFS.client || []).forEach(d => { if (d.key) CLIENT_LABEL[d.key] = d.label; });
 
+  // 把英文增补合并进语气词典各桶，让英文作答也能被评分（中文作答不受影响）
+  (function mergeEnTone() {
+    const en = C.tone && C.tone.en; if (!en) return;
+    if (en.good) Object.keys(en.good).forEach(k => { if (C.tone.good[k]) C.tone.good[k].kw = C.tone.good[k].kw.concat(en.good[k]); });
+    ['bad', 'arrogant', 'defensive'].forEach(k => { if (en[k]) C.tone[k] = (C.tone[k] || []).concat(en[k]); });
+  })();
+
   /* ---------- 基础小工具 ---------- */
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
@@ -449,6 +456,17 @@
     state.answered = null; state.revealHint = false; state.revealLocal = false;
     prog.dealsRun = (prog.dealsRun || 0) + 1; saveProgress();
   }
+  // 英文实战：外方客户场景，全英文台词 + 英文黄金话术
+  function foreignOpp() {
+    return OPPS.filter(o => o.p.country === '澳大利亚' && o.p.cat === 'renewable')[0] || OPPS.filter(o => o.p.region !== '东亚')[0] || OPPS[0];
+  }
+  function startEnglish() {
+    const eng = C.english; if (!eng) return;
+    const opp = foreignOpp(), ctx = buildContext(opp, eng.over);
+    state.deal = { opp: opp, ctx: ctx, steps: stepsOf(eng.stages || []), step: 0, results: [], single: false, kind: 'en', meter: newMeter() };
+    state.answered = null; state.revealHint = false; state.revealLocal = false;
+    prog.dealsRun = (prog.dealsRun || 0) + 1; saveProgress();
+  }
 
   // 随机黑天鹅：闯关 / 经典战役中途插入一个剧情变量回合（'easy' 难度的新手不插，避免压力）
   function maybeInjectCurveball(steps, force) {
@@ -536,7 +554,7 @@
   function renderTabs() {
     const tabs = [
       ['deal', '🎯 闯关成交'], ['signature', '🎓 经典战役'], ['drill', '🎚️ 单项特训'],
-      ['pressure', '🧘 抗压特训'], ['local', '🌍 当地·谈资'], ['method', '🧭 销售军规'],
+      ['pressure', '🧘 抗压特训'], ['en', '🌐 英文实战'], ['local', '🌍 当地·谈资'], ['method', '🧭 销售军规'],
       ['lib', '💬 话术库'], ['product', '📦 产品速查'], ['profile', '📈 成长档案'],
     ];
     const c = $('mode-tabs'); if (!c) return;
@@ -551,6 +569,7 @@
     else if (m === 'signature') renderSignature();
     else if (m === 'drill') renderDrill();
     else if (m === 'pressure') renderPressure();
+    else if (m === 'en') renderEn();
     else if (m === 'local') renderLocal();
     else if (m === 'method') renderMethod();
     else if (m === 'lib') renderLib();
@@ -608,6 +627,23 @@
       '<div class="deck-head"><h2>🎓 经典大单战役</h2>' +
       '<p class="deck-tip">手写打磨的真实旗舰大单，从情报到交付走完完整 8 关，每一关都针对该项目的真实痛点——这是检验综合功力的"毕业考"。</p></div>' +
       '<div class="sig-grid">' + cards + '</div>');
+  }
+
+  // 英文实战
+  function renderEn() {
+    const d = state.deal;
+    if (d && d.kind === 'en') { if (d.step >= d.steps.length) return renderSummary(); return renderStep(); }
+    const eng = C.english || {};
+    const pitch = (eng.pitch || []).map(g =>
+      '<div class="lib-group"><div class="lib-stage">' + esc(g.stage) + '</div>' +
+      (g.lines || []).map(li => '<div class="lib-line"><span>' + esc(li) + '</span><button class="btn-copy" data-act="copy" data-txt="' + esc(li) + '">Copy</button></div>').join('') +
+      '</div>').join('');
+    setHTML('deck',
+      '<div class="deck-head"><h2>🌐 英文实战 · English Sparring</h2>' +
+      '<p class="deck-tip">' + esc(eng.intro || '') + '</p></div>' +
+      '<div class="pressure-hero"><div class="ph-best">外方客户场景 · 5 关全英文（开场→需求→价值→异议→促成）</div>' +
+      '<button class="btn-primary" data-act="en-start">▶ Start English Deal</button></div>' +
+      '<div class="psec"><h3>English Pitch Library</h3><div class="lib-wrap">' + pitch + '</div></div>');
   }
 
   // 抗压特训
@@ -676,7 +712,7 @@
     const d = state.deal, ctx = d.ctx, step = d.steps[d.step], st = step.stage, r = step.round;
     const mc = useMC(step);
     const examMode = d.kind === 'exam';
-    const backLabel = examMode ? '‹ 退出考试' : d.kind === 'pressure' ? '‹ 退出抗压' : d.kind === 'drill' ? '‹ 换一关' : d.kind === 'signature' ? '‹ 退出战役' : '‹ 换商机';
+    const backLabel = examMode ? '‹ 退出考试' : d.kind === 'en' ? '‹ 退出英文实战' : d.kind === 'pressure' ? '‹ 退出抗压' : d.kind === 'drill' ? '‹ 换一关' : d.kind === 'signature' ? '‹ 退出战役' : '‹ 换商机';
     const ofLabel = inFunnel(st)
       ? (d.single ? ('第 ' + (step.sIdx + 1) + '/' + C.stages.length + ' 关 · 回合 ' + (d.step + 1) + '/' + d.steps.length)
         : ('第 ' + (step.sIdx + 1) + '/' + C.stages.length + ' 关'))
@@ -1022,6 +1058,7 @@
     else if (act === 'drill') { const st = C.stages.filter(s => s.key === t.getAttribute('data-key'))[0]; if (st) { startDeal(randomOpp(true), st); render(); } }
     else if (act === 'sig') { const s = (C.signatures || []).filter(x => x.key === t.getAttribute('data-key'))[0]; if (s) { startSignature(s); render(); } }
     else if (act === 'pressure-start') { if (PRESSURE_STAGE) { startDeal(randomOpp(true), PRESSURE_STAGE); render(); } }
+    else if (act === 'en-start') { startEnglish(); render(); }
     else if (act === 'submit') { doSubmit(); }
     else if (act === 'choose') { doChoose(+t.getAttribute('data-i')); }
     else if (act === 'hint') { state.revealHint = !state.revealHint; render(); }
@@ -1136,6 +1173,7 @@
     useMC: useMC, doSubmit: doSubmit, doChoose: doChoose, advance: advance, PRESSURE_STAGE: PRESSURE_STAGE,
     maybeInjectCurveball: maybeInjectCurveball, updateMeter: updateMeter, reactionLine: reactionLine,
     updateSkills: updateSkills, startExam: startExam, startMistake: startMistake, ALL_ROUNDS: ALL_ROUNDS, prog: function () { return prog; },
+    startEnglish: startEnglish,
   };
 
   if (typeof document !== 'undefined' && document.addEventListener) {

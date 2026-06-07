@@ -211,6 +211,21 @@ try {
   ok(K.state.deal && K.state.deal.steps.length === 1 && K.state.deal.kind === 'drill', '错题可单题重练');
 } catch (e) { fails.push('成长闭环抛错：' + (e && e.stack || e)); }
 
+// —— 英文 / 双语实战 ——
+try {
+  ok(K.CONTENT.english && Array.isArray(K.CONTENT.english.stages) && K.CONTENT.english.stages.length >= 5, '英文实战 ≥5 关（' + (K.CONTENT.english && K.CONTENT.english.stages.length) + '）');
+  K.startEnglish();
+  ok(K.state.deal.kind === 'en' && K.state.deal.ctx.t.co === 'Australia', '英文场景启动且外方语境（' + K.state.deal.ctx.t.co + '）');
+  K.state.mode = 'en'; K.render();
+  // 英文评分：双语语气生效，优质英文 > 跪舔英文
+  const enRound = K.CONTENT.english.stages[3].rounds[0]; // objection
+  const enCtx = K.state.deal.ctx;
+  const goodEn = K.scoreFree("That's a fair concern and you're right to ask. We test to AS/NZS, hold local contractor licences and run a Brisbane office; we can start with a pilot, warranty and local spares, then scale.", enRound, enCtx);
+  const badEn = K.scoreFree('Just give me your lowest price, whatever you say, I beg you.', enRound, enCtx);
+  ok(goodEn.total >= 55, '优质英文应答达标（' + goodEn.total + '）');
+  ok(badEn.tone.bad.length > 0 && goodEn.total > badEn.total + 20, '英文跪舔被双语词典捕获且显著低分（' + goodEn.total + ' vs ' + badEn.total + '）');
+} catch (e) { fails.push('英文实战抛错：' + (e && e.stack || e)); }
+
 // —— 经典大单战役（手写 · 绑定真实项目）——
 try {
   ok(Array.isArray(K.CONTENT.signatures) && K.CONTENT.signatures.length >= 2, '经典大单战役 ≥2 个（' + (K.CONTENT.signatures || []).length + '）');

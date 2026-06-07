@@ -101,6 +101,21 @@ window.COACH_CONTENT = (function () {
     arrogant: ['必须买', '只能选我们', '你们不懂', '肯定不行', '爱要不要', '别无选择', '错过别后悔', '没得商量', '我说了算', '你必须'],
     // 情绪失控 / 防御顶撞（抗压扣分）
     defensive: ['凭什么', '你这是', '我告诉你', '欺人太甚', '没法谈', '那算了', '随你便', '说话注意', '不可理喻', '你懂不懂', '我不管', '气死', '别说了', '滚', '废话', '你有完没完'],
+    // 英文增补（被 coach.js 合并进上面各桶，让英文作答也能被评分）
+    en: {
+      good: {
+        quantify: ['save', 'reduce', 'lower', 'cut', '%', 'roi', 'faster', 'weeks', 'downtime', 'uptime', 'on schedule', 'less'],
+        nextStep: ['next step', 'meeting', 'propose', 'schedule', 'technical', 'site visit', 'sample', 'timeline', 'follow up', 'this week', 'call'],
+        evidence: ['reference', 'track record', 'case', 'certified', 'iec', 'as/nzs', 'delivered', 'proven', 'licence'],
+        customerNeed: ['you', 'your', 'understand', 'need', 'for you', 'help you'],
+        expertise: ['e-house', 'prefab', 'modular', 'substation', 'mv', 'gis', 'reliab', 'standard', 'commission', 'voltage'],
+        poise: ['value', 'partner', 'long-term', 'fair', 'win-win', 'confident', 'without compromising'],
+        composure: ['i understand', 'fair question', 'let us', "let's", 'calm', 'objective', 'step by step', "you're right"],
+      },
+      bad: ['lowest price', 'beg', 'whatever', 'cheapest', 'at a loss', 'give me a chance', 'please please'],
+      arrogant: ['must buy', 'no choice', 'take it or leave', 'you must', 'or else'],
+      defensive: ['so what', 'none of your', 'i told you', 'forget it', 'whatever you say'],
+    },
   };
 
   /* ---------------- 成长段位 ---------------- */
@@ -1304,5 +1319,98 @@ window.COACH_CONTENT = (function () {
       coach: '面对竞品放的"质量谣言"，最忌情绪化对骂。冷静、用事实与第三方澄清、用质保降风险。' },
   ];
 
-  return { company, products, tone, levels, stages, signatures, pressure, culture, standards, catTopics, method, cases, overseasCases, reactions, curveballs, pitchLib, tips };
+  /* ---------------- 英文 / 双语实战（外方客户场景，全英文台词 + 英文黄金话术 + 英文要点）----------------
+   * 面向澳洲电网 / 业主、海湾 IPP（ACWA 等）、Maersk 等外方终端客户——这些场景必须用英文谈。
+   * 评分复用同一引擎（rubric 关键词为英文子串，tone 已双语增补）。 */
+  const english = {
+    intro: '外方终端客户（澳洲业主 / 海湾 IPP / 国际 EPC）必须用英文沟通。这一场景全英文：客户用英文发问，你用英文应对，系统按英文要点与双语语气评分，并给英文黄金话术。先把英文实战练顺，才算合格的"国际"销售。',
+    over: { co: 'Australia', cust: 'Sunfield Energy (Owner)', role: 'Owner\'s Project / Electrical Manager', cat: 'Solar Farm', product: 'Modular E-House + Prefab MV Substation', scenario: 'Utility-scale solar farm MV substation (AS/NZS)', pain: 'AS/NZS compliance, tight energization date, local support', persona: 'A pragmatic, standards-driven Australian owner — direct, values HSE/compliance, dislikes overselling, decides on evidence.', status: '在建', approach: 'Lead with delivery speed + AS/NZS + local support; prove with Australian references; pilot to de-risk' },
+    stages: [
+      { key: 'open', name: 'Opening', icon: '🤝', goal: 'Open with value and earn the next meeting (in English).',
+        brief: 'First call with a foreign solar-farm owner. Speak English, be specific, no bragging.',
+        rounds: [{
+          id: 'en-open',
+          ask: '【Owner】"We get pitched by a lot of suppliers. Why should I spend time with a Chinese substation maker?"',
+          hint: ['Lead with value, not company bragging', 'Tie it to their project (solar-farm MV substation)', 'Offer a light, concrete next step'],
+          rubric: [
+            { id: 'value', label: 'Value-led opening', w: 3, kw: ['value', 'faster', 'weeks', 'delivery', 'reliab', 'downtime', 'save', 'help you', 'on schedule'] },
+            { id: 'relevance', label: 'Relevant to their project', w: 2, kw: ['solar', 'substation', 'e-house', 'your project', 'mv', 'farm', 'energiz'] },
+            { id: 'next', label: 'Light next step', w: 2, kw: ['minutes', 'technical', 'meeting', 'call', 'schedule', 'show you', 'fit', 'single-line'] },
+          ],
+          gold: "Fair question — I'll be quick and specific. We build modular E-Houses and prefabricated MV substations that ship factory-tested, so we can cut your substation delivery from months to weeks and keep your solar farm on schedule. I'm not here to pitch specs — could we do a 20-minute technical session around your single-line and timeline to see if we're a fit?",
+          coach: 'Open in English the same way: lead with the value to THEM, tie it to their project, ask for a small next step.' }] },
+      { key: 'discover', name: 'Discovery', icon: '🔍', goal: 'Ask, don\'t pitch — uncover standards, timeline, site, grid.',
+        brief: 'The owner is willing to talk technical. Probe before you propose.',
+        rounds: [{
+          id: 'en-disc',
+          ask: '【Owner】"Alright. We need MV substations for the solar farm. What do you want to know?"',
+          hint: ['Ask open questions', 'Probe standard (AS/NZS), timeline, site conditions, grid connection', 'Listen first, don\'t pitch'],
+          rubric: [
+            { id: 'openq', label: 'Open questions', w: 3, kw: ['?', 'how', 'what', 'when', 'which', 'could you', 'tell me', 'are you'] },
+            { id: 'probe', label: 'Probe key constraints', w: 3, kw: ['standard', 'as/nzs', 'timeline', 'grid', 'connection', 'voltage', 'site', 'commission', 'protection', 'energiz'] },
+            { id: 'listen', label: 'Listen, fit-first', w: 2, kw: ['understand', 'first', 'your', 'before', 'fit'] },
+          ],
+          gold: "Great — let me understand your setup first. What voltage levels and standard are you designing to — AS/NZS plus any utility spec? When do you need energization, and what are the site conditions: heat, salt, bushfire? Any grid-connection or protection constraints I should design around? Once I have this, I can give you a solution that actually fits, not a generic quote.",
+          coach: 'Discovery in English = open questions + listening. "Help me understand…" beats "Let me tell you…".' }] },
+      { key: 'value', name: 'Value', icon: '💡', goal: 'Differentiate on outcomes, prove with Australian references.',
+        brief: 'The owner asks why you, not a local or European supplier.',
+        rounds: [{
+          id: 'en-value',
+          ask: '【Owner】"There are local and European suppliers too. What makes you different?"',
+          hint: ['Differentiate: factory-prefab speed, standards flexibility, total cost', 'Translate features into their benefit', 'Back it with proof (AS/NZS, Australian projects)'],
+          rubric: [
+            { id: 'diff', label: 'Clear differentiation', w: 3, kw: ['prefab', 'factory', 'modular', 'weeks', 'as/nzs', 'standard', 'total cost', 'flexible', 'c5', 'tested'] },
+            { id: 'benefit', label: 'Customer benefit', w: 3, kw: ['save', 'on schedule', 'reduce', 'help you', 'downtime', '%', 'hold your', 'less'] },
+            { id: 'proof', label: 'Proof / references', w: 2, kw: ['reference', 'australia', 'delivered', 'certified', 'case', 'track record', 'site visit'] },
+          ],
+          gold: "Three things that matter for your project. One, factory-prefabricated E-Houses arrive tested and install in days, so we hold your energization date. Two, we design flexibly to AS/NZS and your utility spec, with C5 corrosion and bushfire-rated options. Three, we've delivered similar solar-farm substations in Australia for owners like you — references and a site visit are available. So it's not about being cheapest; it's about on-time, reliable, low-hassle power.",
+          coach: 'Differentiate on outcomes (on-time, reliable, low-hassle), then prove with same-country references.' }] },
+      { key: 'object', name: 'Objection', icon: '🛡️', goal: 'Handle the "Chinese maker / standards / support" objection with poise.',
+        brief: 'The make-or-break trust objection — answer with evidence and a pilot, not defensiveness.',
+        rounds: [{
+          id: 'en-object',
+          ask: '【Owner】"Honestly, can a Chinese maker meet AS/NZS and actually support us if something breaks here?"',
+          hint: ['Acknowledge — it\'s a fair concern', 'Prove standards/certs + local presence (Brisbane office, contractor licences)', 'De-risk: warranty, spares, a pilot first'],
+          rubric: [
+            { id: 'face', label: 'Acknowledge the concern', w: 2, kw: ['fair', 'understand', 'reasonable', 'your concern', 'right to ask', "you're right"] },
+            { id: 'proof', label: 'Standards + local presence', w: 3, kw: ['as/nzs', 'certified', 'iec', 'reference', 'licence', 'brisbane', 'local', 'engineers australia', 'office'] },
+            { id: 'derisk', label: 'De-risk with pilot', w: 3, kw: ['warranty', 'spare', 'support', 'pilot', 'first', 'site', 'commission', 'sla', 'step by step'] },
+          ],
+          gold: "That's a fair concern and you're right to ask. We design and test to AS/NZS, hold Australian state contractor licences and an Engineers-Australia certificate, and we run a Brisbane office for local support — not just a factory far away. To de-risk it, we can start with one substation as a pilot, with warranty, on-site commissioning and a local spares plan, then scale once it proves out. Let's shrink the risk step by step, not ask you to bet everything at once.",
+          coach: 'Cross-border trust: acknowledge, prove with certs + local presence, then de-risk with a pilot. Never get defensive.' }] },
+      { key: 'close', name: 'Close', icon: '✍️', goal: 'Trade for local content / speed; confirm a mutual action plan.',
+        brief: 'The owner is close — wants local content and faster delivery.',
+        rounds: [{
+          id: 'en-close',
+          ask: '【Owner】"Price is okay, but we need more local content and faster delivery. Can you commit?"',
+          hint: ['Don\'t cave for free — trade', 'Offer local assembly/content + an accelerated plan', 'Hold reliability; confirm a mutual action plan'],
+          rubric: [
+            { id: 'trade', label: 'Trade, not give', w: 3, kw: ['if', 'local content', 'assembly', 'in return', 'framework', 'volume', 'next phase', 'lock'] },
+            { id: 'accel', label: 'Accelerated plan', w: 3, kw: ['prefab', 'parallel', 'expedite', 'priority', 'factory', 'weeks', 'timeline', 'pull'] },
+            { id: 'commit', label: 'Confirm action plan', w: 2, kw: ['confirm', 'this week', 'contract', 'plan', 'milestone', 'commit', 'next step', 'annex'] },
+          ],
+          gold: "I want to make this work, so let's trade rather than just give. On local content, we can do local assembly and source locally where it makes sense — I'll commit to a target. In return, let's lock the framework or the next phase so I can prioritize your order in the factory and run foundations in parallel to pull the schedule in. What I won't do is compromise reliability to hit a number. If that works, can we confirm the technical annex this week and set the milestones?",
+          coach: 'Closing in English: trade concessions for value, hold reliability, end with a concrete mutual action plan.' }] },
+    ],
+    pitch: [
+      { stage: 'Opening', lines: [
+        "I'll be quick and specific — we cut substation delivery from months to weeks with factory-tested modular E-Houses.",
+        "Could we do a 20-minute technical session around your single-line and timeline to see if we're a fit?",
+      ] },
+      { stage: 'Value', lines: [
+        "It's not about being cheapest — it's about on-time, reliable, low-hassle power.",
+        "We design flexibly to AS/NZS with C5 corrosion and bushfire-rated options, and we've delivered in Australia — references available.",
+      ] },
+      { stage: 'Objection', lines: [
+        "That's a fair concern and you're right to ask — we test to AS/NZS, hold local contractor licences and run a Brisbane office.",
+        "Let's start with one unit as a pilot — warranty, on-site commissioning, local spares — then scale once it proves out.",
+      ] },
+      { stage: 'Negotiation / Close', lines: [
+        "Let's trade rather than just give: local assembly in return for locking the next phase so I can prioritize and pull the schedule in.",
+        "What I won't do is compromise reliability to hit a number. Can we confirm the technical annex this week?",
+      ] },
+    ],
+  };
+
+  return { company, products, tone, levels, stages, signatures, pressure, culture, standards, catTopics, method, cases, overseasCases, reactions, curveballs, english, pitchLib, tips };
 })();
