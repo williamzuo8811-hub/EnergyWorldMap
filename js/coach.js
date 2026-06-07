@@ -417,6 +417,7 @@
   (C.curveballs || []).forEach(cb => { if (cb.id) { const si = FUNNEL_IDX[cb.stage]; ALL_ROUNDS[cb.id] = { round: Object.assign({}, cb, { curve: true }), stage: (si != null && C.stages[si]) || { key: cb.stage, name: '突发剧情', icon: '⚡', rounds: [] } }; } });
   if (PRESSURE_STAGE) (PRESSURE_STAGE.rounds || []).forEach(r => { if (r.id) ALL_ROUNDS[r.id] = { round: r, stage: PRESSURE_STAGE }; });
   (C.signatures || []).forEach(sig => (sig.stages || []).forEach(st => (st.rounds || []).forEach(r => { if (r.id && !ALL_ROUNDS[r.id]) ALL_ROUNDS[r.id] = { round: r, stage: st }; })));
+  (C.english && C.english.stages || []).forEach(st => (st.rounds || []).forEach(r => { if (r.id) ALL_ROUNDS[r.id] = { round: r, stage: st }; }));
 
   // 6 维能力随开放题作答以指数滑动平均更新（映射七类加分桶）
   function updateSkills(a, step) {
@@ -472,6 +473,33 @@
     state.deal = { opp: opp, ctx: ctx, steps: stepsOf(eng.stages || []), step: 0, results: [], single: false, kind: 'en', meter: newMeter() };
     state.answered = null; state.revealHint = false; state.revealLocal = false;
     prog.dealsRun = (prog.dealsRun || 0) + 1; saveProgress();
+  }
+
+  /* ---------- 保存 / 恢复进行中的剧本（刷新不丢，断点续练）---------- */
+  function dealSnapshot() {
+    const d = state.deal; if (!d || !d.steps || d.step >= d.steps.length) return null;
+    if (!d.steps.every(s => s.round && s.round.id)) return null; // 回合必须可按 id 重建
+    return {
+      kind: d.kind, oppId: d.opp.p.id, sigKey: d.sig ? d.sig.key : null, single: !!d.single,
+      steps: d.steps.map(s => ({ rid: s.round.id, sIdx: s.sIdx, curve: !!s.curve })),
+      step: d.step, results: d.results || [], meter: d.meter || null, recent: state.recent || [], grovel: !!d._grovel,
+    };
+  }
+  function saveDeal() { try { const s = dealSnapshot(); store.set('coach.deal', s ? JSON.stringify(s) : ''); } catch (e) { /* ignore */ } }
+  function clearDeal() { try { store.set('coach.deal', ''); } catch (e) { /* ignore */ } state.savedDeal = null; }
+  function loadSavedDeal() { try { const s = store.get('coach.deal'); state.savedDeal = s ? JSON.parse(s) : null; } catch (e) { state.savedDeal = null; } }
+  function resumeDeal() {
+    const s = state.savedDeal; if (!s) return;
+    const opp = OPP_BY_ID[s.oppId] || OPPS[0];
+    const sig = s.sigKey ? (C.signatures || []).filter(x => x.key === s.sigKey)[0] : null;
+    const over = sig ? sig.over : (s.kind === 'en' ? (C.english && C.english.over) : null);
+    const kw = sig ? sig.kw : null;
+    const steps = (s.steps || []).map(st => { const e = ALL_ROUNDS[st.rid]; return e ? { stage: e.stage, round: e.round, sIdx: st.sIdx, curve: st.curve } : null; }).filter(Boolean);
+    if (!steps.length) { clearDeal(); render(); return; }
+    state.deal = { opp: opp, ctx: buildContext(opp, over, kw), steps: steps, step: Math.min(s.step || 0, steps.length), results: s.results || [], single: !!s.single, kind: s.kind, sig: sig, meter: s.meter || null, _grovel: !!s.grovel };
+    state.recent = s.recent || []; state.answered = null; state.revealHint = false; state.revealLocal = false;
+    state.mode = s.kind === 'exam' ? 'profile' : s.kind === 'en' ? 'en' : s.kind === 'signature' ? 'signature' : s.kind === 'pressure' ? 'pressure' : s.kind === 'drill' ? 'drill' : 'deal';
+    state.savedDeal = null; render();
   }
 
   // 随机黑天鹅：闯关 / 经典战役中途插入一个剧情变量回合（'easy' 难度的新手不插，避免压力）
@@ -680,9 +708,11 @@
         '<div class="opp-sub">🌍 ' + esc(o.p.country || '') + ' · ' + esc(cust) + ' · ' + esc(o.p.status || '') + '</div>' +
         '<div class="opp-go">▶ 接单开练</div></button>';
     }).join('');
-    const onboard = (prog.dealsRun === 0) ? '<div class="onboard">👋 新手上路：① 难度可先切到左侧「选择题（最轻松）」或「自适应」；② 挑一个带 ★ 的商机接单；③ 不会就点「💡看提示 / 🏅看黄金话术」，随时能重来；④ 想要"无提示真考"去「📈 成长档案 · 结业认证考试」。</div>' : '';
+    const onboard = (prog.dealsRun === 0 && !state.savedDeal) ? '<div class="onboard">👋 新手上路：① 难度可先切到左侧「选择题（最轻松）」或「自适应」；② 挑一个带 ★ 的商机接单；③ 不会就点「💡看提示 / 🏅看黄金话术」，随时能重来；④ 想要"无提示真考"去「📈 成长档案 · 结业认证考试」。</div>' : '';
+    const sd = state.savedDeal;
+    const resume = sd ? '<div class="onboard resume"><b>▶ 上次还有未完成的对练</b> · ' + esc((OPP_BY_ID[sd.oppId] && OPP_BY_ID[sd.oppId].p.name) || '') + ' · 进行到第 ' + ((sd.step || 0) + 1) + '/' + (sd.steps ? sd.steps.length : '?') + ' 关 <button class="btn-primary" data-act="resume">继续对练</button><button class="btn-ghost" data-act="dropsave">放弃存档</button></div>' : '';
     setHTML('deck',
-      onboard +
+      resume + onboard +
       '<div class="deck-head"><h2>🎯 选择商机 · 从零做到成交</h2>' +
       '<p class="deck-tip">挑一个真实项目接单，走完「情报→破冰→需求→价值→异议→谈判→促成→交付」八关。带 ★ 的是 54 家出海大客户的项目，画像最完整、最适合上手。</p></div>' +
       '<div class="opp-bar"><input id="opp-search" class="opp-search" type="text" placeholder="🔍 搜索项目 / 国家 / 业主…" value="' + esc(state.oppQuery) + '">' +
@@ -758,6 +788,7 @@
     const curveBanner = (step.round && step.round.curve) ? '<div class="curve-banner">⚡ 突发剧情 · ' + esc(step.round.tag || '') + '</div>' : '';
     const meterHTML = d.meter ? meterBar(d.meter) : '';
     setHTML('deck', curveBanner + head + stepHTML + meterHTML + brief + briefLine + localBox(ctx) + ask + '<div class="answer-zone">' + inputHTML + '</div>');
+    saveDeal();
   }
 
   function starStr(n) { return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n); }
@@ -817,6 +848,7 @@
   }
 
   function renderSummary() {
+    clearDeal();
     const d = state.deal, ctx = d.ctx;
     const res = d.results, n = res.length || 1;
     const avg = Math.round(res.reduce((s, r) => s + r.total, 0) / n);
@@ -987,6 +1019,7 @@
 
   /* ---------- 结业认证考试结果 ---------- */
   function renderExamResult() {
+    clearDeal();
     const d = state.deal, res = d.results, n = res.length || 1;
     const avg = Math.round(res.reduce((s, r) => s + r.total, 0) / n);
     let lvl, cls;
@@ -1111,7 +1144,9 @@
     else if (act === 'reveal') { doReveal(); }
     else if (act === 'next') { advance(); }
     else if (act === 'retry') { state.answered = null; state.revealHint = false; render(); }
-    else if (act === 'abandon' || act === 'newdeal') { state.deal = null; state.answered = null; render(); }
+    else if (act === 'abandon' || act === 'newdeal') { clearDeal(); state.deal = null; state.answered = null; render(); }
+    else if (act === 'resume') { resumeDeal(); }
+    else if (act === 'dropsave') { clearDeal(); render(); }
     else if (act === 'replay') {
       const d = state.deal;
       if (d.kind === 'signature') startSignature(d.sig);
@@ -1122,7 +1157,7 @@
     else if (act === 'copy') { doCopy(t.getAttribute('data-txt')); }
     else if (act === 'wipe') { if (confirmSafe('确定清空全部成长档案与进度？此操作不可恢复。')) { prog = BLANK_PROG(); saveProgress(); render(); } }
     else if (act === 'exam-start') { startExam(); state.mode = 'profile'; render(); }
-    else if (act === 'exam-exit') { state.deal = null; state.answered = null; render(); }
+    else if (act === 'exam-exit') { clearDeal(); state.deal = null; state.answered = null; render(); }
     else if (act === 'mistake') { startMistake(t.getAttribute('data-id')); state.mode = 'drill'; render(); }
     else if (act === 'ai-save') { doAiSave(); }
     else if (act === 'ai-send') { doAiSend(); }
@@ -1201,6 +1236,7 @@
 
   function init() {
     bindStatic();
+    loadSavedDeal();
     render();
     // 首屏加载态淡出
     const ld = $('coach-loader'); if (ld && ld.classList) { try { setTimeout(() => ld.classList.add('gone'), 100); } catch (e) { ld.classList.add('gone'); } }
@@ -1217,7 +1253,7 @@
     useMC: useMC, doSubmit: doSubmit, doChoose: doChoose, advance: advance, PRESSURE_STAGE: PRESSURE_STAGE,
     maybeInjectCurveball: maybeInjectCurveball, updateMeter: updateMeter, reactionLine: reactionLine,
     updateSkills: updateSkills, startExam: startExam, startMistake: startMistake, ALL_ROUNDS: ALL_ROUNDS, prog: function () { return prog; },
-    startEnglish: startEnglish,
+    startEnglish: startEnglish, dealSnapshot: dealSnapshot, saveDeal: saveDeal, loadSavedDeal: loadSavedDeal, resumeDeal: resumeDeal, clearDeal: clearDeal,
   };
 
   if (typeof document !== 'undefined' && document.addEventListener) {
