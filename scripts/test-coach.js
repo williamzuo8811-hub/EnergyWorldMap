@@ -211,6 +211,28 @@ try {
   ok(K.state.deal && K.state.deal.steps.length === 1 && K.state.deal.kind === 'drill', '错题可单题重练');
 } catch (e) { fails.push('成长闭环抛错：' + (e && e.stack || e)); }
 
+// —— 保存 / 恢复进行中的剧本 ——
+try {
+  const opp = K.OPPS.find(o => o.meta) || K.OPPS[0];
+  K.startDeal(opp);
+  // 作答两步，制造进度
+  for (let i = 0; i < 2 && K.state.deal.step < K.state.deal.steps.length; i++) {
+    const st = K.state.deal.steps[K.state.deal.step];
+    if (K.useMC(st)) K.doChoose(0); else { doc.getElementById('free-input').value = '我理解贵司关注，我方预制舱交付快、可靠性高、可降低停产损失，建议本周技术交流。'; K.doSubmit(); }
+    K.advance();
+  }
+  const snap = K.dealSnapshot();
+  ok(snap && snap.kind === 'deal' && snap.step >= 2 && snap.steps.length >= 8, 'dealSnapshot 序列化进度（step=' + (snap && snap.step) + '）');
+  K.saveDeal();
+  const stepWas = K.state.deal.step;
+  K.state.deal = null; K.state.savedDeal = null;
+  K.loadSavedDeal();
+  ok(K.state.savedDeal && K.state.savedDeal.step === stepWas, 'loadSavedDeal 读回存档');
+  K.resumeDeal();
+  ok(K.state.deal && K.state.deal.kind === 'deal' && K.state.deal.step === stepWas && K.state.deal.steps.length >= 8, 'resumeDeal 断点续练（step=' + (K.state.deal && K.state.deal.step) + '）');
+  K.clearDeal(); K.state.deal = null;
+} catch (e) { fails.push('保存/恢复剧本抛错：' + (e && e.stack || e)); }
+
 // —— 成就徽章 + 连续打卡（驱动一整单后应解锁「首单告捷」）——
 try {
   const p0 = K.prog();
