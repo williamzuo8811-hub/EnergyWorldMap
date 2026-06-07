@@ -338,12 +338,15 @@
   /* ============================================================
    * 进度 / 成长档案（localStorage）
    * ============================================================ */
+  const DEF_SKILLS = { expertise: 40, customer: 40, value: 40, poise: 40, drive: 40, resilience: 40 };
   function loadProgress() {
     let d = {};
     try { d = JSON.parse(store.get('coach.v1') || '{}') || {}; } catch (e) { d = {}; }
     return {
       xp: d.xp || 0, dealsClosed: d.dealsClosed || 0, dealsRun: d.dealsRun || 0,
       stageBest: d.stageBest || {}, history: d.history || [],
+      skills: Object.assign({}, DEF_SKILLS, d.skills || {}),
+      mistakes: d.mistakes || [], cert: d.cert || null, diagnostic: d.diagnostic || null,
     };
   }
   function saveProgress() { try { store.set('coach.v1', JSON.stringify(prog)); } catch (e) { /* ignore */ } }
@@ -394,6 +397,58 @@
 
   const PRESSURE_STAGE = (C.pressure && C.pressure.stage) || null;
   const newMeter = () => ({ trust: 50, price: 55, momentum: 50 });
+
+  // 全部回合索引（错题本重练用）：漏斗 + 黑天鹅 + 抗压 + 经典战役
+  const ALL_ROUNDS = {};
+  (C.stages || []).forEach(st => (st.rounds || []).forEach(r => { if (r.id) ALL_ROUNDS[r.id] = { round: r, stage: st }; }));
+  (C.curveballs || []).forEach(cb => { if (cb.id) { const si = FUNNEL_IDX[cb.stage]; ALL_ROUNDS[cb.id] = { round: Object.assign({}, cb, { curve: true }), stage: (si != null && C.stages[si]) || { key: cb.stage, name: '突发剧情', icon: '⚡', rounds: [] } }; } });
+  if (PRESSURE_STAGE) (PRESSURE_STAGE.rounds || []).forEach(r => { if (r.id) ALL_ROUNDS[r.id] = { round: r, stage: PRESSURE_STAGE }; });
+  (C.signatures || []).forEach(sig => (sig.stages || []).forEach(st => (st.rounds || []).forEach(r => { if (r.id && !ALL_ROUNDS[r.id]) ALL_ROUNDS[r.id] = { round: r, stage: st }; })));
+
+  // 6 维能力随开放题作答以指数滑动平均更新（映射七类加分桶）
+  function updateSkills(a, step) {
+    if (!a || a.mode !== 'free') return;
+    const gh = (a.tone && a.tone.goodHit) || {}, sk = prog.skills;
+    const sig = hit => clamp((hit ? a.total + 8 : a.total - 18), 0, 100);
+    const upd = (k, hit) => { sk[k] = Math.round(sk[k] * 0.8 + sig(hit) * 0.2); };
+    upd('expertise', gh.expertise);
+    upd('customer', gh.customerNeed);
+    upd('value', gh.quantify || gh.evidence);
+    upd('poise', gh.poise);
+    upd('drive', gh.nextStep);
+    upd('resilience', (step.stage.key === 'pressure' || (step.round && step.round.curve)) ? (gh.composure || a.total >= 70) : gh.composure);
+  }
+
+  // 6 维能力雷达 SVG
+  const RADAR_DIMS = [['专业', 'expertise'], ['客户导向', 'customer'], ['价值表达', 'value'], ['不卑不亢', 'poise'], ['推进力', 'drive'], ['抗压', 'resilience']];
+  function radarSVG(sk) {
+    const cx = 110, cy = 102, R = 70, N = 6;
+    const pt = (i, r) => { const a = -Math.PI / 2 + i * 2 * Math.PI / N; return [Math.round(cx + Math.cos(a) * r), Math.round(cy + Math.sin(a) * r)]; };
+    let grid = '';
+    [0.25, 0.5, 0.75, 1].forEach(f => { grid += '<polygon points="' + RADAR_DIMS.map((_, i) => pt(i, R * f).join(',')).join(' ') + '" fill="none" stroke="rgba(120,160,220,0.16)"/>'; });
+    let axes = ''; RADAR_DIMS.forEach((d, i) => { const p = pt(i, R); axes += '<line x1="' + cx + '" y1="' + cy + '" x2="' + p[0] + '" y2="' + p[1] + '" stroke="rgba(120,160,220,0.12)"/>'; });
+    const poly = RADAR_DIMS.map((d, i) => pt(i, R * clamp((sk[d[1]] || 0) / 100, 0.05, 1)).join(',')).join(' ');
+    let labels = ''; RADAR_DIMS.forEach((d, i) => { const p = pt(i, R + 17); labels += '<text x="' + p[0] + '" y="' + p[1] + '" font-size="9.5" fill="#93a4c4" text-anchor="middle" dominant-baseline="middle">' + d[0] + ' ' + (sk[d[1]] || 0) + '</text>'; });
+    return '<svg viewBox="0 0 220 204" class="radar">' + grid + axes + '<polygon points="' + poly + '" fill="rgba(33,199,255,0.25)" stroke="var(--accent)" stroke-width="2"/>' + labels + '</svg>';
+  }
+
+  // 错题本：低分回合按 id 重练
+  function startMistake(roundId) {
+    const e = ALL_ROUNDS[roundId]; if (!e) return;
+    startDeal(randomOpp(true), Object.assign({}, e.stage, { rounds: [e.round] }));
+  }
+  // 结业认证考试：每个漏斗阶段取一个代表回合（优先开放题）
+  function buildExamSteps() {
+    const steps = [];
+    C.stages.forEach((st, si) => { const r = (st.rounds || []).filter(x => x.rubric)[0] || (st.rounds || [])[0]; if (r) steps.push({ stage: st, round: r, sIdx: si }); });
+    return steps;
+  }
+  function startExam() {
+    const opp = randomOpp(true), ctx = buildContext(opp);
+    state.deal = { opp: opp, ctx: ctx, steps: buildExamSteps(), step: 0, results: [], single: false, kind: 'exam', meter: null };
+    state.answered = null; state.revealHint = false; state.revealLocal = false;
+    prog.dealsRun = (prog.dealsRun || 0) + 1; saveProgress();
+  }
 
   // 随机黑天鹅：闯关 / 经典战役中途插入一个剧情变量回合（'easy' 难度的新手不插，避免压力）
   function maybeInjectCurveball(steps, force) {
@@ -620,7 +675,8 @@
   function renderStep() {
     const d = state.deal, ctx = d.ctx, step = d.steps[d.step], st = step.stage, r = step.round;
     const mc = useMC(step);
-    const backLabel = d.kind === 'pressure' ? '‹ 退出抗压' : d.kind === 'drill' ? '‹ 换一关' : d.kind === 'signature' ? '‹ 退出战役' : '‹ 换商机';
+    const examMode = d.kind === 'exam';
+    const backLabel = examMode ? '‹ 退出考试' : d.kind === 'pressure' ? '‹ 退出抗压' : d.kind === 'drill' ? '‹ 换一关' : d.kind === 'signature' ? '‹ 退出战役' : '‹ 换商机';
     const ofLabel = inFunnel(st)
       ? (d.single ? ('第 ' + (step.sIdx + 1) + '/' + C.stages.length + ' 关 · 回合 ' + (d.step + 1) + '/' + d.steps.length)
         : ('第 ' + (step.sIdx + 1) + '/' + C.stages.length + ' 关'))
@@ -642,14 +698,14 @@
       inputHTML = '<div class="choices">' + r.choices.map((ch, i) =>
         '<button class="choice" data-act="choose" data-i="' + i + '">' + esc(tpl(ch.t, ctx)) + '</button>').join('') + '</div>';
     } else {
-      const hint = state.revealHint && r.hint ? '<div class="hintbox"><b>💡 要点提示</b><ul>' + r.hint.map(h => '<li>' + esc(tpl(h, ctx)) + '</li>').join('') + '</ul></div>' : '';
+      const hint = (!examMode && state.revealHint && r.hint) ? '<div class="hintbox"><b>💡 要点提示</b><ul>' + r.hint.map(h => '<li>' + esc(tpl(h, ctx)) + '</li>').join('') + '</ul></div>' : '';
       inputHTML =
         hint +
-        '<textarea id="free-input" class="free-input" rows="4" placeholder="在这里写下你的话术应对…（练习模式：随时可看提示、看黄金话术、重来）"></textarea>' +
+        '<textarea id="free-input" class="free-input" rows="4" placeholder="' + (examMode ? '认证考试中：凭实力作答，无提示无范例…' : '在这里写下你的话术应对…（练习模式：随时可看提示、看黄金话术、重来）') + '"></textarea>' +
         '<div class="act-row">' +
         '<button class="btn-primary" data-act="submit">提交话术</button>' +
-        '<button class="btn-ghost" data-act="hint">💡 ' + (state.revealHint ? '收起提示' : '看提示') + '</button>' +
-        '<button class="btn-ghost" data-act="reveal">🏅 看黄金话术（不计分）</button>' +
+        (examMode ? '' : '<button class="btn-ghost" data-act="hint">💡 ' + (state.revealHint ? '收起提示' : '看提示') + '</button>' +
+          '<button class="btn-ghost" data-act="reveal">🏅 看黄金话术（不计分）</button>') +
         '</div>';
     }
     const curveBanner = (step.round && step.round.curve) ? '<div class="curve-banner">⚡ 突发剧情 · ' + esc(step.round.tag || '') + '</div>' : '';
@@ -702,6 +758,12 @@
     if (!prog.stageBest[key] || a.total > prog.stageBest[key]) prog.stageBest[key] = a.total;
     state.deal.results.push({ stage: key, total: a.total, stars: a.stars });
     updateMeter(a, step);
+    updateSkills(a, step);
+    const rid = step.round && step.round.id;
+    if (rid) {
+      if (a.total < 55) { prog.mistakes = (prog.mistakes || []).filter(x => x.roundId !== rid); prog.mistakes.unshift({ roundId: rid, stage: key, total: a.total, at: Date.now() }); prog.mistakes = prog.mistakes.slice(0, 40); }
+      else if (a.total >= 70) { prog.mistakes = (prog.mistakes || []).filter(x => x.roundId !== rid); }
+    }
     saveProgress();
   }
 
@@ -846,8 +908,37 @@
       '<div class="oc-wrap">' + ocases + '</div>');
   }
 
+  /* ---------- 结业认证考试结果 ---------- */
+  function renderExamResult() {
+    const d = state.deal, res = d.results, n = res.length || 1;
+    const avg = Math.round(res.reduce((s, r) => s + r.total, 0) / n);
+    let lvl, cls;
+    if (avg >= 85) { lvl = '🥇 金牌国际销售认证'; cls = 'win'; }
+    else if (avg >= 70) { lvl = '💎 资深销售认证'; cls = 'win'; }
+    else if (avg >= 55) { lvl = '✅ 合格销售认证'; cls = 'ok'; }
+    else { lvl = '❌ 暂未通过'; cls = 'lose'; }
+    const passed = avg >= 55;
+    if (!prog.diagnostic) prog.diagnostic = { score: avg, at: Date.now() };
+    if (passed && (!prog.cert || avg > prog.cert.score)) prog.cert = { level: lvl, score: avg, at: Date.now() };
+    awardXP(Math.round(avg / 4) + (avg >= 85 ? 30 : 0));
+    saveProgress();
+    const bars = res.map(r => { const st = C.stages.filter(s => s.key === r.stage)[0] || { name: r.stage, icon: '•' }; return '<div class="sumbar"><span>' + (st.icon || '') + ' ' + esc(st.name) + '</span><i style="width:' + r.total + '%"></i><b>' + r.total + '</b></div>'; }).join('');
+    const diff = prog.diagnostic ? (avg - prog.diagnostic.score) : 0;
+    setHTML('deck',
+      '<div class="summary ' + cls + '">' +
+      '<div class="sum-outcome">' + lvl + '</div>' +
+      '<div class="sum-deal">结业认证考试 · 8 关综合 · 得分 ' + avg + ' / 100</div>' +
+      (prog.diagnostic ? '<div class="sum-avg">入营诊断 ' + prog.diagnostic.score + ' → 本次 ' + avg + '（' + (diff >= 0 ? '+' : '') + diff + '）</div>' : '') +
+      '<div class="radar-wrap">' + radarSVG(prog.skills) + '</div>' +
+      '<div class="sum-bars">' + bars + '</div>' +
+      '<div class="sum-msg">' + esc(passed ? '恭喜通过！把弱项关卡与错题再刷几轮，向更高认证冲刺。' : '差一点——去单项特训 / 错题本补强后再来考，进步很快。') + '</div>' +
+      '<div class="act-row"><button class="btn-primary" data-act="exam-start">↺ 再考一次</button><button class="btn-ghost" data-act="exam-exit">← 回成长档案</button></div></div>');
+  }
+
   /* ---------- 成长档案 ---------- */
   function renderProfile() {
+    const d = state.deal;
+    if (d && d.kind === 'exam') { if (d.step >= d.steps.length) return renderExamResult(); return renderStep(); }
     const lv = levelOf(prog.xp);
     const ladder = C.levels.map((l, i) =>
       '<div class="lad ' + (i === lv.idx ? 'cur' : (prog.xp >= l.min ? 'done' : '')) + '">' +
@@ -859,6 +950,13 @@
     const hist = (prog.history || []).slice(0, 12).map(h =>
       '<div class="hrow"><span>' + esc(h.name) + '</span><b>' + h.avg + '</b><em>' + esc(h.outcome.replace(/^[^\s]+\s/, '')) + '</em></div>').join('') || '<div class="empty">还没有完整成交记录，去「闯关成交」打第一单吧。</div>';
     const tips = (C.tips || []).map(t => '<li>' + esc(t) + '</li>').join('');
+    const certHTML = prog.cert
+      ? '<div class="cert-badge">' + esc(prog.cert.level) + ' · ' + prog.cert.score + ' 分</div>'
+      : '<div class="cert-none">尚未认证 —— 完成「结业认证考试」获取段位认证</div>';
+    const mistakes = (prog.mistakes || []).slice(0, 12).map(mk => {
+      const e = ALL_ROUNDS[mk.roundId]; const nm = e ? (e.stage.icon + ' ' + e.stage.name) : mk.stage;
+      return '<div class="mrow"><span>' + esc(nm) + '</span><b>' + mk.total + ' 分</b><button class="btn-copy" data-act="mistake" data-id="' + esc(mk.roundId) + '">重练</button></div>';
+    }).join('') || '<div class="empty">还没有错题——保持！低于 55 分的关卡会自动进错题本，≥70 分自动清除。</div>';
     setHTML('deck',
       '<div class="deck-head"><h2>📈 成长档案</h2></div>' +
       '<div class="profile-top">' +
@@ -866,6 +964,11 @@
       '<div class="pcard"><div class="big">' + (prog.dealsClosed || 0) + '</div><b>成功成交</b><span>共接单 ' + (prog.dealsRun || 0) + '</span></div>' +
       '<div class="pcard"><div class="big">' + lv.pct + '%</div><b>本段进度</b><span>' + (lv.next ? '距「' + esc(lv.next.name) + '」' + lv.toNext + ' XP' : '已封顶') + '</span></div>' +
       '</div>' +
+      '<div class="psec radar-sec"><div class="radar-wrap">' + radarSVG(prog.skills) + '</div>' +
+      '<div class="cert-box"><h3>结业认证</h3>' + certHTML +
+      '<button class="btn-primary" data-act="exam-start">🎓 结业认证考试（8 关 · 无提示）</button>' +
+      '<div class="cert-note">' + (prog.diagnostic ? '入营诊断基线：' + prog.diagnostic.score + ' 分' : '首次考试将记录为"入营诊断"基线，之后可看成长幅度。') + '</div></div></div>' +
+      '<div class="psec"><h3>错题本 · 针对性复盘</h3><div class="mistakes">' + mistakes + '</div></div>' +
       '<div class="psec"><h3>各关最佳成绩</h3><div class="pstages">' + stageRows + '</div></div>' +
       '<div class="psec"><h3>成长阶梯</h3><div class="ladder">' + ladder + '</div></div>' +
       '<div class="psec"><h3>近期成交</h3><div class="hist">' + hist + '</div></div>' +
@@ -936,7 +1039,10 @@
       render();
     }
     else if (act === 'copy') { doCopy(t.getAttribute('data-txt')); }
-    else if (act === 'wipe') { if (confirmSafe('确定清空全部成长档案与进度？此操作不可恢复。')) { prog = { xp: 0, dealsClosed: 0, dealsRun: 0, stageBest: {}, history: [] }; saveProgress(); render(); } }
+    else if (act === 'wipe') { if (confirmSafe('确定清空全部成长档案与进度？此操作不可恢复。')) { prog = { xp: 0, dealsClosed: 0, dealsRun: 0, stageBest: {}, history: [], skills: Object.assign({}, DEF_SKILLS), mistakes: [], cert: null, diagnostic: null }; saveProgress(); render(); } }
+    else if (act === 'exam-start') { startExam(); state.mode = 'profile'; render(); }
+    else if (act === 'exam-exit') { state.deal = null; state.answered = null; render(); }
+    else if (act === 'mistake') { startMistake(t.getAttribute('data-id')); state.mode = 'drill'; render(); }
     else if (act === 'ai-save') { doAiSave(); }
     else if (act === 'ai-send') { doAiSend(); }
     else if (act === 'ai-review') { doAiReview(); }
@@ -1029,6 +1135,7 @@
     stepsOf: stepsOf, startDeal: startDeal, startSignature: startSignature, randomOpp: randomOpp, render: render,
     useMC: useMC, doSubmit: doSubmit, doChoose: doChoose, advance: advance, PRESSURE_STAGE: PRESSURE_STAGE,
     maybeInjectCurveball: maybeInjectCurveball, updateMeter: updateMeter, reactionLine: reactionLine,
+    updateSkills: updateSkills, startExam: startExam, startMistake: startMistake, ALL_ROUNDS: ALL_ROUNDS, prog: function () { return prog; },
   };
 
   if (typeof document !== 'undefined' && document.addEventListener) {

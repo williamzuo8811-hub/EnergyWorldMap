@@ -184,6 +184,33 @@ try {
   ok(Array.isArray(K.CONTENT.curveballs) && K.CONTENT.curveballs.length >= 5, '黑天鹅库 ≥5（' + (K.CONTENT.curveballs || []).length + '）');
 } catch (e) { fails.push('沉浸式谈判引擎抛错：' + (e && e.stack || e)); }
 
+// —— 可衡量成长闭环：能力雷达 / 错题本 / 结业认证 ——
+try {
+  const prog = K.prog();
+  ok(prog.skills && typeof prog.skills.expertise === 'number', '6 维能力档存在');
+  const before = prog.skills.value;
+  K.updateSkills({ mode: 'free', total: 95, tone: { goodHit: { quantify: true, evidence: true } } }, { stage: { key: 'value' }, round: {} });
+  ok(prog.skills.value > before, '高分量化作答提升「价值表达」能力');
+  // 结业认证考试
+  K.startExam();
+  ok(K.state.deal.kind === 'exam' && K.state.deal.steps.length >= 8, '认证考试展开 8 关（' + K.state.deal.steps.length + '）');
+  K.state.mode = 'profile'; K.render(); // 渲染考试首关
+  // 驱动整场考试到出证
+  let guard = 0;
+  while (K.state.deal && K.state.deal.kind === 'exam' && K.state.deal.step < K.state.deal.steps.length && guard++ < 20) {
+    const st = K.state.deal.steps[K.state.deal.step];
+    doc.getElementById('free-input').value = '我理解您的关注，我方预制舱交付快、可靠性高，可降低停产损失，建议本周技术交流并出方案，业绩与认证可查。';
+    K.doSubmit(); K.advance();
+  }
+  K.render(); // 出证结果
+  ok(K.prog().diagnostic && typeof K.prog().diagnostic.score === 'number', '首考记录为入营诊断基线');
+  K.state.mode = 'deal'; K.state.deal = null;
+  // 错题本：低分回合可重练
+  const someId = Object.keys(K.ALL_ROUNDS)[0];
+  K.startMistake(someId);
+  ok(K.state.deal && K.state.deal.steps.length === 1 && K.state.deal.kind === 'drill', '错题可单题重练');
+} catch (e) { fails.push('成长闭环抛错：' + (e && e.stack || e)); }
+
 // —— 经典大单战役（手写 · 绑定真实项目）——
 try {
   ok(Array.isArray(K.CONTENT.signatures) && K.CONTENT.signatures.length >= 2, '经典大单战役 ≥2 个（' + (K.CONTENT.signatures || []).length + '）');

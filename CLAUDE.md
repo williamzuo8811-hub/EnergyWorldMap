@@ -147,7 +147,10 @@ and `js/coach.js`. `coach.js` rebuilds `PROJECTS` with `util.buildProjects` (no 
   `scoreChoice` = preset value; both map to 1–5★ + XP. An optional **AI 复核** button (when AI is configured) returns a
   natural "做得好 / 该改进 / 改写示范" critique on top of the deterministic score.
   Progress (XP / level / deals / per-stage best incl. 抗压指数 / history) persists in `localStorage` (memory fallback under
-  Node/private mode). A deal carries a `kind` (`deal`/`signature`/`drill`/`pressure`) so each mode renders only its own active
+  Node/private mode). A **measurable growth loop** sits on top: a 6-axis **能力雷达** (`prog.skills`, EWMA-updated from each free
+  answer's tone buckets via `updateSkills`), an **错题本** (rounds scored <55 auto-enrol, ≥70 auto-clear; `startMistake` re-serves
+  any round by id from the `ALL_ROUNDS` index), and a **结业认证考试** (`startExam` = one round per stage, no hints/golden, runs under
+  the 成长档案 tab) whose first run is recorded as the **入营诊断** baseline and whose result issues a cert level + radar snapshot. A deal carries a `kind` (`deal`/`signature`/`drill`/`pressure`) so each mode renders only its own active
   deal; `startSignature(sig)` runs a marquee deal and `PRESSURE_STAGE` is a synthetic stage built from `COACH_CONTENT.pressure`.
   Full deals (闯关 / 经典战役) carry a **trust / 守价 / 推进 meter** that accumulates from each answer's score + tone (`updateMeter`)
   and blends 60/40 with the rubric average into the final **成交指数** (so the whole trajectory, not a single round, decides
