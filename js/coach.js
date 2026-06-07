@@ -379,6 +379,7 @@
     revealHint: false,
     revealLocal: false,    // 对练步骤里「当地文化·标准·谈资」折叠盒是否展开
     answered: null,        // 当前回合作答结果（评分对象），null=未答
+    recent: [],            // 最近几关得分（自适应难度用）
     oppQuery: '',
     localCountry: '', localCat: '',  // 「当地·谈资」速查页的选择
   };
@@ -393,12 +394,15 @@
     stages.forEach(st => { const si = FUNNEL_IDX[st.key]; (st.rounds || []).forEach(r => steps.push({ stage: st, round: r, sIdx: si == null ? 0 : si })); });
     return steps;
   }
-  const DIFF_LABEL = { easy: '选择题（最轻松）', mix: '混合（推荐）', free: '全开放（高阶）' };
+  const DIFF_LABEL = { easy: '选择题（最轻松）', mix: '混合（推荐）', free: '全开放（高阶）', adapt: '自适应（随表现调整）' };
+  const nextDiff = d => d === 'mix' ? 'easy' : d === 'easy' ? 'free' : d === 'free' ? 'adapt' : 'mix';
+  function recentAvg() { const r = state.recent || []; return r.length ? r.reduce((a, b) => a + b, 0) / r.length : 60; }
 
   function useMC(step) {
     if (!step.round.choices) return false;
     if (state.diff === 'easy') return true;
     if (state.diff === 'free') return false;
+    if (state.diff === 'adapt') return recentAvg() < 58; // 自适应：表现弱给选择题，表现好转开放
     return step.sIdx < 4; // mix：前 4 阶段用选择题打基础，之后转开放
   }
 
@@ -674,7 +678,9 @@
         '<div class="opp-sub">🌍 ' + esc(o.p.country || '') + ' · ' + esc(cust) + ' · ' + esc(o.p.status || '') + '</div>' +
         '<div class="opp-go">▶ 接单开练</div></button>';
     }).join('');
+    const onboard = (prog.dealsRun === 0) ? '<div class="onboard">👋 新手上路：① 难度可先切到左侧「选择题（最轻松）」或「自适应」；② 挑一个带 ★ 的商机接单；③ 不会就点「💡看提示 / 🏅看黄金话术」，随时能重来；④ 想要"无提示真考"去「📈 成长档案 · 结业认证考试」。</div>' : '';
     setHTML('deck',
+      onboard +
       '<div class="deck-head"><h2>🎯 选择商机 · 从零做到成交</h2>' +
       '<p class="deck-tip">挑一个真实项目接单，走完「情报→破冰→需求→价值→异议→谈判→促成→交付」八关。带 ★ 的是 54 家出海大客户的项目，画像最完整、最适合上手。</p></div>' +
       '<div class="opp-bar"><input id="opp-search" class="opp-search" type="text" placeholder="🔍 搜索项目 / 国家 / 业主…" value="' + esc(state.oppQuery) + '">' +
@@ -734,9 +740,12 @@
       inputHTML = '<div class="choices">' + r.choices.map((ch, i) =>
         '<button class="choice" data-act="choose" data-i="' + i + '">' + esc(tpl(ch.t, ctx)) + '</button>').join('') + '</div>';
     } else {
-      const hint = (!examMode && state.revealHint && r.hint) ? '<div class="hintbox"><b>💡 要点提示</b><ul>' + r.hint.map(h => '<li>' + esc(tpl(h, ctx)) + '</li>').join('') + '</ul></div>' : '';
+      const struggling = !examMode && state.diff === 'adapt' && recentAvg() < 52;
+      const showHint = !examMode && (state.revealHint || struggling);
+      const hint = (showHint && r.hint) ? '<div class="hintbox"><b>💡 要点提示' + (struggling ? '（自适应已为你展开）' : '') + '</b><ul>' + r.hint.map(h => '<li>' + esc(tpl(h, ctx)) + '</li>').join('') + '</ul></div>' : '';
+      const scaffold = (struggling && r.gold) ? '<div class="scaffold">🪜 起头参考：「' + esc(tpl(r.gold, ctx).slice(0, 16)) + '…」（用自己的话续完）</div>' : '';
       inputHTML =
-        hint +
+        hint + scaffold +
         '<textarea id="free-input" class="free-input" rows="4" placeholder="' + (examMode ? '认证考试中：凭实力作答，无提示无范例…' : '在这里写下你的话术应对…（练习模式：随时可看提示、看黄金话术、重来）') + '"></textarea>' +
         '<div class="act-row">' +
         '<button class="btn-primary" data-act="submit">提交话术</button>' +
@@ -795,6 +804,7 @@
     state.deal.results.push({ stage: key, total: a.total, stars: a.stars });
     updateMeter(a, step);
     updateSkills(a, step);
+    state.recent = (state.recent || []).concat(a.total).slice(-4);
     const rid = step.round && step.round.id;
     if (rid) {
       if (a.total < 55) { prog.mistakes = (prog.mistakes || []).filter(x => x.roundId !== rid); prog.mistakes.unshift({ roundId: rid, stage: key, total: a.total, at: Date.now() }); prog.mistakes = prog.mistakes.slice(0, 40); }
@@ -1051,7 +1061,7 @@
     if (!t) return;
     const act = t.getAttribute('data-act');
     if (act === 'mode') { state.mode = t.getAttribute('data-mode'); state.answered = null; render(); }
-    else if (act === 'diff') { state.diff = state.diff === 'mix' ? 'easy' : state.diff === 'easy' ? 'free' : 'mix'; if (state.deal && !state.answered) render(); else syncControls(); }
+    else if (act === 'diff') { state.diff = nextDiff(state.diff); if (state.deal && !state.answered) render(); else syncControls(); }
     else if (act === 'ai') { state.ai = !state.ai; syncControls(); }
     else if (act === 'pick') { const o = OPP_BY_ID[+t.getAttribute('data-id')]; if (o) { startDeal(o); render(); } }
     else if (act === 'rand') { const o = randomOpp(true); if (o) { startDeal(o); render(); } }
@@ -1149,7 +1159,7 @@
   function bindStatic() {
     if (typeof document === 'undefined' || !document.addEventListener) return;
     document.addEventListener('click', onClick);
-    const di = $('diff-cycle'); if (di && di.addEventListener) di.addEventListener('click', () => { state.diff = state.diff === 'mix' ? 'easy' : state.diff === 'easy' ? 'free' : 'mix'; if (state.deal && !state.answered) render(); else syncControls(); });
+    const di = $('diff-cycle'); if (di && di.addEventListener) di.addEventListener('click', () => { state.diff = nextDiff(state.diff); if (state.deal && !state.answered) render(); else syncControls(); });
     // AI 配置回填
     const cfg = aiConfig();
     ['ai-base', 'ai-key', 'ai-model'].forEach((id, k) => { const e = $(id); if (e) e.value = [cfg.base, cfg.key, cfg.model][k]; });

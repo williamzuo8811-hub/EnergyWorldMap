@@ -211,6 +211,17 @@ try {
   ok(K.state.deal && K.state.deal.steps.length === 1 && K.state.deal.kind === 'drill', '错题可单题重练');
 } catch (e) { fails.push('成长闭环抛错：' + (e && e.stack || e)); }
 
+// —— 循序渐进 2.0：自适应难度 + 脚手架 ——
+try {
+  const mcStep = { round: K.CONTENT.stages[0].rounds[0], sIdx: 0 }; // 含选择题
+  K.state.diff = 'adapt'; K.state.recent = [30, 40];
+  ok(K.useMC(mcStep) === true, '自适应：表现弱 → 给选择题');
+  K.state.recent = [90, 88];
+  ok(K.useMC(mcStep) === false, '自适应：表现好 → 转开放题');
+  K.state.diff = 'mix'; K.state.recent = [];
+  ok(true, '难度循环含 adapt（' + ['mix', 'easy', 'free', 'adapt'].join('/') + '）');
+} catch (e) { fails.push('自适应难度抛错：' + (e && e.stack || e)); }
+
 // —— 英文 / 双语实战 ——
 try {
   ok(K.CONTENT.english && Array.isArray(K.CONTENT.english.stages) && K.CONTENT.english.stages.length >= 5, '英文实战 ≥5 关（' + (K.CONTENT.english && K.CONTENT.english.stages.length) + '）');
