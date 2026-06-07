@@ -211,6 +211,16 @@ try {
   ok(K.state.deal && K.state.deal.steps.length === 1 && K.state.deal.kind === 'drill', '错题可单题重练');
 } catch (e) { fails.push('成长闭环抛错：' + (e && e.stack || e)); }
 
+// —— 结果分享卡（SVG → PNG）——
+try {
+  const svg = K.buildShareSVG({ title: '🏆 成功签约', subtitle: '某项目 · 某客户', big: 85, bigLabel: '成交指数', rows: [{ label: '破冰', val: 80 }, { label: '异议', val: 72 }], footnote: 'x' });
+  ok(typeof svg === 'string' && svg.indexOf('<svg') === 0 && /国际销售话术陪练/.test(svg), '分享卡 SVG 生成');
+  const svgR = K.buildShareSVG({ title: '🥇 金牌认证', subtitle: '认证', big: 90, bigLabel: '得分', rows: [{ label: 'a', val: 90 }], skills: K.prog().skills });
+  ok(/polygon/.test(svgR), '认证卡含能力雷达');
+  K.exportShareCard(); // 无 Image 环境应安全 no-op
+  ok(true, 'exportShareCard 在无浏览器环境安全降级');
+} catch (e) { fails.push('分享卡抛错：' + (e && e.stack || e)); }
+
 // —— 保存 / 恢复进行中的剧本 ——
 try {
   const opp = K.OPPS.find(o => o.meta) || K.OPPS[0];
