@@ -165,6 +165,25 @@ try {
   ok(d.step >= d.steps.length, '剧本被推进到结算（render 结算态不抛错）');
 } catch (e) { fails.push('驱动完整剧本抛错：' + (e && e.stack || e)); }
 
+// —— 沉浸式谈判引擎：信任/守价/推进状态 + 黑天鹅 + 客户反应 ——
+try {
+  const opp = K.OPPS.find(o => o.meta) || K.OPPS[0];
+  K.startDeal(opp);
+  ok(K.state.deal.meter && typeof K.state.deal.meter.trust === 'number', '闯关携带 信任/守价/推进 状态');
+  const before = K.state.deal.meter.trust;
+  K.updateMeter({ total: 95, tone: { good: [], bad: [], arrogant: [], defensive: [] } }, K.state.deal.steps[0]);
+  ok(K.state.deal.meter.trust > before, '高分作答提升信任值');
+  K.updateMeter({ total: 20, tone: { bad: ['跪'], arrogant: [], defensive: [] } }, { stage: { key: 'negotiate' }, round: {} });
+  ok(K.state.deal.meter.price < 55, '低分/跪舔侵蚀守价值');
+  // 黑天鹅强制插入
+  const steps = K.stepsOf(K.CONTENT.stages);
+  const n0 = steps.length;
+  K.maybeInjectCurveball(steps, true);
+  ok(steps.length === n0 + 1 && steps.some(s => s.curve), '黑天鹅剧情可插入闯关（' + n0 + '→' + steps.length + '）');
+  ok(typeof K.reactionLine({ total: 90, tone: { bad: [], arrogant: [], defensive: [] } }) === 'string', '客户即时反应可生成');
+  ok(Array.isArray(K.CONTENT.curveballs) && K.CONTENT.curveballs.length >= 5, '黑天鹅库 ≥5（' + (K.CONTENT.curveballs || []).length + '）');
+} catch (e) { fails.push('沉浸式谈判引擎抛错：' + (e && e.stack || e)); }
+
 // —— 经典大单战役（手写 · 绑定真实项目）——
 try {
   ok(Array.isArray(K.CONTENT.signatures) && K.CONTENT.signatures.length >= 2, '经典大单战役 ≥2 个（' + (K.CONTENT.signatures || []).length + '）');

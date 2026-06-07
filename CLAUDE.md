@@ -149,6 +149,11 @@ and `js/coach.js`. `coach.js` rebuilds `PROJECTS` with `util.buildProjects` (no 
   Progress (XP / level / deals / per-stage best incl. 抗压指数 / history) persists in `localStorage` (memory fallback under
   Node/private mode). A deal carries a `kind` (`deal`/`signature`/`drill`/`pressure`) so each mode renders only its own active
   deal; `startSignature(sig)` runs a marquee deal and `PRESSURE_STAGE` is a synthetic stage built from `COACH_CONTENT.pressure`.
+  Full deals (闯关 / 经典战役) carry a **trust / 守价 / 推进 meter** that accumulates from each answer's score + tone (`updateMeter`)
+  and blends 60/40 with the rubric average into the final **成交指数** (so the whole trajectory, not a single round, decides
+  win/lose); each answer triggers a banded **客户即时反应** (`COACH_CONTENT.reactions`); and a random **黑天鹅 curveball**
+  (`COACH_CONTENT.curveballs` — competitor cut / FX / owner-change / schedule / compliance / quality-rumor) may be spliced
+  mid-deal via `maybeInjectCurveball` (skipped on 'easy' so beginners aren't pressured).
   An **optional AI free-spar** mode (off by default, BYO OpenAI-compatible key stored only in the browser) lets the user
   free-chat with an AI customer; the deterministic core works with **zero network**. `localPack(p)` resolves a project's
   country→region culture/standards (+ category 谈资) and is surfaced both as a collapsible box inside each deal step and as a

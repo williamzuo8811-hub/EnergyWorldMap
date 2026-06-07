@@ -393,13 +393,30 @@
   }
 
   const PRESSURE_STAGE = (C.pressure && C.pressure.stage) || null;
+  const newMeter = () => ({ trust: 50, price: 55, momentum: 50 });
+
+  // 随机黑天鹅：闯关 / 经典战役中途插入一个剧情变量回合（'easy' 难度的新手不插，避免压力）
+  function maybeInjectCurveball(steps, force) {
+    const cbs = C.curveballs || [];
+    if (!cbs.length || steps.length < 5) return;
+    if (!force && (state.diff === 'easy' || Math.random() > 0.5)) return;
+    const cb = cbs[Math.floor(Math.random() * cbs.length)];
+    const si = FUNNEL_IDX[cb.stage];
+    const stStage = (si != null && C.stages[si]) || steps[Math.floor(steps.length / 2)].stage;
+    let pos = steps.findIndex(s => s.sIdx === si);
+    pos = pos >= 0 ? pos + 1 : Math.floor(steps.length / 2);
+    pos = clamp(pos, 1, steps.length - 1);
+    steps.splice(pos, 0, { stage: stStage, round: Object.assign({}, cb, { curve: true }), sIdx: si == null ? 0 : si, curve: true });
+  }
 
   function startDeal(opp, single) {
     const ctx = buildContext(opp);
     const stages = single ? [single] : C.stages;
     const kind = single ? (single.key === 'pressure' ? 'pressure' : 'drill') : 'deal';
-    state.deal = { opp: opp, ctx: ctx, steps: stepsOf(stages), step: 0, results: [], single: !!single, kind: kind, stageKey: single ? single.key : null };
-    state.answered = null; state.revealHint = false;
+    const steps = stepsOf(stages);
+    if (kind === 'deal') maybeInjectCurveball(steps);
+    state.deal = { opp: opp, ctx: ctx, steps: steps, step: 0, results: [], single: !!single, kind: kind, stageKey: single ? single.key : null, meter: kind === 'deal' ? newMeter() : null };
+    state.answered = null; state.revealHint = false; state.revealLocal = false;
     prog.dealsRun = (prog.dealsRun || 0) + 1; saveProgress();
   }
 
@@ -407,9 +424,40 @@
   function startSignature(sig) {
     const opp = OPP_BY_ID[sig.projId] || OPPS[0];
     const ctx = buildContext(opp, sig.over, sig.kw);
-    state.deal = { opp: opp, ctx: ctx, steps: stepsOf(sig.stages || []), step: 0, results: [], single: false, kind: 'signature', sig: sig };
-    state.answered = null; state.revealHint = false;
+    const steps = stepsOf(sig.stages || []);
+    maybeInjectCurveball(steps);
+    state.deal = { opp: opp, ctx: ctx, steps: steps, step: 0, results: [], single: false, kind: 'signature', sig: sig, meter: newMeter() };
+    state.answered = null; state.revealHint = false; state.revealLocal = false;
     prog.dealsRun = (prog.dealsRun || 0) + 1; saveProgress();
+  }
+
+  // 信任 / 守价 / 推进 三态随作答累积，贯穿整单、影响最终成交
+  function updateMeter(a, step) {
+    const m = state.deal && state.deal.meter; if (!m) return;
+    const d = a.total - 60;
+    m.trust = clamp(Math.round(m.trust + d * 0.3), 0, 100);
+    m.momentum = clamp(Math.round(m.momentum + d * 0.25 + 4), 0, 100);
+    const sk = step.stage.key;
+    if (sk === 'negotiate' || sk === 'object') m.price = clamp(Math.round(m.price + (a.total - 55) * 0.25), 0, 100);
+    const tn = a.tone || {};
+    if (tn.bad && tn.bad.length) { m.price = clamp(m.price - 8, 0, 100); m.trust = clamp(m.trust - 3, 0, 100); }
+    if ((tn.arrogant && tn.arrogant.length) || (tn.defensive && tn.defensive.length)) m.trust = clamp(m.trust - 6, 0, 100);
+    if (step.round && step.round.curve) { m.trust = clamp(Math.round(m.trust + d * 0.2), 0, 100); m.momentum = clamp(Math.round(m.momentum + d * 0.2), 0, 100); }
+  }
+  function meterBar(m) {
+    if (!m) return '';
+    const bar = (lab, v, col) => '<div class="mtr"><span>' + lab + '</span><i><b style="width:' + v + '%;background:' + col + '"></b></i><em>' + v + '</em></div>';
+    return '<div class="meters" title="信任/守价/推进随你的话术累积，影响最终成交">' +
+      bar('🤝 信任', m.trust, 'var(--good)') + bar('🛡️ 守价', m.price, 'var(--accent)') + bar('🚀 推进', m.momentum, 'var(--gold)') + '</div>';
+  }
+  // 客户即时反应：按分数 / 语气分档
+  function reactionLine(a) {
+    const R = C.reactions || {};
+    let pool;
+    if (a.tone && a.tone.bad && a.tone.bad.length && R.grovel) pool = R.grovel;
+    else if (a.tone && ((a.tone.arrogant && a.tone.arrogant.length) || (a.tone.defensive && a.tone.defensive.length)) && R.aggressive) pool = R.aggressive;
+    else pool = a.total >= 75 ? R.good : a.total >= 55 ? R.mid : R.low;
+    return (pool && pool.length) ? pool[Math.floor(Math.random() * pool.length)] : '';
   }
 
   function randomOpp(weighted) {
@@ -604,7 +652,9 @@
         '<button class="btn-ghost" data-act="reveal">🏅 看黄金话术（不计分）</button>' +
         '</div>';
     }
-    setHTML('deck', head + stepHTML + brief + briefLine + localBox(ctx) + ask + '<div class="answer-zone">' + inputHTML + '</div>');
+    const curveBanner = (step.round && step.round.curve) ? '<div class="curve-banner">⚡ 突发剧情 · ' + esc(step.round.tag || '') + '</div>' : '';
+    const meterHTML = d.meter ? meterBar(d.meter) : '';
+    setHTML('deck', curveBanner + head + stepHTML + meterHTML + brief + briefLine + localBox(ctx) + ask + '<div class="answer-zone">' + inputHTML + '</div>');
   }
 
   function starStr(n) { return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n); }
@@ -633,9 +683,11 @@
     const verdict = a.total >= 75 ? '<span class="v good">表现优秀</span>' : a.total >= 55 ? '<span class="v warn">合格，可更好</span>' : '<span class="v bad">需要重练</span>';
     const next = (state.deal.step >= state.deal.steps.length - 1) ? '完成本剧本 →' : '进入下一关 →';
     const aiBtn = (state.ai && a.mode === 'free') ? '<button class="btn-ghost" data-act="ai-review">🤖 AI 复核与改写</button>' : '';
+    const react = reactionLine(a);
+    const reactHTML = react ? '<div class="bubble cust react"><div class="who">🗣️ 客户反应</div><div class="say">' + esc(react) + '</div></div>' : '';
     return '<div class="feedback">' +
       '<div class="fb-head"><span class="stars">' + starStr(a.stars) + '</span><span class="score">' + a.total + ' 分</span>' + verdict + '<span class="xp">+' + a.xp + ' XP</span></div>' +
-      body + gold +
+      reactHTML + body + gold +
       (state.ai && a.mode === 'free' ? '<div class="ai-review" id="ai-review"></div>' : '') +
       '<div class="act-row">' +
       (a.total < 55 ? '<button class="btn-ghost" data-act="retry">↺ 重练这关</button>' : '') + aiBtn +
@@ -649,6 +701,7 @@
     const key = step.stage.key;
     if (!prog.stageBest[key] || a.total > prog.stageBest[key]) prog.stageBest[key] = a.total;
     state.deal.results.push({ stage: key, total: a.total, stars: a.stars });
+    updateMeter(a, step);
     saveProgress();
   }
 
@@ -656,28 +709,34 @@
     const d = state.deal, ctx = d.ctx;
     const res = d.results, n = res.length || 1;
     const avg = Math.round(res.reduce((s, r) => s + r.total, 0) / n);
+    const m = d.meter;
+    const meterAvg = m ? Math.round((m.trust + m.price + m.momentum) / 3) : avg;
+    // 综合成交指数：话术均分 6 成 + 关系/守价/推进的累积态 4 成（让"全程表现"而非单题决定成交）
+    const fin = m ? Math.round(avg * 0.6 + meterAvg * 0.4) : avg;
     let outcome, oc;
-    if (avg >= 80) { outcome = '🏆 高度认可 · 成功签约'; oc = 'win'; }
-    else if (avg >= 62) { outcome = '✅ 顺利成交'; oc = 'ok'; }
-    else if (avg >= 45) { outcome = '⚠️ 勉强推进 · 客户仍有顾虑'; oc = 'warn'; }
+    if (fin >= 80) { outcome = '🏆 高度认可 · 成功签约'; oc = 'win'; }
+    else if (fin >= 62) { outcome = '✅ 顺利成交'; oc = 'ok'; }
+    else if (fin >= 45) { outcome = '⚠️ 勉强推进 · 客户仍有顾虑'; oc = 'warn'; }
     else { outcome = '❌ 暂时丢单 · 复盘再来'; oc = 'lose'; }
-    const closed = avg >= 62;
+    const closed = fin >= 62;
     if (closed) { prog.dealsClosed = (prog.dealsClosed || 0) + 1; }
-    const bonus = Math.round(avg / 5) + (avg >= 80 ? 20 : 0);
+    const bonus = Math.round(fin / 5) + (fin >= 80 ? 20 : 0);
     awardXP(bonus);
-    prog.history.unshift({ name: ctx.p.name, avg: avg, outcome: outcome, at: Date.now() });
+    prog.history.unshift({ name: ctx.p.name, avg: fin, outcome: outcome, at: Date.now() });
     prog.history = prog.history.slice(0, 30); saveProgress();
     const bars = res.map(r => {
       const st = C.stages.filter(s => s.key === r.stage)[0] || { name: r.stage, icon: '•' };
       return '<div class="sumbar"><span>' + (st.icon || '') + ' ' + esc(st.name) + '</span><i style="width:' + r.total + '%"></i><b>' + r.total + '</b></div>';
     }).join('');
+    const meterHTML = m ? '<div class="sum-meters">' + meterBar(m) + '</div>' : '';
     setHTML('deck',
       '<div class="summary ' + oc + '">' +
       '<div class="sum-outcome">' + outcome + '</div>' +
       '<div class="sum-deal">' + esc(ctx.p.name) + ' · ' + esc(ctx.t.cust) + '</div>' +
-      '<div class="sum-avg">综合得分 <b>' + avg + '</b> / 100 · 本单 +' + bonus + ' XP</div>' +
+      '<div class="sum-avg">' + (m ? '综合成交指数 <b>' + fin + '</b> / 100 · 话术均分 ' + avg : '综合得分 <b>' + fin + '</b> / 100') + ' · 本单 +' + bonus + ' XP</div>' +
+      meterHTML +
       '<div class="sum-bars">' + bars + '</div>' +
-      '<div class="sum-msg">' + esc(summaryMsg(avg)) + '</div>' +
+      '<div class="sum-msg">' + esc(summaryMsg(fin)) + '</div>' +
       '<div class="act-row"><button class="btn-primary" data-act="replay">↺ 复盘重打</button>' +
       '<button class="btn-ghost" data-act="newdeal">🎯 换个商机</button></div></div>');
   }
@@ -969,6 +1028,7 @@
     scoreFree: scoreFree, scoreChoice: scoreChoice, toneScan: toneScan, levelOf: levelOf,
     stepsOf: stepsOf, startDeal: startDeal, startSignature: startSignature, randomOpp: randomOpp, render: render,
     useMC: useMC, doSubmit: doSubmit, doChoose: doChoose, advance: advance, PRESSURE_STAGE: PRESSURE_STAGE,
+    maybeInjectCurveball: maybeInjectCurveball, updateMeter: updateMeter, reactionLine: reactionLine,
   };
 
   if (typeof document !== 'undefined' && document.addEventListener) {

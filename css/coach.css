@@ -288,6 +288,21 @@ button, input, textarea { font-family: inherit; }
 .oc-row span { color: var(--txt-faint); display: block; margin: 1px 0; }
 .oc-row em { color: var(--txt-dim); font-style: normal; line-height: 1.5; }
 
+/* ---------- 谈判状态计量（信任/守价/推进）---------- */
+.meters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0 0 12px; }
+.mtr { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 7px; }
+.mtr span { font-size: 11px; color: var(--txt-dim); white-space: nowrap; }
+.mtr i { height: 7px; border-radius: 4px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.mtr i b { display: block; height: 100%; border-radius: 4px; transition: width .4s; }
+.mtr em { font-size: 11px; font-style: normal; font-weight: 700; color: var(--txt); min-width: 18px; text-align: right; }
+.sum-meters { max-width: 460px; margin: 0 auto 14px; }
+
+/* ---------- 突发剧情横幅 + 客户反应气泡 ---------- */
+.curve-banner { background: linear-gradient(90deg, rgba(255,95,122,0.22), rgba(255,176,46,0.18)); border: 1px solid rgba(255,176,46,0.5);
+  color: #ffe6c2; font-weight: 700; font-size: 13px; border-radius: 10px; padding: 9px 14px; margin-bottom: 12px; box-shadow: 0 0 18px rgba(255,122,24,0.18); }
+.bubble.react { border-left-color: var(--gold); }
+.bubble.react .say { font-size: 13.5px; color: #fbe9bf; }
+
 /* ---------- 阶段情境旁白 ---------- */
 .stage-brief { font-size: 12px; color: var(--txt-dim); line-height: 1.65; background: rgba(255,255,255,0.03);
   border: 1px dashed var(--border); border-radius: 10px; padding: 9px 13px; margin: 0 0 12px; }
