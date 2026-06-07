@@ -18,8 +18,77 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
   <link rel="stylesheet" href="css/coach.css?v=1">
+  <!-- 访问口令门（暂未公开，仅口令可见）：纯前端 deterrence，非强加密。已解锁则提前加类，避免闪烁。 -->
+  <style>
+    #coach-gate{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;
+      background:radial-gradient(1200px 600px at 50% 25%,#0b1730,#05080f 70%);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+      -webkit-tap-highlight-color:transparent;}
+    html.coach-unlocked #coach-gate{display:none;}
+    #coach-gate .cg-card{width:min(92vw,360px);padding:32px 26px;border-radius:18px;text-align:center;
+      background:rgba(13,22,40,.85);border:1px solid rgba(120,160,220,.18);
+      box-shadow:0 20px 60px rgba(0,0,0,.55);backdrop-filter:blur(8px);}
+    #coach-gate .cg-logo{font-size:42px;line-height:1;margin-bottom:10px;}
+    #coach-gate .cg-title{color:#e8eefb;font-size:19px;font-weight:800;letter-spacing:.5px;}
+    #coach-gate .cg-desc{color:#8ea3c7;font-size:13px;margin:8px 0 18px;line-height:1.6;}
+    #coach-gate .cg-input{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:10px;
+      border:1px solid rgba(120,160,220,.25);background:rgba(4,8,16,.7);color:#e8eefb;
+      font-size:16px;text-align:center;letter-spacing:2px;outline:none;}
+    #coach-gate .cg-input:focus{border-color:#43d6a0;box-shadow:0 0 0 3px rgba(67,214,160,.15);}
+    #coach-gate .cg-btn{margin-top:14px;width:100%;padding:12px;border:0;border-radius:10px;cursor:pointer;
+      font-size:15px;font-weight:700;color:#04261a;background:linear-gradient(135deg,#43d6a0,#cdb35a);}
+    #coach-gate .cg-btn:active{transform:translateY(1px);}
+    #coach-gate .cg-err{min-height:18px;margin-top:10px;color:#ff8585;font-size:12.5px;}
+  </style>
+  <script>
+    (function(){
+      try{
+        if(localStorage.getItem('coach_access_v1')==='7a96764cc44efb32ba02e5ecf68c78740256a25c594e57b1a7972c1a2ecf5677'){
+          document.documentElement.classList.add('coach-unlocked');
+        }
+      }catch(e){}
+    })();
+  </script>
 </head>
 <body>
+  <!-- 访问口令门：暂未公开，仅口令访问。校验离线完成，明文不入源码（仅存 SHA-256 / djb2 哈希）。 -->
+  <div id="coach-gate" role="dialog" aria-modal="true" aria-label="访问口令">
+    <div class="cg-card">
+      <div class="cg-logo">🎓</div>
+      <div class="cg-title">国际销售话术陪练</div>
+      <div class="cg-desc">该模块暂未公开，仅限受邀访问。<br>请输入访问口令。</div>
+      <input id="cg-input" class="cg-input" type="password" inputmode="numeric" autocomplete="off" placeholder="访问口令" aria-label="访问口令">
+      <button id="cg-btn" class="cg-btn" type="button">进 入</button>
+      <div id="cg-err" class="cg-err" role="alert"></div>
+    </div>
+  </div>
+  <script>
+    (function(){
+      var KEY='coach_access_v1';
+      var SHA='7a96764cc44efb32ba02e5ecf68c78740256a25c594e57b1a7972c1a2ecf5677';
+      var DJB='e214b24e'; // crypto.subtle 不可用（如 file://）时的离线退回校验
+      var gate=document.getElementById('coach-gate'); if(!gate) return;
+      var input=document.getElementById('cg-input'),btn=document.getElementById('cg-btn'),err=document.getElementById('cg-err');
+      function djb2(s){var h=5381;for(var i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))>>>0;return h.toString(16);}
+      function toHex(buf){return Array.prototype.map.call(new Uint8Array(buf),function(b){return ('0'+b.toString(16)).slice(-2);}).join('');}
+      function unlock(){try{localStorage.setItem(KEY,SHA);}catch(e){}document.documentElement.classList.add('coach-unlocked');}
+      function fail(){err.textContent='口令不正确，请重试。';input.value='';input.focus();}
+      function verify(v){
+        v=(v||'').trim(); if(!v) return;
+        if(window.crypto&&crypto.subtle&&location.protocol!=='file:'){
+          crypto.subtle.digest('SHA-256',new TextEncoder().encode(v))
+            .then(function(buf){toHex(buf)===SHA?unlock():fail();})
+            .catch(function(){djb2(v)===DJB?unlock():fail();});
+        }else{ djb2(v)===DJB?unlock():fail(); }
+      }
+      btn.addEventListener('click',function(){verify(input.value);});
+      input.addEventListener('keydown',function(e){if(e.key==='Enter')verify(input.value);});
+      // 便捷解锁：在受信任设备上访问 coach.html#key=口令，验证后清掉 hash
+      try{var m=(location.hash||'').match(/key=([^&]+)/);if(m){verify(decodeURIComponent(m[1]));history.replaceState(null,'',location.pathname+location.search);}}catch(e){}
+      if(!document.documentElement.classList.contains('coach-unlocked'))input.focus();
+    })();
+  </script>
+
   <!-- 首屏加载态 -->
   <div class="coach-loader" id="coach-loader">
     <div class="cl-logo">🎓</div>
