@@ -55,17 +55,17 @@
     <!-- 左侧：模式 + 设置 -->
     <aside class="side" aria-label="模式与设置">
       <div class="block">
-        <div class="block-title">训练模式</div>
-        <div class="mode-tabs" id="mode-tabs"></div>
+        <div class="block-title" id="mode-label">训练模式</div>
+        <nav class="mode-tabs" id="mode-tabs" aria-labelledby="mode-label"></nav>
       </div>
       <div class="block">
         <div class="block-title">难度（循序渐进）</div>
-        <button class="diff-cycle" id="diff-cycle" title="点击切换难度">作答方式：<b id="diff-label">混合（推荐）</b><span>▸ 点击切换</span></button>
+        <button class="diff-cycle" id="diff-cycle" title="点击切换难度" aria-label="切换难度：选择题 / 混合 / 全开放 / 自适应">作答方式：<b id="diff-label">混合（推荐）</b><span>▸ 点击切换</span></button>
         <div class="diff-note">选择题最轻松 → 混合 → 全开放话术（高阶）。随时切换，没有压力。</div>
       </div>
       <div class="block">
         <div class="block-title">🤖 AI 自由陪练（可选）</div>
-        <button class="ai-toggle" id="ai-toggle" data-act="ai">启用 AI 真人感对练</button>
+        <button class="ai-toggle" id="ai-toggle" data-act="ai" aria-label="启用或关闭 AI 自由陪练">启用 AI 真人感对练</button>
         <div class="ai-config" id="ai-config" style="display:none">
           <div class="ai-note">离线核心完全可用；如需 AI 不卡词的自由对话，可自备 OpenAI 兼容接口（仅存于本机浏览器，不上传）。</div>
           <input id="ai-base" class="ai-inp" placeholder="API 地址，如 https://api.openai.com/v1">
@@ -82,10 +82,10 @@
     </aside>
 
     <!-- 主区：对练台 -->
-    <main class="deck" id="deck"></main>
+    <main class="deck" id="deck" role="main" aria-label="对练台"></main>
   </div>
 
-  <div class="toast" id="toast"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <!-- 数据层（与 index.html 同序，省去 3D 库与英文正文 i18n-en.js）+ 工具层 + 客户元数据 + 陪练内容 + 引擎 -->
   <script defer src="js/data.js"></script>
