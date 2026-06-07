@@ -211,6 +211,24 @@ try {
   ok(K.state.deal && K.state.deal.steps.length === 1 && K.state.deal.kind === 'drill', '错题可单题重练');
 } catch (e) { fails.push('成长闭环抛错：' + (e && e.stack || e)); }
 
+// —— 成就徽章 + 连续打卡（驱动一整单后应解锁「首单告捷」）——
+try {
+  const p0 = K.prog();
+  p0.badges = []; p0.dealsClosed = 0; p0.streakWins = 0; p0.dayStreak = 0; p0.lastDay = '';
+  const opp = K.OPPS.find(o => o.meta) || K.OPPS[0];
+  K.startDeal(opp);
+  let g = 0;
+  while (K.state.deal && K.state.deal.kind === 'deal' && K.state.deal.step < K.state.deal.steps.length && g++ < 40) {
+    const st = K.state.deal.steps[K.state.deal.step];
+    if (K.useMC(st)) K.doChoose(0);
+    else { doc.getElementById('free-input').value = '我理解贵司的关注，我方预制舱交付快、可靠性高，可降低停产损失，建议本周技术交流、出方案，业绩与认证可查，咱们一起把节点守住。'; K.doSubmit(); }
+    K.advance();
+  }
+  ok(K.prog().dealsClosed >= 1, '完整成交后 dealsClosed≥1');
+  ok(K.prog().badges.indexOf('first') >= 0, '解锁「首单告捷」徽章');
+  ok(K.prog().dayStreak >= 1, '记录连续打卡天数');
+} catch (e) { fails.push('成就/打卡抛错：' + (e && e.stack || e)); }
+
 // —— 循序渐进 2.0：自适应难度 + 脚手架 ——
 try {
   const mcStep = { round: K.CONTENT.stages[0].rounds[0], sIdx: 0 }; // 含选择题

@@ -303,6 +303,14 @@ button, input, textarea { font-family: inherit; }
 .mrow span { color: var(--txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mrow b { color: var(--bad); font-weight: 700; }
 
+/* ---------- 成就徽章 ---------- */
+.badges-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 9px; }
+.badge { background: var(--panel-2); border: 1px solid var(--border); border-radius: 11px; padding: 11px; text-align: center; opacity: .45; filter: grayscale(.6); transition: all .15s; }
+.badge.got { opacity: 1; filter: none; border-color: rgba(255,212,95,0.45); background: rgba(255,212,95,0.06); }
+.badge span { font-size: 24px; }
+.badge b { display: block; font-size: 12.5px; margin: 5px 0 2px; }
+.badge em { font-size: 10.5px; color: var(--txt-faint); font-style: normal; line-height: 1.4; }
+
 /* ---------- 谈判状态计量（信任/守价/推进）---------- */
 .meters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0 0 12px; }
 .mtr { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 7px; }

@@ -354,8 +354,10 @@
       stageBest: d.stageBest || {}, history: d.history || [],
       skills: Object.assign({}, DEF_SKILLS, d.skills || {}),
       mistakes: d.mistakes || [], cert: d.cert || null, diagnostic: d.diagnostic || null,
+      badges: d.badges || [], streakWins: d.streakWins || 0, dayStreak: d.dayStreak || 0, lastDay: d.lastDay || '',
     };
   }
+  const BLANK_PROG = () => ({ xp: 0, dealsClosed: 0, dealsRun: 0, stageBest: {}, history: [], skills: Object.assign({}, DEF_SKILLS), mistakes: [], cert: null, diagnostic: null, badges: [], streakWins: 0, dayStreak: 0, lastDay: '' });
   function saveProgress() { try { store.set('coach.v1', JSON.stringify(prog)); } catch (e) { /* ignore */ } }
   let prog = loadProgress();
 
@@ -805,6 +807,7 @@
     updateMeter(a, step);
     updateSkills(a, step);
     state.recent = (state.recent || []).concat(a.total).slice(-4);
+    if (a.tone && a.tone.bad && a.tone.bad.length) state.deal._grovel = true;
     const rid = step.round && step.round.id;
     if (rid) {
       if (a.total < 55) { prog.mistakes = (prog.mistakes || []).filter(x => x.roundId !== rid); prog.mistakes.unshift({ roundId: rid, stage: key, total: a.total, at: Date.now() }); prog.mistakes = prog.mistakes.slice(0, 40); }
@@ -827,11 +830,13 @@
     else if (fin >= 45) { outcome = '⚠️ 勉强推进 · 客户仍有顾虑'; oc = 'warn'; }
     else { outcome = '❌ 暂时丢单 · 复盘再来'; oc = 'lose'; }
     const closed = fin >= 62;
-    if (closed) { prog.dealsClosed = (prog.dealsClosed || 0) + 1; }
+    if (closed) { prog.dealsClosed = (prog.dealsClosed || 0) + 1; prog.streakWins = (prog.streakWins || 0) + 1; } else { prog.streakWins = 0; }
     const bonus = Math.round(fin / 5) + (fin >= 80 ? 20 : 0);
     awardXP(bonus);
+    updateDayStreak();
     prog.history.unshift({ name: ctx.p.name, avg: fin, outcome: outcome, at: Date.now() });
     prog.history = prog.history.slice(0, 30); saveProgress();
+    awardBadges({ cleanClose: closed && !d._grovel, enClose: d.kind === 'en' && closed && avg >= 70 });
     const bars = res.map(r => {
       const st = C.stages.filter(s => s.key === r.stage)[0] || { name: r.stage, icon: '•' };
       return '<div class="sumbar"><span>' + (st.icon || '') + ' ' + esc(st.name) + '</span><i style="width:' + r.total + '%"></i><b>' + r.total + '</b></div>';
@@ -954,6 +959,32 @@
       '<div class="oc-wrap">' + ocases + '</div>');
   }
 
+  /* ---------- 成就徽章 + 每日打卡 ---------- */
+  const BADGES = [
+    { id: 'first', icon: '🎯', name: '首单告捷', desc: '完成第一笔成交', has: c => c.prog.dealsClosed >= 1 },
+    { id: 'streak3', icon: '🔥', name: '连胜三场', desc: '连续 3 单成交', has: c => (c.prog.streakWins || 0) >= 3 },
+    { id: 'nogrovel', icon: '🛡️', name: '不卑不亢', desc: '全程零跪舔拿下一单', has: c => c.cleanClose },
+    { id: 'pressure', icon: '🧘', name: '抗压王', desc: '抗压特训达 80 分', has: c => (c.prog.stageBest.pressure || 0) >= 80 },
+    { id: 'english', icon: '🌐', name: '出海口语', desc: '英文实战成交达 70', has: c => c.enClose },
+    { id: 'certified', icon: '🎓', name: '持证上岗', desc: '通过结业认证', has: c => !!c.prog.cert },
+    { id: 'gold', icon: '🥇', name: '金牌认证', desc: '拿到金牌国际销售认证', has: c => c.prog.cert && c.prog.cert.score >= 85 },
+    { id: 'allstage', icon: '🏆', name: '八关全优', desc: '8 关最佳均 ≥70', has: c => C.stages.every(s => (c.prog.stageBest[s.key] || 0) >= 70) },
+    { id: 'veteran', icon: '💎', name: '晋级资深', desc: '达到资深段位', has: c => levelOf(c.prog.xp).idx >= 4 },
+  ];
+  function awardBadges(extra) {
+    const c = Object.assign({ prog: prog, cleanClose: false, enClose: false }, extra || {});
+    const unlocked = [];
+    BADGES.forEach(b => { if (prog.badges.indexOf(b.id) < 0 && b.has(c)) { prog.badges.push(b.id); unlocked.push(b); } });
+    if (unlocked.length) { saveProgress(); flash('🏅 解锁成就：' + unlocked.map(b => b.icon + b.name).join('、')); }
+  }
+  function todayStr() { try { return new Date().toISOString().slice(0, 10); } catch (e) { return ''; } }
+  function updateDayStreak() {
+    const t = todayStr(); if (!t || prog.lastDay === t) return;
+    const y = (function () { try { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10); } catch (e) { return ''; } })();
+    prog.dayStreak = (prog.lastDay === y) ? (prog.dayStreak || 0) + 1 : 1;
+    prog.lastDay = t;
+  }
+
   /* ---------- 结业认证考试结果 ---------- */
   function renderExamResult() {
     const d = state.deal, res = d.results, n = res.length || 1;
@@ -967,7 +998,8 @@
     if (!prog.diagnostic) prog.diagnostic = { score: avg, at: Date.now() };
     if (passed && (!prog.cert || avg > prog.cert.score)) prog.cert = { level: lvl, score: avg, at: Date.now() };
     awardXP(Math.round(avg / 4) + (avg >= 85 ? 30 : 0));
-    saveProgress();
+    updateDayStreak(); saveProgress();
+    awardBadges({});
     const bars = res.map(r => { const st = C.stages.filter(s => s.key === r.stage)[0] || { name: r.stage, icon: '•' }; return '<div class="sumbar"><span>' + (st.icon || '') + ' ' + esc(st.name) + '</span><i style="width:' + r.total + '%"></i><b>' + r.total + '</b></div>'; }).join('');
     const diff = prog.diagnostic ? (avg - prog.diagnostic.score) : 0;
     setHTML('deck',
@@ -1003,6 +1035,7 @@
       const e = ALL_ROUNDS[mk.roundId]; const nm = e ? (e.stage.icon + ' ' + e.stage.name) : mk.stage;
       return '<div class="mrow"><span>' + esc(nm) + '</span><b>' + mk.total + ' 分</b><button class="btn-copy" data-act="mistake" data-id="' + esc(mk.roundId) + '">重练</button></div>';
     }).join('') || '<div class="empty">还没有错题——保持！低于 55 分的关卡会自动进错题本，≥70 分自动清除。</div>';
+    const badgesHTML = BADGES.map(b => { const got = prog.badges.indexOf(b.id) >= 0; return '<div class="badge' + (got ? ' got' : '') + '"><span>' + b.icon + '</span><b>' + esc(b.name) + '</b><em>' + esc(b.desc) + '</em></div>'; }).join('');
     setHTML('deck',
       '<div class="deck-head"><h2>📈 成长档案</h2></div>' +
       '<div class="profile-top">' +
@@ -1014,6 +1047,7 @@
       '<div class="cert-box"><h3>结业认证</h3>' + certHTML +
       '<button class="btn-primary" data-act="exam-start">🎓 结业认证考试（8 关 · 无提示）</button>' +
       '<div class="cert-note">' + (prog.diagnostic ? '入营诊断基线：' + prog.diagnostic.score + ' 分' : '首次考试将记录为"入营诊断"基线，之后可看成长幅度。') + '</div></div></div>' +
+      '<div class="psec"><h3>成就徽章' + (prog.dayStreak ? ' · 🔥 连续打卡 ' + prog.dayStreak + ' 天' : '') + '（' + prog.badges.length + '/' + BADGES.length + '）</h3><div class="badges-grid">' + badgesHTML + '</div></div>' +
       '<div class="psec"><h3>错题本 · 针对性复盘</h3><div class="mistakes">' + mistakes + '</div></div>' +
       '<div class="psec"><h3>各关最佳成绩</h3><div class="pstages">' + stageRows + '</div></div>' +
       '<div class="psec"><h3>成长阶梯</h3><div class="ladder">' + ladder + '</div></div>' +
@@ -1086,7 +1120,7 @@
       render();
     }
     else if (act === 'copy') { doCopy(t.getAttribute('data-txt')); }
-    else if (act === 'wipe') { if (confirmSafe('确定清空全部成长档案与进度？此操作不可恢复。')) { prog = { xp: 0, dealsClosed: 0, dealsRun: 0, stageBest: {}, history: [], skills: Object.assign({}, DEF_SKILLS), mistakes: [], cert: null, diagnostic: null }; saveProgress(); render(); } }
+    else if (act === 'wipe') { if (confirmSafe('确定清空全部成长档案与进度？此操作不可恢复。')) { prog = BLANK_PROG(); saveProgress(); render(); } }
     else if (act === 'exam-start') { startExam(); state.mode = 'profile'; render(); }
     else if (act === 'exam-exit') { state.deal = null; state.answered = null; render(); }
     else if (act === 'mistake') { startMistake(t.getAttribute('data-id')); state.mode = 'drill'; render(); }
