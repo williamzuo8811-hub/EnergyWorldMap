@@ -101,6 +101,21 @@ window.COACH_CONTENT = (function () {
     arrogant: ['必须买', '只能选我们', '你们不懂', '肯定不行', '爱要不要', '别无选择', '错过别后悔', '没得商量', '我说了算', '你必须'],
     // 情绪失控 / 防御顶撞（抗压扣分）
     defensive: ['凭什么', '你这是', '我告诉你', '欺人太甚', '没法谈', '那算了', '随你便', '说话注意', '不可理喻', '你懂不懂', '我不管', '气死', '别说了', '滚', '废话', '你有完没完'],
+    // 英文增补（被 coach.js 合并进上面各桶，让英文作答也能被评分）
+    en: {
+      good: {
+        quantify: ['save', 'reduce', 'lower', 'cut', '%', 'roi', 'faster', 'weeks', 'downtime', 'uptime', 'on schedule', 'less'],
+        nextStep: ['next step', 'meeting', 'propose', 'schedule', 'technical', 'site visit', 'sample', 'timeline', 'follow up', 'this week', 'call'],
+        evidence: ['reference', 'track record', 'case', 'certified', 'iec', 'as/nzs', 'delivered', 'proven', 'licence'],
+        customerNeed: ['you', 'your', 'understand', 'need', 'for you', 'help you'],
+        expertise: ['e-house', 'prefab', 'modular', 'substation', 'mv', 'gis', 'reliab', 'standard', 'commission', 'voltage'],
+        poise: ['value', 'partner', 'long-term', 'fair', 'win-win', 'confident', 'without compromising'],
+        composure: ['i understand', 'fair question', 'let us', "let's", 'calm', 'objective', 'step by step', "you're right"],
+      },
+      bad: ['lowest price', 'beg', 'whatever', 'cheapest', 'at a loss', 'give me a chance', 'please please'],
+      arrogant: ['must buy', 'no choice', 'take it or leave', 'you must', 'or else'],
+      defensive: ['so what', 'none of your', 'i told you', 'forget it', 'whatever you say'],
+    },
   };
 
   /* ---------------- 成长段位 ---------------- */
@@ -355,6 +370,18 @@ window.COACH_CONTENT = (function () {
           ],
           coach: '撬关系户不靠踩对手，靠找到他覆盖不到的缝，先用一个小胜建立信任。',
         },
+        {
+          id: 'obj-technical',
+          ask: '【{role}】"技术上我有疑问：你们的短路容量、绝缘配合和保护配置，真能满足我们的电网要求和当地规范吗？"',
+          hint: ['用专业回应专业，别打太极', '点到关键技术参数与标准符合性', '给可验证的方式（型式试验 / 第三方报告 / 技术交流）'],
+          rubric: [
+            { id: 'tech', label: '专业技术回应', w: 3, kw: ['短路容量', '绝缘配合', '保护配置', '电压等级', '型式试验', '开断', '继电保护', '谐波', '接地', '额定'] },
+            { id: 'std', label: '标准符合性', w: 3, kw: ['iec', 'as', 'gost', '当地规范', '认证', '并网', '入网', '满足', '符合', 'kema'] },
+            { id: 'verify', label: '给可验证方式', w: 2, kw: ['报告', '第三方', '型式试验', '技术交流', '图纸', '计算书', '见证', '澄清', '工程师'] },
+          ],
+          gold: '技术问题我用技术跟您交底，不打太极。短路容量、绝缘配合与保护配置，我们按您的电网参数和当地规范（IEC / 当地标准）逐项校核，关键设备具备型式试验与 KEMA / 国际短路联盟报告。建议安排一次技术交流，由我们工程师带计算书、单线图与试验报告跟贵司技术口逐条对，把每个疑点都落到可验证的依据上。专业的问题，值得专业地回答。',
+          coach: '技术异议最忌打太极。用参数、标准符合性与可验证报告正面回应，技术口才会真正信你。',
+        },
       ],
     },
     {
@@ -392,6 +419,18 @@ window.COACH_CONTENT = (function () {
           ],
           gold: '我完全理解您有时间压力，但越是大单越不该被一句话逼着击穿底线——那对后续服务和您都不是好事。这个价已是物有所值的位置，再降只能减配置、动可靠性，我不建议。今天一定要定，我们可以用预付或后续份额换一点空间；时间不够，我也尊重您的选择，方案随时在，欢迎您比完再回来谈。我对我们的价值有信心。',
           coach: '敢从容地说"欢迎您比完再回来"，往往比慌忙降价更能拿下单——这就是底气。',
+        },
+        {
+          id: 'nego-finance',
+          ask: '【{role}】"价格先放放——付款和融资你们怎么安排？我们希望低预付、长账期，最好还能带融资。"',
+          hint: ['把付款 / 融资当方案设计，不是被动接受', '给保函 / LC / 分期 / 出口信贷·中信保等工具', '用结构换价格，守住现金流底线'],
+          rubric: [
+            { id: 'tools', label: '给付款 / 融资工具', w: 3, kw: ['预付', '保函', '信用证', 'lc', '分期', '里程碑', '账期', '出口信贷', '中信保', '融资', '锁汇'] },
+            { id: 'trade', label: '用结构换条件', w: 3, kw: ['如果', '换', '份额', '框架', '锁定', '对冲', '配合', '作为', '前提'] },
+            { id: 'hold', label: '守现金流底线', w: 2, kw: ['底线', '现金流', '风险', '共担', '保障', '合理', '可持续'] },
+          ],
+          gold: '付款和融资我们当方案来设计，不是被动接受。低预付可以谈，但建议用履约保函 + 信用证来对冲风险；账期按交付里程碑分期，既缓解您的资金压力、也守住我们的现金流。带融资也有路径——出口信贷加中信保承保，甚至看您所在国的本币融资。作为对应，希望把后续份额或框架一并锁定。咱们一起设计一个您资金顺、我们也扛得住的结构。',
+          coach: '国际大单"价格"常是表象，"付款与融资结构"才是关键。用保函 / LC / 出口信贷把风险设计掉。',
         },
       ],
     },
@@ -569,6 +608,11 @@ window.COACH_CONTENT = (function () {
     '帮客户"出彩"：让他在领导面前有业绩、有面子，他自然向着你。',
     '见面胜过电话，雪中送炭胜过锦上添花；客情贵在持续真诚。',
     '出海客情守合规红线：靠专业可靠赢信任，不靠吃喝送礼。',
+    '竞品对标不踩对手，把战场引到他覆盖不到的场景。',
+    '国际大单常死在付款与融资结构，不只在价格。',
+    '招投标赢在资格预审与综合评标，平时积累业绩弹药。',
+    '宁可丢单，不踩合规红线——一次违规毁掉整个海外布局。',
+    '技术异议用技术回应：参数、标准符合性、可验证报告。',
   ];
 
   /* ---------------- 经典大单剧本（手写、绑定真实旗舰项目，全 8 阶段闯关）----------------
@@ -1174,6 +1218,38 @@ window.COACH_CONTENT = (function () {
         '织生态圈：设计 / 咨询院、EPC 总包、元器件与系统集成伙伴、当地代理、政府平台——信息共享、方案植入、配合投标、利益共同体。',
         '出海版根据地：业主 + EPC + 设计咨询 + 当地电网 / 政府 + 当地代理与服务商，缺一不可。',
       ] },
+    { key: 'battle', icon: '⚔️', name: '竞品对标（怎么打）',
+      essence: '不踩对手、找差异缝、用价值与本地化错位竞争。',
+      points: [
+        'vs 西门子 / ABB / 施耐德（外资）：品牌强但交期长、价格高、本地响应慢——打"交货期短 + 高性价比 + 本地服务 + 标准灵活(IEC/AS/GOST…)"。',
+        'vs 平高 / 特变 / 山东电工等国内同行：避免内卷价格战，打"模块化预制 + 海外业绩 + 一站式集成 + EPC 协同"差异。',
+        'vs 本地厂商：他们懂本地但产能 / 技术 / 交付弱——打"工厂预制质量稳定 + 大项目业绩 + 本地组装合作"。',
+        '通用法则：先认同对手的好，再把战场引到他覆盖不到的场景（交期 / 弱电网应急 / 严苛环境 / 标准灵活），用业绩与试点证明。',
+      ] },
+    { key: 'finance', icon: '💳', name: '融资与商务条款（国际大单生死线）',
+      essence: '国际大单常死在付款与融资结构，不只在价格。',
+      points: [
+        '付款工具：预付款 / 履约 / 质量保函；信用证(LC)优于电汇(TT)；分期与里程碑付款对齐交付节点。',
+        '融资方案：出口信贷（买方 / 卖方信贷）、中信保承保政治与商业风险、买方所在国本币融资（如巴西 BNDES）。',
+        '汇率：约定结算币种与锁汇 / 调价机制，分担汇率波动风险。',
+        '交易模式：设备供货 vs EPC 总包 vs PC——范围、责任边界、税费与本地含量要谈清。',
+      ] },
+    { key: 'tender', icon: '📋', name: '招投标机制（出海版）',
+      essence: '看懂规则，赢在标前与综合评标，而非最低价。',
+      points: [
+        '资格预审(PQ)：业绩 / 资质 / 财务 / HSE 门槛——平时积累"业绩弹药"才进得了短名单。',
+        '技术澄清：用澄清把技术规格往我方优势引导（标前先入为主）。',
+        '投标 / 履约保函：商务标要扎实、合规递交。',
+        '综合评标：资质 + 技术 + 商务 + 履约，差异化技术与履约业绩能"比最低价更高"中标；远离围标 / 串标红线。',
+      ] },
+    { key: 'redline', icon: '🚨', name: '合规红线（出海必修）',
+      essence: '宁可丢单，不踩红线——一次违规毁掉整个海外布局。',
+      points: [
+        '反贿赂：FCPA / 英国反贿赂法 / 当地反腐法——客情靠专业与帮客户成功，绝不靠回扣 / 不当馈赠。',
+        '制裁与出口管制：核查项目所在国与最终用户的制裁清单、两用物项出口管制，存疑先合规审查。',
+        '本地含量与劳工 / 环保：满足属地化与 HSE / 环保法规，尊重当地用工。',
+        '数据与知识产权：保护图纸 / 技术，遵守当地数据合规。',
+      ] },
   ];
 
   /* ---------------- 战绩弹药 · 真实中标案例（跟客户谈业绩 / 履约时可引用；国内项目，出海可类比）---------------- */
@@ -1230,5 +1306,172 @@ window.COACH_CONTENT = (function () {
     { name: '香港有轨电车 10kV 整站', country: '中国香港', region: '东亚', cat: 'transport', customer: 'CMEC / 香港有轨电车', scope: '10kV 整站 E-House', hi: '城市中心紧凑、降噪、整体运输' },
   ];
 
-  return { company, products, tone, levels, stages, signatures, pressure, culture, standards, catTopics, method, cases, overseasCases, pitchLib, tips };
+  /* ---------------- 客户即时反应（按作答分数 / 语气分档，营造来回博弈感）---------------- */
+  const reactions = {
+    good: ['嗯，这个说法我认可，你继续。', '有点意思，接着说。', '你说到点子上了，我在听。', '这个我比较买账，往下走。'],
+    mid: ['行，我先记下，不过我还有顾虑。', '嗯……可以，但还没真正打动我。', '听着还行，再具体点。', '我保留意见，你接着说。'],
+    low: ['你这没说到点上啊。', '听着像在背稿子，我没感觉到价值。', '这套话我听多了，换个说法。', '嗯。（看得出不太满意）'],
+    grovel: ['你这么急着让步，反倒让我担心你们的底气。', '一上来就松口？那我可得再压压你。'],
+    aggressive: ['你这态度可不行，我们是来谈合作的，不是来吵架的。', '别这么冲，我随时可以找别家。'],
+  };
+
+  /* ---------------- 随机黑天鹅 · 剧情变量（闯关中途随机插入，逼你临场应变）----------------
+   * stage = 就近挂靠的漏斗阶段 key（用于进度条与难度）。每个都是可打分回合。 */
+  const curveballs = [
+    { id: 'cb-competitor', stage: 'negotiate', tag: '竞品突袭',
+      ask: '【⚡突发】竞争对手连夜把报价砍到你的七折，客户把对方报价单转给你："人家便宜这么多，你怎么说？"',
+      hint: ['先稳住、不慌不跪', '质疑口径而非人格，拉回总账与可靠性', '守底线，必要时用条件交换而非降价'],
+      rubric: [
+        { id: 'calm', label: '冷静不慌不跪', w: 2, kw: ['理解', '冷静', '先别急', '客观', '不慌'] },
+        { id: 'reframe', label: '拉回口径/总账', w: 3, kw: ['口径', '配置', '总账', '可靠', '同一', '范围', '对一对', '停产损失', '返工'] },
+        { id: 'hold', label: '守底线不打价格战', w: 3, kw: ['底线', '价值', '不能再低', '物有所值', '不牺牲', '条件', '预付', '份额'] },
+      ],
+      gold: '这个差距我反而建议咱们一起核口径——大概率不是同一套配置与可靠性标准。我理解您要控成本，但把价砍到牺牲供电可靠性，真停一次产损失就全回来了。这个价是物有所值的位置，我不靠腰斩证明自己；要更优可以用预付或后续份额来换。您愿意把对手方案拿来对一对吗？',
+      coach: '竞品砍价是最常见的突袭。把战场从"谁便宜"拉回"口径是否可比"，你就稳住了。' },
+    { id: 'cb-fx', stage: 'negotiate', tag: '汇率/账期',
+      ask: '【⚡突发】项目所在国货币大幅贬值，客户要求改用本币结算并延长账期、再压价，否则缓签。',
+      hint: ['正视汇率风险、表达共担', '给币种/账期/保函等结构化方案', '守住核心价值与底线'],
+      rubric: [
+        { id: 'ack', label: '正视并愿共担风险', w: 2, kw: ['理解', '汇率', '风险', '共担', '一起', '体谅'] },
+        { id: 'solution', label: '结构化商务方案', w: 3, kw: ['币种', '账期', '保函', '信用证', '分期', '锁汇', '预付', '出口信贷', '中信保'] },
+        { id: 'hold', label: '守住价值底线', w: 3, kw: ['底线', '价值', '不牺牲', '可靠', '物有所值', '范围'] },
+      ],
+      gold: '汇率波动的压力我理解，也愿意和您共担一部分。我们可以这样设计：核心设备币种与锁汇方式重新约定，账期配合您的资金节奏分期、必要时用信用证或保函兜底，甚至看看出口信贷的可能。但价格已是物有所值的位置，要让步请用付款结构来换，而不是动可靠性。咱们一起找个都扛得住的方案。',
+      coach: '国际大单的生死线常在商务结构。用币种/账期/保函这些工具谈，比纯压价高明得多。' },
+    { id: 'cb-owner', stage: 'intel', tag: '换人',
+      ask: '【⚡突发】你经营许久的对接人突然调走，新负责人对你们毫不了解、明显倾向原供应商。',
+      hint: ['不慌不馁、快速重建关系', '请教式开场 + 用业绩与方案快速立信', '在新决策层里找一个新"教练"'],
+      rubric: [
+        { id: 'calm', label: '不慌不馁', w: 2, kw: ['理解', '正常', '没关系', '重新', '从头', '不急'] },
+        { id: 'rebuild', label: '快速重建关系', w: 3, kw: ['请教', '拜访', '了解', '介绍', '认识', '交流', '约', '教练', '内线'] },
+        { id: 'proof', label: '用业绩/方案立信', w: 3, kw: ['业绩', '案例', '已交付', '方案', '认证', '同类', '见证', '专业'] },
+      ],
+      gold: '换人很正常，我从头跟您建立信任就好。先不谈生意，想先向您请教贵司的关注重点；同时我把我们在【同类项目】的交付业绩、认证与方案整理一份给您，让专业说话。也希望您身边能有同事帮我引荐，把情况摸清。我有信心用结果赢回这份信任。',
+      coach: '换人=关系归零，但不是丢单。用请教式开场 + 业绩立信，在新决策层重建"教练"。' },
+    { id: 'cb-schedule', stage: 'value', tag: '工期突变',
+      ask: '【⚡突发】业主把投产节点硬提前两个月，问你们扛不扛得住，扛不了就换方案。',
+      hint: ['冷静评估、不轻许也不退缩', '给加速方案（预制/移动变/并行）', '量化把握并守住质量底线'],
+      rubric: [
+        { id: 'assess', label: '冷静评估可行性', w: 2, kw: ['评估', '梳理', '看一下', '排一排', '关键路径', '节点', '一起'] },
+        { id: 'accel', label: '给加速方案', w: 3, kw: ['预制', '工厂预制', '移动变', '并行', '提前排产', '分批', '加派', '驻场', '抢工期'] },
+        { id: 'quality', label: '不牺牲质量/不空许', w: 3, kw: ['质量', '可靠', '不牺牲', '把握', '保证', '稳妥', '风险', '实事求是'] },
+      ],
+      gold: '我先不拍胸脯也不退缩，咱们把关键路径一起捋一遍。我方预制舱本就是为抢工期而生：工厂提前排产、现场基础并行、必要时先上移动变兜底过渡，确实能往前抢。我会给您一个有把握的加速方案，但绝不靠牺牲质量来换时间——那对您是更大的风险。哪些节点能压、压多少，我用数据跟您交底。',
+      coach: '工期突变最忌两件事：拍胸脯空许、和扭头就退。冷静评估 + 给真方案，才显专业。' },
+    { id: 'cb-compliance', stage: 'object', tag: '合规/地缘',
+      ask: '【⚡突发】项目所在国突然出台本地含量新规、并有制裁风声，客户担心你们的交付与合规风险。',
+      hint: ['正视风险、不回避', '给本地化与合规方案、亮分支机构与业绩', '坦诚守底线、不踩红线'],
+      rubric: [
+        { id: 'face', label: '正视风险', w: 2, kw: ['理解', '应该', '谨慎', '正视', '关注', '重视'] },
+        { id: 'plan', label: '本地化/合规方案', w: 3, kw: ['本地化', '本地含量', '属地', '合规', '认证', '本地组装', '分支机构', '出口管制', '替代'] },
+        { id: 'honest', label: '坦诚守底线', w: 3, kw: ['坦诚', '透明', '底线', '红线', '不踩', '合法', '业绩', '保障'] },
+      ],
+      gold: '您的担心完全应该，这种事必须正视。本地含量我们能配合做本地组装与属地服务、满足新规；合规上我们严守出口管制与制裁红线、绝不让您承担违规风险，必要时调整供应链与方案。我们在当地设有分支机构、也有同类交付业绩，交付与售后有保障。透明、合法、负责，是我们一贯的底线。',
+      coach: '地缘与合规风险面前，坦诚正视 + 给本地化/合规方案，比回避更能赢得信任，且绝不踩红线。' },
+    { id: 'cb-rumor', stage: 'object', tag: '质量谣言',
+      ask: '【⚡突发】竞争对手放风说你们某海外项目出过质量事故，客户半信半疑来问你。',
+      hint: ['冷静正视、不诋毁对手', '用事实/第三方/数据澄清', '用质保与见证降低对方风险'],
+      rubric: [
+        { id: 'calm', label: '冷静正视不诋毁', w: 2, kw: ['理解', '冷静', '正视', '澄清', '不评价对手', '坦诚', '感谢您直接问'] },
+        { id: 'fact', label: '用事实/第三方澄清', w: 3, kw: ['事实', '数据', '第三方', '报告', '记录', '业绩', '认证', '见证', '核实'] },
+        { id: 'derisk', label: '降低对方风险', w: 3, kw: ['质保', '驻场', '考察', '试点', '备件', '保障', '欢迎核实', '现场'] },
+      ],
+      gold: '谢谢您直接来问，而不是听一面之词。我不评价对手怎么说，只跟您讲事实：我们的海外交付记录、第三方报告与认证都可以给您核实，欢迎您实地考察或视频见证。为彻底打消您的顾虑，我们可以提供质保、驻场与备件方案，甚至先做小范围试点。让事实和现场说话，比任何辩解都有力。',
+      coach: '面对竞品放的"质量谣言"，最忌情绪化对骂。冷静、用事实与第三方澄清、用质保降风险。' },
+  ];
+
+  /* ---------------- 英文 / 双语实战（外方客户场景，全英文台词 + 英文黄金话术 + 英文要点）----------------
+   * 面向澳洲电网 / 业主、海湾 IPP（ACWA 等）、Maersk 等外方终端客户——这些场景必须用英文谈。
+   * 评分复用同一引擎（rubric 关键词为英文子串，tone 已双语增补）。 */
+  const english = {
+    intro: '外方终端客户（澳洲业主 / 海湾 IPP / 国际 EPC）必须用英文沟通。这一场景全英文：客户用英文发问，你用英文应对，系统按英文要点与双语语气评分，并给英文黄金话术。先把英文实战练顺，才算合格的"国际"销售。',
+    over: { co: 'Australia', cust: 'Sunfield Energy (Owner)', role: 'Owner\'s Project / Electrical Manager', cat: 'Solar Farm', product: 'Modular E-House + Prefab MV Substation', scenario: 'Utility-scale solar farm MV substation (AS/NZS)', pain: 'AS/NZS compliance, tight energization date, local support', persona: 'A pragmatic, standards-driven Australian owner — direct, values HSE/compliance, dislikes overselling, decides on evidence.', status: '在建', approach: 'Lead with delivery speed + AS/NZS + local support; prove with Australian references; pilot to de-risk' },
+    stages: [
+      { key: 'open', name: 'Opening', icon: '🤝', goal: 'Open with value and earn the next meeting (in English).',
+        brief: 'First call with a foreign solar-farm owner. Speak English, be specific, no bragging.',
+        rounds: [{
+          id: 'en-open',
+          ask: '【Owner】"We get pitched by a lot of suppliers. Why should I spend time with a Chinese substation maker?"',
+          hint: ['Lead with value, not company bragging', 'Tie it to their project (solar-farm MV substation)', 'Offer a light, concrete next step'],
+          rubric: [
+            { id: 'value', label: 'Value-led opening', w: 3, kw: ['value', 'faster', 'weeks', 'delivery', 'reliab', 'downtime', 'save', 'help you', 'on schedule'] },
+            { id: 'relevance', label: 'Relevant to their project', w: 2, kw: ['solar', 'substation', 'e-house', 'your project', 'mv', 'farm', 'energiz'] },
+            { id: 'next', label: 'Light next step', w: 2, kw: ['minutes', 'technical', 'meeting', 'call', 'schedule', 'show you', 'fit', 'single-line'] },
+          ],
+          gold: "Fair question — I'll be quick and specific. We build modular E-Houses and prefabricated MV substations that ship factory-tested, so we can cut your substation delivery from months to weeks and keep your solar farm on schedule. I'm not here to pitch specs — could we do a 20-minute technical session around your single-line and timeline to see if we're a fit?",
+          coach: 'Open in English the same way: lead with the value to THEM, tie it to their project, ask for a small next step.' }] },
+      { key: 'discover', name: 'Discovery', icon: '🔍', goal: 'Ask, don\'t pitch — uncover standards, timeline, site, grid.',
+        brief: 'The owner is willing to talk technical. Probe before you propose.',
+        rounds: [{
+          id: 'en-disc',
+          ask: '【Owner】"Alright. We need MV substations for the solar farm. What do you want to know?"',
+          hint: ['Ask open questions', 'Probe standard (AS/NZS), timeline, site conditions, grid connection', 'Listen first, don\'t pitch'],
+          rubric: [
+            { id: 'openq', label: 'Open questions', w: 3, kw: ['?', 'how', 'what', 'when', 'which', 'could you', 'tell me', 'are you'] },
+            { id: 'probe', label: 'Probe key constraints', w: 3, kw: ['standard', 'as/nzs', 'timeline', 'grid', 'connection', 'voltage', 'site', 'commission', 'protection', 'energiz'] },
+            { id: 'listen', label: 'Listen, fit-first', w: 2, kw: ['understand', 'first', 'your', 'before', 'fit'] },
+          ],
+          gold: "Great — let me understand your setup first. What voltage levels and standard are you designing to — AS/NZS plus any utility spec? When do you need energization, and what are the site conditions: heat, salt, bushfire? Any grid-connection or protection constraints I should design around? Once I have this, I can give you a solution that actually fits, not a generic quote.",
+          coach: 'Discovery in English = open questions + listening. "Help me understand…" beats "Let me tell you…".' }] },
+      { key: 'value', name: 'Value', icon: '💡', goal: 'Differentiate on outcomes, prove with Australian references.',
+        brief: 'The owner asks why you, not a local or European supplier.',
+        rounds: [{
+          id: 'en-value',
+          ask: '【Owner】"There are local and European suppliers too. What makes you different?"',
+          hint: ['Differentiate: factory-prefab speed, standards flexibility, total cost', 'Translate features into their benefit', 'Back it with proof (AS/NZS, Australian projects)'],
+          rubric: [
+            { id: 'diff', label: 'Clear differentiation', w: 3, kw: ['prefab', 'factory', 'modular', 'weeks', 'as/nzs', 'standard', 'total cost', 'flexible', 'c5', 'tested'] },
+            { id: 'benefit', label: 'Customer benefit', w: 3, kw: ['save', 'on schedule', 'reduce', 'help you', 'downtime', '%', 'hold your', 'less'] },
+            { id: 'proof', label: 'Proof / references', w: 2, kw: ['reference', 'australia', 'delivered', 'certified', 'case', 'track record', 'site visit'] },
+          ],
+          gold: "Three things that matter for your project. One, factory-prefabricated E-Houses arrive tested and install in days, so we hold your energization date. Two, we design flexibly to AS/NZS and your utility spec, with C5 corrosion and bushfire-rated options. Three, we've delivered similar solar-farm substations in Australia for owners like you — references and a site visit are available. So it's not about being cheapest; it's about on-time, reliable, low-hassle power.",
+          coach: 'Differentiate on outcomes (on-time, reliable, low-hassle), then prove with same-country references.' }] },
+      { key: 'object', name: 'Objection', icon: '🛡️', goal: 'Handle the "Chinese maker / standards / support" objection with poise.',
+        brief: 'The make-or-break trust objection — answer with evidence and a pilot, not defensiveness.',
+        rounds: [{
+          id: 'en-object',
+          ask: '【Owner】"Honestly, can a Chinese maker meet AS/NZS and actually support us if something breaks here?"',
+          hint: ['Acknowledge — it\'s a fair concern', 'Prove standards/certs + local presence (Brisbane office, contractor licences)', 'De-risk: warranty, spares, a pilot first'],
+          rubric: [
+            { id: 'face', label: 'Acknowledge the concern', w: 2, kw: ['fair', 'understand', 'reasonable', 'your concern', 'right to ask', "you're right"] },
+            { id: 'proof', label: 'Standards + local presence', w: 3, kw: ['as/nzs', 'certified', 'iec', 'reference', 'licence', 'brisbane', 'local', 'engineers australia', 'office'] },
+            { id: 'derisk', label: 'De-risk with pilot', w: 3, kw: ['warranty', 'spare', 'support', 'pilot', 'first', 'site', 'commission', 'sla', 'step by step'] },
+          ],
+          gold: "That's a fair concern and you're right to ask. We design and test to AS/NZS, hold Australian state contractor licences and an Engineers-Australia certificate, and we run a Brisbane office for local support — not just a factory far away. To de-risk it, we can start with one substation as a pilot, with warranty, on-site commissioning and a local spares plan, then scale once it proves out. Let's shrink the risk step by step, not ask you to bet everything at once.",
+          coach: 'Cross-border trust: acknowledge, prove with certs + local presence, then de-risk with a pilot. Never get defensive.' }] },
+      { key: 'close', name: 'Close', icon: '✍️', goal: 'Trade for local content / speed; confirm a mutual action plan.',
+        brief: 'The owner is close — wants local content and faster delivery.',
+        rounds: [{
+          id: 'en-close',
+          ask: '【Owner】"Price is okay, but we need more local content and faster delivery. Can you commit?"',
+          hint: ['Don\'t cave for free — trade', 'Offer local assembly/content + an accelerated plan', 'Hold reliability; confirm a mutual action plan'],
+          rubric: [
+            { id: 'trade', label: 'Trade, not give', w: 3, kw: ['if', 'local content', 'assembly', 'in return', 'framework', 'volume', 'next phase', 'lock'] },
+            { id: 'accel', label: 'Accelerated plan', w: 3, kw: ['prefab', 'parallel', 'expedite', 'priority', 'factory', 'weeks', 'timeline', 'pull'] },
+            { id: 'commit', label: 'Confirm action plan', w: 2, kw: ['confirm', 'this week', 'contract', 'plan', 'milestone', 'commit', 'next step', 'annex'] },
+          ],
+          gold: "I want to make this work, so let's trade rather than just give. On local content, we can do local assembly and source locally where it makes sense — I'll commit to a target. In return, let's lock the framework or the next phase so I can prioritize your order in the factory and run foundations in parallel to pull the schedule in. What I won't do is compromise reliability to hit a number. If that works, can we confirm the technical annex this week and set the milestones?",
+          coach: 'Closing in English: trade concessions for value, hold reliability, end with a concrete mutual action plan.' }] },
+    ],
+    pitch: [
+      { stage: 'Opening', lines: [
+        "I'll be quick and specific — we cut substation delivery from months to weeks with factory-tested modular E-Houses.",
+        "Could we do a 20-minute technical session around your single-line and timeline to see if we're a fit?",
+      ] },
+      { stage: 'Value', lines: [
+        "It's not about being cheapest — it's about on-time, reliable, low-hassle power.",
+        "We design flexibly to AS/NZS with C5 corrosion and bushfire-rated options, and we've delivered in Australia — references available.",
+      ] },
+      { stage: 'Objection', lines: [
+        "That's a fair concern and you're right to ask — we test to AS/NZS, hold local contractor licences and run a Brisbane office.",
+        "Let's start with one unit as a pilot — warranty, on-site commissioning, local spares — then scale once it proves out.",
+      ] },
+      { stage: 'Negotiation / Close', lines: [
+        "Let's trade rather than just give: local assembly in return for locking the next phase so I can prioritize and pull the schedule in.",
+        "What I won't do is compromise reliability to hit a number. Can we confirm the technical annex this week?",
+      ] },
+    ],
+  };
+
+  return { company, products, tone, levels, stages, signatures, pressure, culture, standards, catTopics, method, cases, overseasCases, reactions, curveballs, english, pitchLib, tips };
 })();

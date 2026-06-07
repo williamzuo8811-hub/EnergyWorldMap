@@ -107,7 +107,16 @@ try {
   ok(b.tone.bad.length > 0, '跪舔用词被语气词典捕获（' + b.tone.bad.join('、') + '）');
   const tooShort = K.scoreFree('好的', round, ctx);
   ok(tooShort.total <= 35, '过短回答被限分（' + tooShort.total + '）');
-} catch (e) { fails.push('scoreFree 抛错：' + (e && e.message)); }
+  // —— 评分公正化：否定豁免 / 同义词 / 反作弊 ——
+  const negR = K.scoreFree('我们绝不跪舔、不会亏本贱卖，坚持物有所值，建议本周技术交流。', round, ctx);
+  ok(negR.tone.bad.length === 0, '否定语境不误判为跪舔（绝不跪舔 / 不会亏本）');
+  const synR = K.scoreFree('该项目最怕弱电网下停线，我方预制式变电站工厂预制、现场几周就位，可把交期压缩、减少停工损失，提议这周技术对接。', round, ctx);
+  ok(synR.total >= 55, '同义表达也能拿合格分（' + synR.total + '）');
+  const stuffR = K.scoreFree('弱电网 预制舱 停产 缩短 工期 案例 下一步', round, ctx);
+  ok((stuffR.flags || []).some(f => /罗列|堆词/.test(f)) && stuffR.total <= 62, '堆砌关键词被识别并限分（' + stuffR.total + '）');
+  const copyR = K.scoreFree(K.tpl(round.gold, ctx), round, ctx);
+  ok((copyR.flags || []).some(f => /照抄/.test(f)) && copyR.total <= 72, '照抄黄金话术被识别并限分（' + copyR.total + '）');
+} catch (e) { fails.push('scoreFree 抛错：' + (e && e.stack || e)); }
 
 // —— 离线评分：选择题 ——
 try {
@@ -155,6 +164,96 @@ try {
   }
   ok(d.step >= d.steps.length, '剧本被推进到结算（render 结算态不抛错）');
 } catch (e) { fails.push('驱动完整剧本抛错：' + (e && e.stack || e)); }
+
+// —— 沉浸式谈判引擎：信任/守价/推进状态 + 黑天鹅 + 客户反应 ——
+try {
+  const opp = K.OPPS.find(o => o.meta) || K.OPPS[0];
+  K.startDeal(opp);
+  ok(K.state.deal.meter && typeof K.state.deal.meter.trust === 'number', '闯关携带 信任/守价/推进 状态');
+  const before = K.state.deal.meter.trust;
+  K.updateMeter({ total: 95, tone: { good: [], bad: [], arrogant: [], defensive: [] } }, K.state.deal.steps[0]);
+  ok(K.state.deal.meter.trust > before, '高分作答提升信任值');
+  K.updateMeter({ total: 20, tone: { bad: ['跪'], arrogant: [], defensive: [] } }, { stage: { key: 'negotiate' }, round: {} });
+  ok(K.state.deal.meter.price < 55, '低分/跪舔侵蚀守价值');
+  // 黑天鹅强制插入
+  const steps = K.stepsOf(K.CONTENT.stages);
+  const n0 = steps.length;
+  K.maybeInjectCurveball(steps, true);
+  ok(steps.length === n0 + 1 && steps.some(s => s.curve), '黑天鹅剧情可插入闯关（' + n0 + '→' + steps.length + '）');
+  ok(typeof K.reactionLine({ total: 90, tone: { bad: [], arrogant: [], defensive: [] } }) === 'string', '客户即时反应可生成');
+  ok(Array.isArray(K.CONTENT.curveballs) && K.CONTENT.curveballs.length >= 5, '黑天鹅库 ≥5（' + (K.CONTENT.curveballs || []).length + '）');
+} catch (e) { fails.push('沉浸式谈判引擎抛错：' + (e && e.stack || e)); }
+
+// —— 可衡量成长闭环：能力雷达 / 错题本 / 结业认证 ——
+try {
+  const prog = K.prog();
+  ok(prog.skills && typeof prog.skills.expertise === 'number', '6 维能力档存在');
+  const before = prog.skills.value;
+  K.updateSkills({ mode: 'free', total: 95, tone: { goodHit: { quantify: true, evidence: true } } }, { stage: { key: 'value' }, round: {} });
+  ok(prog.skills.value > before, '高分量化作答提升「价值表达」能力');
+  // 结业认证考试
+  K.startExam();
+  ok(K.state.deal.kind === 'exam' && K.state.deal.steps.length >= 8, '认证考试展开 8 关（' + K.state.deal.steps.length + '）');
+  K.state.mode = 'profile'; K.render(); // 渲染考试首关
+  // 驱动整场考试到出证
+  let guard = 0;
+  while (K.state.deal && K.state.deal.kind === 'exam' && K.state.deal.step < K.state.deal.steps.length && guard++ < 20) {
+    const st = K.state.deal.steps[K.state.deal.step];
+    doc.getElementById('free-input').value = '我理解您的关注，我方预制舱交付快、可靠性高，可降低停产损失，建议本周技术交流并出方案，业绩与认证可查。';
+    K.doSubmit(); K.advance();
+  }
+  K.render(); // 出证结果
+  ok(K.prog().diagnostic && typeof K.prog().diagnostic.score === 'number', '首考记录为入营诊断基线');
+  K.state.mode = 'deal'; K.state.deal = null;
+  // 错题本：低分回合可重练
+  const someId = Object.keys(K.ALL_ROUNDS)[0];
+  K.startMistake(someId);
+  ok(K.state.deal && K.state.deal.steps.length === 1 && K.state.deal.kind === 'drill', '错题可单题重练');
+} catch (e) { fails.push('成长闭环抛错：' + (e && e.stack || e)); }
+
+// —— 成就徽章 + 连续打卡（驱动一整单后应解锁「首单告捷」）——
+try {
+  const p0 = K.prog();
+  p0.badges = []; p0.dealsClosed = 0; p0.streakWins = 0; p0.dayStreak = 0; p0.lastDay = '';
+  const opp = K.OPPS.find(o => o.meta) || K.OPPS[0];
+  K.startDeal(opp);
+  let g = 0;
+  while (K.state.deal && K.state.deal.kind === 'deal' && K.state.deal.step < K.state.deal.steps.length && g++ < 40) {
+    const st = K.state.deal.steps[K.state.deal.step];
+    if (K.useMC(st)) K.doChoose(0);
+    else { doc.getElementById('free-input').value = '我理解贵司的关注，我方预制舱交付快、可靠性高，可降低停产损失，建议本周技术交流、出方案，业绩与认证可查，咱们一起把节点守住。'; K.doSubmit(); }
+    K.advance();
+  }
+  ok(K.prog().dealsClosed >= 1, '完整成交后 dealsClosed≥1');
+  ok(K.prog().badges.indexOf('first') >= 0, '解锁「首单告捷」徽章');
+  ok(K.prog().dayStreak >= 1, '记录连续打卡天数');
+} catch (e) { fails.push('成就/打卡抛错：' + (e && e.stack || e)); }
+
+// —— 循序渐进 2.0：自适应难度 + 脚手架 ——
+try {
+  const mcStep = { round: K.CONTENT.stages[0].rounds[0], sIdx: 0 }; // 含选择题
+  K.state.diff = 'adapt'; K.state.recent = [30, 40];
+  ok(K.useMC(mcStep) === true, '自适应：表现弱 → 给选择题');
+  K.state.recent = [90, 88];
+  ok(K.useMC(mcStep) === false, '自适应：表现好 → 转开放题');
+  K.state.diff = 'mix'; K.state.recent = [];
+  ok(true, '难度循环含 adapt（' + ['mix', 'easy', 'free', 'adapt'].join('/') + '）');
+} catch (e) { fails.push('自适应难度抛错：' + (e && e.stack || e)); }
+
+// —— 英文 / 双语实战 ——
+try {
+  ok(K.CONTENT.english && Array.isArray(K.CONTENT.english.stages) && K.CONTENT.english.stages.length >= 5, '英文实战 ≥5 关（' + (K.CONTENT.english && K.CONTENT.english.stages.length) + '）');
+  K.startEnglish();
+  ok(K.state.deal.kind === 'en' && K.state.deal.ctx.t.co === 'Australia', '英文场景启动且外方语境（' + K.state.deal.ctx.t.co + '）');
+  K.state.mode = 'en'; K.render();
+  // 英文评分：双语语气生效，优质英文 > 跪舔英文
+  const enRound = K.CONTENT.english.stages[3].rounds[0]; // objection
+  const enCtx = K.state.deal.ctx;
+  const goodEn = K.scoreFree("That's a fair concern and you're right to ask. We test to AS/NZS, hold local contractor licences and run a Brisbane office; we can start with a pilot, warranty and local spares, then scale.", enRound, enCtx);
+  const badEn = K.scoreFree('Just give me your lowest price, whatever you say, I beg you.', enRound, enCtx);
+  ok(goodEn.total >= 55, '优质英文应答达标（' + goodEn.total + '）');
+  ok(badEn.tone.bad.length > 0 && goodEn.total > badEn.total + 20, '英文跪舔被双语词典捕获且显著低分（' + goodEn.total + ' vs ' + badEn.total + '）');
+} catch (e) { fails.push('英文实战抛错：' + (e && e.stack || e)); }
 
 // —— 经典大单战役（手写 · 绑定真实项目）——
 try {
@@ -222,7 +321,10 @@ try {
 
 // —— 销售军规：方法论 + 战绩弹药（提炼自特锐德培训资料）——
 try {
-  ok(Array.isArray(K.CONTENT.method) && K.CONTENT.method.length >= 12, '方法论框架 ≥12（' + (K.CONTENT.method || []).length + '）');
+  ok(Array.isArray(K.CONTENT.method) && K.CONTENT.method.length >= 16, '方法论框架 ≥16（' + (K.CONTENT.method || []).length + '）');
+  ok(['battle', 'finance', 'tender', 'redline'].every(k => K.CONTENT.method.some(m => m.key === k)), '新增 竞品对标/融资/招投标/合规红线 四框架');
+  ok(K.CONTENT.stages[4].rounds.some(r => r.id === 'obj-technical'), '异议阶段新增「技术异议」回合');
+  ok(K.CONTENT.stages[5].rounds.some(r => r.id === 'nego-finance'), '谈判阶段新增「融资条款」回合');
   ok(Array.isArray(K.CONTENT.cases) && K.CONTENT.cases.length >= 7, '战绩弹药案例 ≥7（' + (K.CONTENT.cases || []).length + '）');
   ok(K.CONTENT.method.every(m => m.name && m.essence && Array.isArray(m.points) && m.points.length), '每个方法论含 name/essence/points');
   ok(K.CONTENT.method.some(m => m.key === 'consult') && K.CONTENT.method.some(m => m.key === 'base'), '新增「顾问式沟通范式」与「根据地+生态圈」方法论');

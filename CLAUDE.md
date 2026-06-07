@@ -142,15 +142,33 @@ and `js/coach.js`. `coach.js` rebuilds `PROJECTS` with `util.buildProjects` (no 
   `SUB_DEFS.client`'s `fn` matchers (`clientKeyOf`), builds the **opportunity pool** ranked by a training-value score
   (CLIENT_META match / flagship / investment / recency), derives a deterministic **persona** (role by category, style by
   `id` hash), runs the deal/single-stage **drill**, and **scores answers fully offline & deterministically**: `scoreFree`
-  = rubric-coverage % ± tone bonus/penalty (with a length guard), `scoreChoice` = preset value; both map to 1–5★ + XP.
+  = rubric-coverage % (with **synonym expansion** so paraphrases hit) ± tone bonus/penalty (**negation-aware** so "绝不跪舔"
+  isn't penalised) − **anti-gaming** caps (keyword-stuffing → ≤50, copying the golden script → ≤72) and a length guard;
+  `scoreChoice` = preset value; both map to 1–5★ + XP. An optional **AI 复核** button (when AI is configured) returns a
+  natural "做得好 / 该改进 / 改写示范" critique on top of the deterministic score.
   Progress (XP / level / deals / per-stage best incl. 抗压指数 / history) persists in `localStorage` (memory fallback under
-  Node/private mode). A deal carries a `kind` (`deal`/`signature`/`drill`/`pressure`) so each mode renders only its own active
+  Node/private mode). A **measurable growth loop** sits on top: a 6-axis **能力雷达** (`prog.skills`, EWMA-updated from each free
+  answer's tone buckets via `updateSkills`), an **错题本** (rounds scored <55 auto-enrol, ≥70 auto-clear; `startMistake` re-serves
+  any round by id from the `ALL_ROUNDS` index), and a **结业认证考试** (`startExam` = one round per stage, no hints/golden, runs under
+  the 成长档案 tab) whose first run is recorded as the **入营诊断** baseline and whose result issues a cert level + radar snapshot.
+  Difficulty (`state.diff`) cycles easy→free→**adapt**→mix: **adapt** picks MC vs free and auto-reveals hints + a 起头 scaffold
+  from rolling recent scores (`recentAvg`), and first-time users (`prog.dealsRun===0`) get an onboarding banner on the picker.
+  9 **成就徽章** (`BADGES` / `awardBadges`, evaluated after each deal/exam) and a daily-practice **连续打卡** streak (`updateDayStreak`)
+  surface in 成长档案. A deal carries a `kind` (`deal`/`signature`/`drill`/`pressure`) so each mode renders only its own active
   deal; `startSignature(sig)` runs a marquee deal and `PRESSURE_STAGE` is a synthetic stage built from `COACH_CONTENT.pressure`.
+  Full deals (闯关 / 经典战役) carry a **trust / 守价 / 推进 meter** that accumulates from each answer's score + tone (`updateMeter`)
+  and blends 60/40 with the rubric average into the final **成交指数** (so the whole trajectory, not a single round, decides
+  win/lose); each answer triggers a banded **客户即时反应** (`COACH_CONTENT.reactions`); and a random **黑天鹅 curveball**
+  (`COACH_CONTENT.curveballs` — competitor cut / FX / owner-change / schedule / compliance / quality-rumor) may be spliced
+  mid-deal via `maybeInjectCurveball` (skipped on 'easy' so beginners aren't pressured).
   An **optional AI free-spar** mode (off by default, BYO OpenAI-compatible key stored only in the browser) lets the user
   free-chat with an AI customer; the deterministic core works with **zero network**. `localPack(p)` resolves a project's
   country→region culture/standards (+ category 谈资) and is surfaced both as a collapsible box inside each deal step and as a
-  standalone **当地·谈资** reference page (country picker × category). Modes: 闯关成交 / 经典战役 / 单项特训 / 抗压特训 /
-  当地·谈资 / 销售军规 / 话术库 / 产品速查 / 成长档案. Guarded against missing DOM so `scripts/test-coach.js` can load it under a stub.
+  standalone **当地·谈资** reference page (country picker × category). The **英文实战** mode (`COACH_CONTENT.english`,
+  `startEnglish`) runs an all-English foreign-customer scenario (an Australian solar-farm owner, 5 funnel rounds) scored by the
+  same engine — `COACH_CONTENT.tone.en` is merged into the tone buckets at init (`mergeEnTone`) so English answers are scored
+  bilingually. Modes: 闯关成交 / 经典战役 / 单项特训 / 抗压特训 / 英文实战 / 当地·谈资 / 销售军规 / 话术库 / 产品速查 /
+  成长档案. Guarded against missing DOM so `scripts/test-coach.js` can load it under a stub.
 
 ### Data globals and merge model
 
