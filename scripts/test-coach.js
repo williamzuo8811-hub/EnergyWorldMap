@@ -289,7 +289,9 @@ try {
 
 // —— 经典大单战役（手写 · 绑定真实项目）——
 try {
-  ok(Array.isArray(K.CONTENT.signatures) && K.CONTENT.signatures.length >= 2, '经典大单战役 ≥2 个（' + (K.CONTENT.signatures || []).length + '）');
+  ok(Array.isArray(K.CONTENT.signatures) && K.CONTENT.signatures.length >= 4, '经典大单战役 ≥4 个（' + (K.CONTENT.signatures || []).length + '）');
+  ok(['neom', 'congo', 'acwa', 'idn'].every(k => K.CONTENT.signatures.some(s => s.key === k)), '含 NEOM / 刚果金 / 沙特ACWA / 印尼TKDN 四大战役');
+  K.CONTENT.signatures.forEach(s => { ok((s.stages || []).length === 8 && s.stages.every(st => (st.rounds || []).length && st.rounds[0].id), '战役「' + s.key + '」覆盖全 8 阶段且回合可重建'); });
   const sig = K.CONTENT.signatures[0];
   K.startSignature(sig);
   ok(K.state.deal.kind === 'signature', 'signature 剧本 kind=signature');

@@ -117,9 +117,10 @@ and `js/coach.js`. `coach.js` rebuilds `PROJECTS` with `util.buildProjects` (no 
 - **`js/coach-content.js`** (`window.COACH_CONTENT`, pure data, **not** project data — outside `validate-data.js`):
   the **8-stage deal funnel** (情报画像→破冰触达→需求诊断 SPIN→价值方案→异议化解→商务谈判→促成签约→交付复购) with ~20 rounds,
   each round carrying a customer line, hints, a scoring **rubric** (weighted 要点 × keyword variants), a **golden-script**
-  model answer, and (for early stages) multiple-choice options; the two hand-written **经典大单战役 `signatures`** (NEOM Oxagon
-  net-zero data center / Congo CMOC Kisanfu copper-cobalt mine — each bound to a real project `id` via `projId`, with an `over`
-  block overriding the customer persona and bespoke rounds across all 8 funnel keys); the **抗压特训 `pressure`** module
+  model answer, and (for early stages) multiple-choice options; four hand-written **经典大单战役 `signatures`** (NEOM Oxagon
+  net-zero data center / Congo CMOC Kisanfu copper-cobalt mine / Saudi ACWA solar-storage IPP / Indonesia CATL battery-park TKDN
+  — each bound to a real project `id` via `projId`, with an `over` block overriding the customer persona and bespoke rounds
+  across all 8 funnel keys); the **抗压特训 `pressure`** module
   (escalating high-pressure rounds — anger / belittling / silence / lowball / ultimatum / blame — plus 抗压心法 tips); the 5-product
   knowledge base; the **tone dictionary** (seven good-expression buckets incl. `composure` + groveling/arrogant/**defensive**
   penalty lists that power the **"不卑不亢" poise score** and the stress-mode composure score); the 6 growth **levels** (XP
