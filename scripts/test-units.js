@@ -137,6 +137,28 @@ eq(built2[0].detailEn, 'detail-C', 'buildProjects(en)：按 id 合并 detailEn')
 eq(built2[0].descEn, 'desc-C', 'buildProjects(en)：按 id 合并 descEn');
 eq(built2[1].detailEn, 'inline-D', 'buildProjects(en)：源数据已内联 detailEn 时不被覆盖');
 
+/* ---------- matchProject（搜索：多词 AND + 拼音全拼/首字母；js/pinyin-map.js 字表）---------- */
+const mp = U.matchProject;
+const PY = { '沙': 'sha', '特': 'te', '绿': 'lv', '氢': 'qing', '储': 'chu', '能': 'neng' };
+const sp = { name: '沙特NEOM绿氢项目', en: 'NEOM Green Hydrogen', country: '沙特', owner: 'ACWA Power', desc: '全球最大绿氢' };
+ok(mp(sp, '', PY), 'matchProject：空查询恒为真');
+ok(mp(sp, '绿氢', PY), 'matchProject：中文子串（原行为兼容）');
+ok(mp(sp, 'neom', PY), 'matchProject：英文名不区分大小写');
+ok(mp(sp, 'acwa', PY), 'matchProject：业主字段可搜');
+ok(mp(sp, 'shate', PY), 'matchProject：拼音全拼连写命中（沙特→shate）');
+ok(mp(sp, 'lvqing', PY), 'matchProject：拼音 ü→v 归一（绿氢→lvqing）');
+ok(mp(sp, 'st', PY), 'matchProject：拼音首字母连写命中（沙特→st）');
+ok(mp(sp, '沙特 绿氢', PY), 'matchProject：多词 AND（两词都命中）');
+ok(mp(sp, 'neom 沙特', PY), 'matchProject：多词中英混搭');
+ok(!mp(sp, '沙特 储能', PY), 'matchProject：多词 AND——有一词不命中即不匹配');
+ok(!mp(sp, 'xyz', PY), 'matchProject：不命中返回 false');
+ok(mp(sp, 'shate', undefined) === false, 'matchProject：无拼音字表时纯字母词退回子串匹配（不抛错）');
+// 生成的静态字表本身可被 Node 加载且包含常用字
+const PYMAP = require('../js/pinyin-map.js');
+ok(PYMAP && typeof PYMAP === 'object' && Object.keys(PYMAP).length > 1000, 'pinyin-map.js：可加载且字数充足');
+eq(PYMAP['沙'], 'sha', 'pinyin-map.js：沙→sha');
+eq(PYMAP['绿'], 'lv', 'pinyin-map.js：绿→lv（ü 已归一为 v）');
+
 /* ---------- 汇总 ---------- */
 console.log('═══════════════════════════════════════════════');
 console.log(' 能源世界地图 · 纯逻辑单元测试');

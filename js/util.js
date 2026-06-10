@@ -287,6 +287,45 @@
     return n >= 10000 ? (n / 10000).toFixed(1) + ' 万亿' : (n < 10 ? (Math.round(n * 10) / 10) : Math.round(n)).toLocaleString('en-US') + ' 亿';
   }
 
+  /* ---------- 搜索匹配（多词 AND + 拼音全拼/首字母，DOM 无关，app.js 与单测共享）----------
+   * matchProject(p, q, pyMap)：
+   *   · q 按空白切词，全部词都命中才算匹配（词序无关，如「沙特 储能」）
+   *   · 每个词先做 name/en/country/owner/desc 的小写子串匹配（即原行为）
+   *   · 纯字母词再试拼音：全拼连写（shate）与首字母连写（st），字表来自 js/pinyin-map.js
+   *     （scripts/build-pinyin.js 生成；ü→v。多音字取默认读音，搜索容错场景可接受）
+   * 派生的搜索索引就地缓存在 p._hay / p._py，首次搜索时构建一次。 */
+  function searchTokens(q) { return String(q || '').toLowerCase().split(/\s+/).filter(Boolean); }
+  function projectHay(p) {
+    return p._hay || (p._hay = ((p.name || '') + ' ' + (p.en || '') + ' ' + (p.country || '') + ' ' +
+      (p.owner || '') + ' ' + (p.desc || '')).toLowerCase());
+  }
+  function projectPinyin(p, pyMap) {
+    if (p._py) return p._py;
+    let full = '', init = '';
+    if (pyMap) {
+      const src = (p.name || '') + ' ' + (p.country || '') + ' ' + (p.owner || '');
+      for (const ch of src) {
+        const py = pyMap[ch];
+        if (py) { full += py; init += py[0]; }
+      }
+    }
+    return (p._py = { full: full, init: init });
+  }
+  function matchProject(p, q, pyMap) {
+    const toks = searchTokens(q);
+    if (!toks.length) return true;
+    const hay = projectHay(p);
+    let py = null;
+    return toks.every(t => {
+      if (hay.indexOf(t) >= 0) return true;
+      if (pyMap && /^[a-z]+$/.test(t)) {
+        py = py || projectPinyin(p, pyMap);
+        return py.full.indexOf(t) >= 0 || py.init.indexOf(t) >= 0;
+      }
+      return false;
+    });
+  }
+
   /* ---------- 数据装配管线（app.js 与 globe.js 同口径，单一实现）----------
    * 合并 ENERGY.PROJECTS 与 ENERGY_EXTRA → 按 name 去重（首个占位胜出）→ 挂 progress(按id)
    * → 合并英文正文 opts.en(按id，仅在源数据未内联 descEn/detailEn 时填充)
@@ -316,5 +355,5 @@
     return out;
   }
 
-  return { SUB_DEFS, classifySub, parseCapacity, wgs2gcj, outOfChina, normalizeOwner, LABELS_EN, capFmtMW, invMagnitude, buildProjects };
+  return { SUB_DEFS, classifySub, parseCapacity, wgs2gcj, outOfChina, normalizeOwner, LABELS_EN, capFmtMW, invMagnitude, buildProjects, searchTokens, projectHay, projectPinyin, matchProject };
 });

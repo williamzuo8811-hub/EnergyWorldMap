@@ -9,7 +9,7 @@
   const CAT_KEYS = Object.keys(CATEGORIES);
   // 纯逻辑（子分类规则 / 容量解析 / 坐标纠偏 / 标签映射 / 量级 / 数据装配）抽至 js/util.js，
   // 与 scripts/test-units.js 及 globe.js 共享同一实现
-  const { SUB_DEFS, wgs2gcj, normalizeOwner, LABELS_EN, capFmtMW, invMagnitude, buildProjects } = window.ENERGY_UTIL;
+  const { SUB_DEFS, wgs2gcj, normalizeOwner, LABELS_EN, capFmtMW, invMagnitude, buildProjects, matchProject } = window.ENERGY_UTIL;
 
   const SUB_LABEL = {};
   Object.keys(SUB_DEFS).forEach(cat => { SUB_LABEL[cat] = {}; SUB_DEFS[cat].forEach(d => { SUB_LABEL[cat][d.key] = d.label; }); });
@@ -237,11 +237,8 @@
   // 开关类控件统一同步 aria-pressed（无障碍：读屏能听到"已按下/未按下"）
   const pressed = (el, on) => { if (el && el.setAttribute) el.setAttribute('aria-pressed', on ? 'true' : 'false'); };
 
-  function matchQ(p, q) {
-    if (!q) return true;
-    const hay = (p.name + ' ' + (p.en || '') + ' ' + p.country + ' ' + (p.owner || '') + ' ' + p.desc).toLowerCase();
-    return hay.indexOf(q.toLowerCase()) >= 0;
-  }
+  // 搜索：多词 AND + 拼音全拼/首字母（util.matchProject；字表 js/pinyin-map.js，索引就地缓存在项目对象上）
+  const matchQ = (p, q) => matchProject(p, q, window.PINYIN_MAP);
   function passBase(p) {
     // 地理筛选：选了国家则以国家为准（更具体，覆盖大区选择，避免"大区∩国家"为空的困惑）；否则按大区
     const geoOK = state.countries.size
@@ -694,7 +691,7 @@
       el.textContent = state.lang === 'en' ? el.dataset.i18n : el.dataset.zh;
     });
     const sEl = document.getElementById('search');
-    if (sEl) sEl.placeholder = state.lang === 'en' ? 'Search project / country / owner…' : '搜索项目 / 国家 / 业主…';
+    if (sEl) sEl.placeholder = state.lang === 'en' ? 'Search project / country / owner… (pinyin OK)' : '搜索项目 / 国家 / 业主，支持拼音…';
     if (btnLang) btnLang.textContent = state.lang === 'en' ? '中' : 'EN';
     if (sortToggle) sortToggle.textContent = state.lang === 'en' ? (state.sort === 'cap' ? 'by capacity ⇄' : 'by investment ⇄') : (state.sort === 'cap' ? '按装机容量 ⇄' : '按投资额 ⇄');
     buildCatLegend();   // 地图浮层文案随语言重建

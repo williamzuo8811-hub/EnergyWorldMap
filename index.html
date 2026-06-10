@@ -65,7 +65,7 @@
         <button class="drawer-close" data-i18n="✕ Close" aria-label="关闭筛选面板">✕ 收起筛选</button>
         <div class="search">
           <span class="ico">🔍</span>
-          <input id="search" type="text" placeholder="搜索项目 / 国家 / 业主…" aria-label="搜索项目 / 国家 / 业主">
+          <input id="search" type="text" placeholder="搜索项目 / 国家 / 业主，支持拼音…" aria-label="搜索项目 / 国家 / 业主，支持拼音与首字母">
         </div>
 
         <button class="recent-toggle" id="recent-toggle" aria-pressed="false" data-i18n="🆕 Latest updates only">🆕 仅看最新动态</button>
@@ -195,6 +195,8 @@
   <script defer src="js/data-refresh2606.js"></script>
   <script defer src="js/data-refresh2606b.js"></script>
   <script defer src="js/progress.js"></script>
+  <!-- 拼音字表（~17KB，scripts/build-pinyin.js 生成）：搜索框拼音/首字母匹配用 -->
+  <script defer src="js/pinyin-map.js"></script>
   <!-- i18n-en.js（英文正文 ~1.4MB）不在此同步加载：只有英文详情卡正文用得到（英文名/标签均已内联），
        改由 app.js 在切到英文 / 带 ?lang=en 深链时按需注入，避免拖慢中文访客首屏可交互时间。 -->
   <script defer src="js/util.js"></script>

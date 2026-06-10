@@ -213,6 +213,16 @@ if (UTIL && UTIL.classifySub) {
   });
 })();
 
+// 5g) 拼音字表覆盖（js/pinyin-map.js，搜索框拼音匹配用）：新数据批次可能引入新汉字 → 提示重跑 build-pinyin
+(function () {
+  let PY = null;
+  try { PY = require(path.join(ROOT, 'js/pinyin-map.js')); } catch (e) { W('js/pinyin-map.js 缺失或不可加载（搜索的拼音匹配将退化为子串匹配）：node scripts/build-pinyin.js 生成'); return; }
+  const missing = new Set();
+  const feed = s => { for (const ch of String(s || '')) if (/[㐀-鿿]/.test(ch) && !PY[ch]) missing.add(ch); };
+  PROJECTS.forEach(p => { if (p) { feed(p.name); feed(p.country); feed(p.owner); } });
+  if (missing.size) W(`拼音字表缺 ${missing.size} 个汉字（新数据引入；这些字暂无法被拼音搜索命中）：${[...missing].slice(0, 20).join('')}${missing.size > 20 ? ' …' : ''} → 重跑 node scripts/build-pinyin.js`);
+})();
+
 /* ---------- 6) 概览 ---------- */
 const by = (key) => PROJECTS.reduce((m, p) => { const k = p[key]; m[k] = (m[k] || 0) + 1; return m; }, {});
 const capPresent = PROJECTS.filter(p => p.cap && /\d/.test(p.cap)).length;
