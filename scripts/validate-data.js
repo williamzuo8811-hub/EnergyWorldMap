@@ -233,8 +233,9 @@ if (UTIL && UTIL.geoNameOf) {
       if (!p || !p.country || /[—、\/]/.test(p.country)) return;   // 复合走廊不参与染色
       const g = UTIL.geoNameOf(p.country);
       if (g === null) {
-        // 显式 null（110m 没有的微型经济体）合法；完全未知的国名才告警
-        const known = UTIL.LABELS_EN.country && Object.prototype.hasOwnProperty.call(UTIL.LABELS_EN.country, p.country);
+        // 显式 null（GEO_FIX 里 110m 没有的微型经济体/多国聚合）合法；完全未知的国名才告警
+        const known = (UTIL.LABELS_EN.country && Object.prototype.hasOwnProperty.call(UTIL.LABELS_EN.country, p.country)) ||
+          (UTIL.GEO_FIX && Object.prototype.hasOwnProperty.call(UTIL.GEO_FIX, p.country));
         if (!known) bad.set(p.country, (bad.get(p.country) || 0) + 1);
       } else if (GEO.size && !GEO.has(g)) {
         bad.set(p.country + '→"' + g + '"(110m 无此要素，需在 util.js GEO_FIX 修正)', (bad.get(p.country) || 0) + 1);

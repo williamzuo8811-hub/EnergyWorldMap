@@ -406,5 +406,5 @@
     return out;
   }
 
-  return { SUB_DEFS, classifySub, parseCapacity, wgs2gcj, outOfChina, normalizeOwner, LABELS_EN, capFmtMW, invMagnitude, buildProjects, searchTokens, projectHay, projectPinyin, matchProject, geoNameOf };
+  return { SUB_DEFS, classifySub, parseCapacity, wgs2gcj, outOfChina, normalizeOwner, LABELS_EN, capFmtMW, invMagnitude, buildProjects, searchTokens, projectHay, projectPinyin, matchProject, geoNameOf, GEO_FIX };
 });
