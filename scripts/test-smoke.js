@@ -154,6 +154,8 @@ try { APP.showClientBoard(); ok(true, 'showClientBoard()（🎯 客户 BD 看板
 catch (e) { fails.push('showClientBoard() 抛错：' + (e && e.message)); }
 try { APP.showLeague(); ok(true, 'showLeague()（🏢 企业榜）不抛错'); }
 catch (e) { fails.push('showLeague() 抛错：' + (e && e.message)); }
+try { APP.showTrends(); ok(true, 'showTrends()（📈 趋势统计）不抛错'); }
+catch (e) { fails.push('showTrends() 抛错：' + (e && e.message)); }
 
 /* ---------- 汇总 ---------- */
 console.log('═══════════════════════════════════════════════');

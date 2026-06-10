@@ -782,6 +782,10 @@
   const btnCompare = document.getElementById('btn-compare');
   if (btnCompare) btnCompare.addEventListener('click', openCompare);
 
+  // 📈 趋势统计（年度投资/项目数 + 大区×品类矩阵）
+  const btnTrends = document.getElementById('btn-trends');
+  if (btnTrends) btnTrends.addEventListener('click', showTrends);
+
   /* ---------- 英文正文(detailEn/descEn)按需加载 ----------
    * js/i18n-en.js 约 1.4MB，只有英文详情卡正文用得到（英文名/标签均已内联在源数据）。
    * 已从 index.html 首屏脚本链移除，改为：切到英文 / 带 ?lang=en 深链时才异步注入，
@@ -1271,6 +1275,89 @@
     }));
   }
 
+  /* ---------- 📈 趋势统计（按当前筛选：年度投资/项目数 + 大区×品类矩阵热格）----------
+   * 既有右栏统计都是"当前切片"的横截面；这里补时间维度的纵向视角。复用 countryPanel 宽弹层。 */
+  function showTrends() {
+    const items = filtered();
+    const en = state.lang === 'en';
+    if (!items.length) { toast(tr('无匹配项目，请调整筛选条件')); return; }
+    // 年度投资沿用 KPI 口径（排除国际大客户防双计；仅看 client 时照常计入）；项目数按全部所选
+    const clientOnly = state.cats.size === 1 && state.cats.has('client');
+    const stat = clientOnly ? items : items.filter(p => p.cat !== 'client');
+    const invY = {}, cntY = {};
+    items.forEach(p => { cntY[p.year] = (cntY[p.year] || 0) + 1; });
+    stat.forEach(p => { invY[p.year] = (invY[p.year] || 0) + (p.inv || 0); });
+    const yearsAll = Object.keys(cntY).map(Number);
+    const y0 = Math.min(...yearsAll), y1 = Math.max(...yearsAll);
+    const years = []; for (let y = y0; y <= y1; y++) years.push(y);
+
+    // —— 图1：年度投资额（柱）+ 年度项目数（折线，独立比例）——
+    const W = 660, H = 210, PL = 14, PR = 14, PT = 16, PB = 36, plotH = H - PT - PB;
+    const maxInv = Math.max(1, ...years.map(y => invY[y] || 0));
+    const maxCnt = Math.max(1, ...years.map(y => cntY[y] || 0));
+    const slotW = (W - PL - PR) / years.length;
+    const xOf = i => PL + i * slotW + slotW / 2;
+    const bars = years.map((y, i) => {
+      const v = invY[y] || 0, h = Math.max(v > 0 ? 2 : 0, v / maxInv * plotH);
+      return '<rect x="' + (xOf(i) - slotW * 0.31).toFixed(1) + '" y="' + (PT + plotH - h).toFixed(1) +
+        '" width="' + (slotW * 0.62).toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2" fill="url(#trg)">' +
+        '<title>' + y + (en ? ': ≈$' : '：≈$') + invMag(v) + ' · ' + (cntY[y] || 0) + (en ? ' projects' : ' 个项目') + '</title></rect>';
+    }).join('');
+    const line = years.map((y, i) => (i ? 'L' : 'M') + xOf(i).toFixed(1) + ' ' + (PT + plotH - (cntY[y] || 0) / maxCnt * plotH).toFixed(1)).join(' ');
+    const dots = years.map((y, i) =>
+      '<circle cx="' + xOf(i).toFixed(1) + '" cy="' + (PT + plotH - (cntY[y] || 0) / maxCnt * plotH).toFixed(1) + '" r="2.6" fill="#ffb02e"><title>' + y + (en ? ': ' : '：') + (cntY[y] || 0) + (en ? ' projects' : ' 个项目') + '</title></circle>').join('');
+    const step = Math.max(1, Math.ceil(years.length / 9));
+    const axis = years.map((y, i) => (i % step === 0 || i === years.length - 1)
+      ? '<text x="' + xOf(i).toFixed(1) + '" y="' + (H - 12) + '" font-size="10.5" fill="#7b8ca6" text-anchor="middle">' + y + '</text>' : '').join('');
+    const chart = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="tr-svg" role="img" aria-label="' + (en ? 'Investment & project count by year' : '年度投资额与项目数') + '">' +
+      '<defs><linearGradient id="trg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#21c7ff"/><stop offset="1" stop-color="rgba(33,199,255,0.25)"/></linearGradient></defs>' +
+      '<line x1="' + PL + '" y1="' + (PT + plotH) + '" x2="' + (W - PR) + '" y2="' + (PT + plotH) + '" stroke="rgba(120,160,220,0.3)"/>' +
+      bars + '<path d="' + line + '" fill="none" stroke="#ffb02e" stroke-width="2"/>' + dots + axis + '</svg>';
+
+    // —— 图2：大区 × 品类矩阵热格（数字=项目数；色深=该桶投资额，√ 压缩）——
+    const mInv = {}, mCnt = {};
+    items.forEach(p => {
+      const k = p.region + '|' + p.cat;
+      mCnt[k] = (mCnt[k] || 0) + 1; mInv[k] = (mInv[k] || 0) + (p.inv || 0);
+    });
+    const regs = REGIONS.filter(r => CAT_KEYS.some(k => mCnt[r + '|' + k]));
+    const maxCell = Math.max(1, ...Object.values(mInv).map(v => Math.sqrt(v)));
+    const head = '<div class="trm-corner"></div>' + CAT_KEYS.map(k =>
+      '<div class="trm-h" title="' + esc(catName(k)) + '"><span class="d" style="background:' + CATEGORIES[k].color + '"></span>' + catShort(k) + '</div>').join('');
+    const rows = regs.map(r => '<div class="trm-r">' + esc(regionName(r)) + '</div>' + CAT_KEYS.map(k => {
+      const key = r + '|' + k, n = mCnt[key] || 0, v = mInv[key] || 0;
+      const t = n ? Math.sqrt(v) / maxCell : 0;
+      const bg = n ? heatColor(t) : 'transparent';
+      return '<div class="trm-c' + (n ? ' has' : '') + '" data-region="' + esc(r) + '" data-cat="' + k + '"' +
+        (n ? ' tabindex="0" role="button" aria-label="' + esc(regionName(r)) + ' × ' + esc(catShort(k)) + ' ' + n + (en ? ' projects' : ' 个项目') + '"' : '') +
+        ' style="--cbg:' + bg + ';--ca:' + (0.16 + t * 0.72).toFixed(2) + '" title="' + esc(regionName(r)) + ' × ' + esc(catShort(k)) + (en ? ': ' : '：') + n + (en ? ' proj · ≈$' : ' 个 · ≈$') + invMag(v) + '">' + (n || '') + '</div>';
+    }).join('')).join('');
+
+    countryPanel.classList.add('wide');
+    countryPanel.innerHTML =
+      '<div class="cp-head"><span style="font-size:20px">📈</span><div class="cp-name">' + (en ? 'Trends' : '趋势统计') + '</div>' +
+      '<button class="cp-close" id="cp-close" aria-label="关闭面板" title="关闭">×</button></div>' +
+      '<div class="cp-body">' +
+      '<div class="cp-sec-title">' + (en ? 'BY YEAR — investment (bars, USD) · project count (line)' : '年度趋势 —— 投资额（柱，美元）· 项目数（折线）') +
+      ' <span class="tr-cap">' + items.length + (en ? ' projects in current filter' : ' 个项目 · 按当前筛选') + '</span></div>' +
+      chart +
+      '<div class="cp-sec-title">' + (en ? 'REGION × CATEGORY — number = projects · color = investment' : '大区 × 品类矩阵 —— 数字=项目数 · 色深=投资额') + '</div>' +
+      '<div class="tr-matrix" style="--cols:' + CAT_KEYS.length + '">' + head + rows + '</div>' +
+      '<div class="cp-note">* ' + (en
+        ? 'Annual investment follows the KPI rule (Key-Clients excluded to avoid double counting). Click a matrix cell to filter the map to that region × category.'
+        : '年度投资沿用 KPI 口径（不含「国际大客户」防双计）；矩阵色深为该桶投资额（√ 压缩）。点矩阵格子可把地图筛选到对应「大区 × 品类」。') + '</div>' +
+      '</div>';
+    countryBackdrop.classList.add('show'); countryPanel.classList.add('show');
+    document.getElementById('cp-close').addEventListener('click', hideCountry);
+    focusEl('cp-close');
+    countryPanel.querySelectorAll('.trm-c.has').forEach(el => el.addEventListener('click', () => {
+      state.cats = new Set([el.dataset.cat]); state.subOff.clear();
+      state.regions = new Set([el.dataset.region]); state.countries.clear();
+      hideCountry(); applyUIFromState(); render();
+      toast((en ? 'Filtered: ' : '已筛选：') + regionName(el.dataset.region) + ' × ' + catShort(el.dataset.cat));
+    }));
+  }
+
   /* ---------- 品类色图例（地图左上，点击=切换该品类；随语言重建）---------- */
   const legendEl = document.getElementById('cat-legend');
   function buildCatLegend() {
@@ -1640,5 +1727,5 @@
   })();
 
   // 调试 / 程序化控制句柄
-  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showLeague, showDetail, PROJECTS, applyLang, buildRegionTree, showCompare, openCompare, toggleFav, FAVS };
+  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showLeague, showDetail, PROJECTS, applyLang, buildRegionTree, showCompare, openCompare, toggleFav, FAVS, showTrends };
 })();
