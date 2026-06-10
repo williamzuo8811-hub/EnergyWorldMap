@@ -303,6 +303,9 @@
       '阿塞拜疆': 'Azerbaijan', '阿富汗': 'Afghanistan', '阿尔及利亚': 'Algeria', '阿拉伯联合酋长国': 'UAE',
       '阿曼': 'Oman', '阿根廷': 'Argentina', '阿联酋': 'UAE', '韩国': 'South Korea', '马拉维': 'Malawi',
       '马来西亚': 'Malaysia', '马耳他': 'Malta', '马达加斯加': 'Madagascar', '马里': 'Mali', '黑山': 'Montenegro',
+      '东帝汶': 'Timor-Leste', '马尔代夫': 'Maldives', '叙利亚': 'Syria', '也门': 'Yemen', '利比里亚': 'Liberia',
+      '斯洛伐克': 'Slovakia', '所罗门群岛': 'Solomon Islands', '多米尼加': 'Dominican Republic',
+      '委内瑞拉': 'Venezuela', '巴拉圭': 'Paraguay', '乌拉圭': 'Uruguay', '特立尼达和多巴哥': 'Trinidad and Tobago',
     },
   };
 
@@ -315,7 +318,8 @@
     '刚果（金）': 'Dem. Rep. Congo', '刚果（布）': 'Congo', '赤道几内亚': 'Eq. Guinea',
     '波黑': 'Bosnia and Herz.', '波斯尼亚和黑塞哥维那': 'Bosnia and Herz.', '南苏丹': 'S. Sudan',
     '中国台湾': 'Taiwan', '科特迪瓦': "Côte d'Ivoire",
-    '新加坡': null, '巴林': null, '佛得角': null, '马耳他': null, '中国香港': null, '欧盟': null, '欧盟多国': null, '多哥等': null,
+    '所罗门群岛': 'Solomon Is.', '多米尼加': 'Dominican Rep.',
+    '新加坡': null, '巴林': null, '佛得角': null, '马耳他': null, '中国香港': null, '欧盟': null, '欧盟多国': null, '多哥等': null, '马尔代夫': null,
   };
   function geoNameOf(country) {
     if (!country || /[—、\/]/.test(country)) return null;   // 复合国名不参与染色
