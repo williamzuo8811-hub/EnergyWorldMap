@@ -227,5 +227,10 @@
       window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
     }
   </script>
+  <!-- 轻量访问统计（Cloudflare Web Analytics：免费、无 Cookie、不采集个人数据）。
+       启用：Cloudflare 仪表盘 → Analytics & Logs → Web Analytics → Add a site 获取 token，
+       替换下方 YOUR_CF_TOKEN 并取消注释（三个页面同此操作）。详见 docs/部署与中国访问.md「五、访问统计」。
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "YOUR_CF_TOKEN"}'></script>
+  -->
 </body>
 </html>

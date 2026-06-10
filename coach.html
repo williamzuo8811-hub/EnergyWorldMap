@@ -186,5 +186,8 @@
       window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
     }
   </script>
+  <!-- 轻量访问统计（Cloudflare Web Analytics）：替换 token 并取消注释即启用，详见 docs/部署与中国访问.md「五、访问统计」。
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "YOUR_CF_TOKEN"}'></script>
+  -->
 </body>
 </html>
