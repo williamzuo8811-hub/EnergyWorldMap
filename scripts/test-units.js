@@ -137,6 +137,17 @@ eq(built2[0].detailEn, 'detail-C', 'buildProjects(en)：按 id 合并 detailEn')
 eq(built2[0].descEn, 'desc-C', 'buildProjects(en)：按 id 合并 descEn');
 eq(built2[1].detailEn, 'inline-D', 'buildProjects(en)：源数据已内联 detailEn 时不被覆盖');
 
+/* ---------- geoNameOf（国别染色：中文国名 → Natural-Earth-110m 要素名）---------- */
+const gn = U.geoNameOf;
+eq(gn('美国'), 'United States of America', 'geoNameOf：美国 → 110m 全称（GEO_FIX 修正）');
+eq(gn('沙特'), 'Saudi Arabia', 'geoNameOf：沙特 → Saudi Arabia');
+eq(gn('沙特阿拉伯'), 'Saudi Arabia', 'geoNameOf：沙特阿拉伯 同样并入 Saudi Arabia');
+eq(gn('刚果（金）'), 'Dem. Rep. Congo', 'geoNameOf：刚果（金）→ 110m 缩写名');
+eq(gn('中国台湾'), 'Taiwan', 'geoNameOf：中国台湾 → Taiwan（110m 要素名）');
+eq(gn('新加坡'), null, 'geoNameOf：110m 无微型经济体 → 显式 null（不染色不告警）');
+eq(gn('英国—法国'), null, 'geoNameOf：跨国复合国名不参与染色');
+eq(gn('某未知国'), null, 'geoNameOf：未知国名返回 null');
+
 /* ---------- matchProject（搜索：多词 AND + 拼音全拼/首字母；js/pinyin-map.js 字表）---------- */
 const mp = U.matchProject;
 const PY = { '沙': 'sha', '特': 'te', '绿': 'lv', '氢': 'qing', '储': 'chu', '能': 'neng' };

@@ -549,9 +549,18 @@ input[type=range]::-webkit-slider-thumb {
 .btn-heat:hover { color: var(--txt); border-color: var(--border-strong); }
 .btn-heat.on { color: #fff; border-color: #ff7a18; background: linear-gradient(90deg, rgba(255,45,45,.30), rgba(255,122,24,.30)); box-shadow: 0 0 0 1px rgba(255,122,24,.45), var(--shadow); }
 
-/* 投资热力图图例（仅热力模式显示） */
+/* 🎨 国别染色按钮（与热力互斥的另一种宏观面视图） */
+.btn-choro { padding: 7px 12px; font-size: 12px; color: var(--txt-dim); background: var(--panel); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; backdrop-filter: blur(8px); box-shadow: var(--shadow); white-space: nowrap; }
+.btn-choro:hover { color: var(--txt); border-color: var(--border-strong); }
+.btn-choro.on { color: #fff; border-color: #15c2c2; background: linear-gradient(90deg, rgba(21,194,194,.30), rgba(52,208,88,.26)); box-shadow: 0 0 0 1px rgba(21,194,194,.45), var(--shadow); }
+/* 染色模式：右下署名让位给染色图例 */
+body.choro-on .map-credit { display: none; }
+
+/* 投资热力图图例（仅热力模式显示）；国别染色图例复用同壳（仅染色模式显示） */
 .heat-legend { position: absolute; right: 14px; bottom: 14px; z-index: 1100; display: none; align-items: center; gap: 9px; padding: 7px 13px; background: rgba(6, 11, 24, 0.74); border: 1px solid var(--border); border-radius: 20px; backdrop-filter: blur(6px); box-shadow: var(--shadow); font-size: 11px; color: var(--txt-dim); }
 body.heat-on .heat-legend { display: flex; }
+body.heat-on .heat-legend.choro-legend { display: none; }
+body.choro-on .heat-legend.choro-legend { display: flex; }
 .heat-legend .hl-cap { color: var(--txt); font-weight: 600; }
 .heat-legend .hl-bar { width: 124px; height: 9px; border-radius: 5px; background: linear-gradient(90deg, #0b1f4d, #1e63ff, #15c2c2, #34d058, #ffd000, #ff7a18, #ff2d2d); }
 .heat-legend .hl-lo, .heat-legend .hl-hi { letter-spacing: .5px; }

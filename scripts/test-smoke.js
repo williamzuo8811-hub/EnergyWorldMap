@@ -48,6 +48,7 @@ const doc = {
   createElement(t) { return new El(t); },
   createElementNS(_ns, t) { return new El(t); },
   addEventListener() {},
+  head: new El('head'),
   body: new El('body'),
   documentElement: new El('html'),
 };
@@ -82,6 +83,7 @@ const L = {
   marker: () => leafObj(),
   polyline: () => leafObj(),
   heatLayer: () => leafObj(),
+  geoJSON: () => leafObj(),
   control: { zoom: () => leafObj() },
   Browser: {},
 };
@@ -107,6 +109,7 @@ try {
     'data-europe', 'data-nuclear', 'data-northam', 'data-southasia', 'data-china-future', 'data-clients2', 'data-refresh2606', 'progress']
     .forEach(f => require(path.join(__dirname, '..', 'js', f + '.js')));
   require(path.join(__dirname, '..', 'js', 'clients-meta.js'));   // window.CLIENT_META（BD 看板用）
+  require(path.join(__dirname, '..', 'lib', 'world-110m.js'));    // window.WORLD_GEO（🎨 国别染色用；浏览器里按需懒加载）
   require(path.join(__dirname, '..', 'js', 'app.js'));
 } catch (e) {
   console.error('✘ app.js 初始化抛出异常：\n', e && e.stack || e);
@@ -140,6 +143,12 @@ try {
   APP.state.favOnly = false; APP.render();
   ok(true, '⭐ 收藏夹 toggleFav / favOnly 筛选渲染不抛错（无 localStorage 环境内存退化）');
 } catch (e) { fails.push('⭐ 收藏夹抛错：' + (e && e.message)); }
+
+try {
+  APP.state.choro = true; APP.render();
+  APP.state.choro = false; APP.render();
+  ok(true, '🎨 国别染色（choropleth）渲染开/关不抛错');
+} catch (e) { fails.push('🎨 国别染色抛错：' + (e && e.message)); }
 
 try { APP.showClientBoard(); ok(true, 'showClientBoard()（🎯 客户 BD 看板）不抛错'); }
 catch (e) { fails.push('showClientBoard() 抛错：' + (e && e.message)); }

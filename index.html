@@ -134,6 +134,7 @@
           <!-- 🎓 销售陪练入口：暂未公开，仅口令访问（去掉 hidden + display:none 即可重新公开） -->
           <a class="btn-coach" id="btn-coach" href="coach.html" hidden style="display:none" title="国际销售话术陪练：用真实项目把生意从零练到成交" aria-label="打开国际销售话术陪练" data-i18n="🎓 Sales Coach">🎓 销售陪练</a>
           <button class="btn-heat" id="btn-heat" aria-pressed="false" title="按当前权重显示宏观热力格局" aria-label="切换投资热力图" data-i18n="🔥 Heatmap">🔥 热力图</button>
+          <button class="btn-choro" id="btn-choro" aria-pressed="false" title="按国家聚合投资/装机，整国面填色（点国家看下钻）" aria-label="切换国别染色" data-i18n="🎨 Choropleth">🎨 国别染色</button>
           <button class="btn-weight" id="btn-weight" aria-pressed="false" title="圆点大小与热力按 投资额 或 装机容量(MW) 加权" aria-label="切换加权口径：投资额或装机容量">⚖️ 投资权重</button>
           <button class="btn-flow on" id="btn-flow" aria-pressed="true" title="显隐输变电/高铁/管道飞线" aria-label="显隐飞线" data-i18n="⚡ Flowlines">⚡ 飞线</button>
           <button class="btn-league" id="btn-league" title="企业 / 业主全球排行榜" aria-label="打开企业排行榜" data-i18n="🏢 Companies">🏢 企业榜</button>
@@ -144,6 +145,11 @@
         <div class="heat-facets" id="heat-facets"></div>
         <div class="heat-legend" id="heat-legend">
           <span class="hl-cap">投资热力</span>
+          <i class="hl-bar"></i>
+          <span class="hl-lo">低</span><span class="hl-hi">高</span>
+        </div>
+        <div class="heat-legend choro-legend" id="choro-legend">
+          <span class="hl-cap">国别投资</span>
           <i class="hl-bar"></i>
           <span class="hl-lo">低</span><span class="hl-hi">高</span>
         </div>

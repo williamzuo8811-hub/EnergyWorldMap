@@ -9,7 +9,7 @@
   const CAT_KEYS = Object.keys(CATEGORIES);
   // 纯逻辑（子分类规则 / 容量解析 / 坐标纠偏 / 标签映射 / 量级 / 数据装配）抽至 js/util.js，
   // 与 scripts/test-units.js 及 globe.js 共享同一实现
-  const { SUB_DEFS, wgs2gcj, normalizeOwner, LABELS_EN, capFmtMW, invMagnitude, buildProjects, matchProject } = window.ENERGY_UTIL;
+  const { SUB_DEFS, wgs2gcj, normalizeOwner, LABELS_EN, capFmtMW, invMagnitude, buildProjects, matchProject, geoNameOf } = window.ENERGY_UTIL;
 
   const SUB_LABEL = {};
   Object.keys(SUB_DEFS).forEach(cat => { SUB_LABEL[cat] = {}; SUB_DEFS[cat].forEach(d => { SUB_LABEL[cat][d.key] = d.label; }); });
@@ -143,7 +143,7 @@
   }
   const state = {
     cats: new Set(CAT_KEYS), subOff: new Set(), regions: new Set(), countries: new Set(), statuses: new Set(),
-    minYear: MIN_YEAR, maxYear: MAX_YEAR, q: '', recentOnly: false, favOnly: false, heat: false,
+    minYear: MIN_YEAR, maxYear: MAX_YEAR, q: '', recentOnly: false, favOnly: false, heat: false, choro: false,
     weight: 'inv', sort: 'inv', // weight: 圆点/热力按 inv 投资 或 cap 装机容量；sort: TOP 排序
     playYear: null,             // 时间轴播放时的"当前年"（用于年份大字 + 当年新项目高亮）
     lang: 'zh',                 // 'zh' | 'en'：项目名称与分析标签的中英切换
@@ -182,40 +182,9 @@
   const catName = k => state.lang === 'en' ? (CAT_EN[k] || (CATEGORIES[k] || {}).name || k) : ((CATEGORIES[k] || {}).name || k);
   const regionName = r => state.lang === 'en' ? (REGION_EN[r] || r) : r;
   const statusName = s => state.lang === 'en' ? (STATUS_EN[s] || s) : s;
-  // 国名中→英（全库约 139 个原子国名；EN 模式下悬浮/列表/详情/国别面板/对比统一显示英文）。
-  // 仅用于"显示"，dataset/状态键仍存中文原串；复合国名（"英国—德国"/"贝宁、多哥等"）逐段翻译再拼接。
-  const COUNTRY_EN = {
-    '中国': 'China', '中国台湾': 'Taiwan, China', '中国香港': 'Hong Kong, China', '不丹': 'Bhutan',
-    '丹麦': 'Denmark', '乌克兰': 'Ukraine', '乌兹别克斯坦': 'Uzbekistan', '乌干达': 'Uganda', '乍得': 'Chad',
-    '以色列': 'Israel', '伊拉克': 'Iraq', '伊朗': 'Iran', '佛得角': 'Cape Verde', '俄罗斯': 'Russia',
-    '保加利亚': 'Bulgaria', '克罗地亚': 'Croatia', '冈比亚': 'Gambia', '冰岛': 'Iceland', '几内亚': 'Guinea',
-    '几内亚比绍': 'Guinea-Bissau', '刚果（布）': 'Congo-Brazzaville', '刚果（金）': 'DR Congo', '利比亚': 'Libya',
-    '加拿大': 'Canada', '加纳': 'Ghana', '加蓬': 'Gabon', '匈牙利': 'Hungary', '南苏丹': 'South Sudan',
-    '南非': 'South Africa', '博茨瓦纳': 'Botswana', '卡塔尔': 'Qatar', '卢旺达': 'Rwanda', '印度': 'India',
-    '印度尼西亚': 'Indonesia', '厄瓜多尔': 'Ecuador', '厄立特里亚': 'Eritrea', '吉尔吉斯斯坦': 'Kyrgyzstan',
-    '吉布提': 'Djibouti', '哈萨克斯坦': 'Kazakhstan', '哥伦比亚': 'Colombia', '喀麦隆': 'Cameroon',
-    '土库曼斯坦': 'Turkmenistan', '土耳其': 'Turkey', '圭亚那': 'Guyana', '坦桑尼亚': 'Tanzania', '埃及': 'Egypt',
-    '埃塞俄比亚': 'Ethiopia', '塔吉克斯坦': 'Tajikistan', '塞内加尔': 'Senegal', '塞尔维亚': 'Serbia',
-    '塞浦路斯': 'Cyprus', '墨西哥': 'Mexico', '多哥': 'Togo', '多哥等': 'Togo etc.', '奥地利': 'Austria',
-    '孟加拉国': 'Bangladesh', '安哥拉': 'Angola', '尼日利亚': 'Nigeria', '尼日尔': 'Niger', '尼泊尔': 'Nepal',
-    '巴基斯坦': 'Pakistan', '巴布亚新几内亚': 'Papua New Guinea', '巴拿马': 'Panama', '巴林': 'Bahrain',
-    '巴西': 'Brazil', '布基纳法索': 'Burkina Faso', '布隆迪': 'Burundi', '希腊': 'Greece', '德国': 'Germany',
-    '意大利': 'Italy', '挪威': 'Norway', '捷克': 'Czechia', '摩洛哥': 'Morocco', '文莱': 'Brunei',
-    '斯里兰卡': 'Sri Lanka', '新加坡': 'Singapore', '新西兰': 'New Zealand', '日本': 'Japan', '智利': 'Chile',
-    '柬埔寨': 'Cambodia', '格陵兰': 'Greenland', '欧盟': 'EU', '比利时': 'Belgium', '毛里塔尼亚': 'Mauritania',
-    '沙特': 'Saudi Arabia', '沙特阿拉伯': 'Saudi Arabia', '法国': 'France', '波兰': 'Poland',
-    '波斯尼亚和黑塞哥维那': 'Bosnia & Herzegovina', '波黑': 'Bosnia & Herzegovina', '泰国': 'Thailand',
-    '津巴布韦': 'Zimbabwe', '澳大利亚': 'Australia', '爱尔兰': 'Ireland', '爱沙尼亚': 'Estonia', '牙买加': 'Jamaica',
-    '玻利维亚': 'Bolivia', '瑞典': 'Sweden', '科威特': 'Kuwait', '科特迪瓦': 'Côte d’Ivoire', '秘鲁': 'Peru',
-    '突尼斯': 'Tunisia', '立陶宛': 'Lithuania', '约旦': 'Jordan', '纳米比亚': 'Namibia', '缅甸': 'Myanmar',
-    '罗马尼亚': 'Romania', '美国': 'United States', '老挝': 'Laos', '肯尼亚': 'Kenya', '芬兰': 'Finland',
-    '苏里南': 'Suriname', '英国': 'United Kingdom', '荷兰': 'Netherlands', '莫桑比克': 'Mozambique',
-    '莱索托': 'Lesotho', '菲律宾': 'Philippines', '葡萄牙': 'Portugal', '蒙古': 'Mongolia', '蒙古国': 'Mongolia',
-    '西班牙': 'Spain', '贝宁': 'Benin', '赞比亚': 'Zambia', '赤道几内亚': 'Equatorial Guinea', '越南': 'Vietnam',
-    '阿塞拜疆': 'Azerbaijan', '阿富汗': 'Afghanistan', '阿尔及利亚': 'Algeria', '阿拉伯联合酋长国': 'UAE',
-    '阿曼': 'Oman', '阿根廷': 'Argentina', '阿联酋': 'UAE', '韩国': 'South Korea', '马拉维': 'Malawi',
-    '马来西亚': 'Malaysia', '马耳他': 'Malta', '马达加斯加': 'Madagascar', '马里': 'Mali', '黑山': 'Montenegro',
-  };
+  // 国名中→英（EN 模式下悬浮/列表/详情/国别面板/对比统一显示英文）。
+  // 表本体已下沉至 util.js LABELS_EN.country（与国别染色 geoNameOf 共用单一真源）。
+  const COUNTRY_EN = LABELS_EN.country;
   const countryName = c => {
     if (state.lang !== 'en' || !c) return c;
     if (COUNTRY_EN[c]) return COUNTRY_EN[c];
@@ -324,9 +293,81 @@
     },
   }).addTo(map);
 
+  /* ---------- 🎨 国别染色（choropleth）：按国家聚合投资/装机给整国面填色 ----------
+   * 国界 GeoJSON（lib/world-110m.js，~430KB）按需懒加载：首次开启时注入 <script>，载入后自动重渲染。
+   * 口径：单国精确匹配（与国别下钻一致）——跨国走廊复合国名与 110m 没有的微型经济体不上色；
+   *      投资聚合沿用 KPI 的 client 排除规则，避免「国际大客户」与能源品类对同一物理项目双计。 */
+  let choroLayer = null;
+  let _geoState = window.WORLD_GEO ? 'done' : 'idle';
+  function ensureWorldGeo() {
+    if (_geoState !== 'idle') return;
+    _geoState = 'loading';
+    const s = document.createElement('script');
+    s.src = 'lib/world-110m.js'; s.async = true;
+    s.onload = () => { _geoState = 'done'; render(); };
+    s.onerror = () => { _geoState = 'idle'; toast(state.lang === 'en' ? 'Failed to load borders — retry' : '国界数据加载失败，请重试'); };
+    (document.head || document.body).appendChild(s);
+  }
+  // 热力图同款渐变取色：t∈[0,1]，在相邻色标间线性插值
+  const HEAT_STOPS = Object.keys(HEAT_GRADIENT).map(Number).sort((a, b) => a - b);
+  function heatColor(t) {
+    t = Math.max(0, Math.min(1, t));
+    let lo = HEAT_STOPS[0], hi = HEAT_STOPS[HEAT_STOPS.length - 1];
+    for (let i = 1; i < HEAT_STOPS.length; i++) { if (t <= HEAT_STOPS[i]) { lo = HEAT_STOPS[i - 1]; hi = HEAT_STOPS[i]; break; } }
+    const f = hi === lo ? 0 : (t - lo) / (hi - lo);
+    const px = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+    const a = px(HEAT_GRADIENT[lo]), b = px(HEAT_GRADIENT[hi]);
+    return 'rgb(' + a.map((v, i) => Math.round(v + (b[i] - v) * f)).join(',') + ')';
+  }
+  function updateChoro(items) {
+    if (!window.WORLD_GEO) { ensureWorldGeo(); return; }   // 懒加载中：载完会自动 render
+    const clientOnly = state.cats.size === 1 && state.cats.has('client');
+    const agg = {};   // geo要素名 -> { v 权重和, inv, mw, n, zh: {中文国名:项目数} }
+    items.forEach(p => {
+      if (!clientOnly && p.cat === 'client') return;
+      const g = geoNameOf(p.country); if (!g) return;
+      const a = agg[g] || (agg[g] = { v: 0, inv: 0, mw: 0, n: 0, zh: {} });
+      a.n++; a.inv += (p.inv || 0); a.mw += (p.capMW || 0); a.v += weightVal(p) || 0;
+      a.zh[p.country] = (a.zh[p.country] || 0) + 1;
+    });
+    // 与热力图同策略：√ 压缩量级，max 取约 92 分位，避免超大经济体独占色阶
+    const ws = Object.values(agg).map(a => Math.sqrt(a.v)).sort((a, b) => a - b);
+    const max = ws.length ? Math.max(0.5, ws[Math.floor(ws.length * 0.92)] * 1.15) : 1;
+    if (choroLayer) { map.removeLayer(choroLayer); choroLayer = null; }
+    choroLayer = L.geoJSON(window.WORLD_GEO, {
+      style: f => {
+        const a = agg[f.properties.name];
+        return a
+          ? { fillColor: heatColor(Math.sqrt(a.v) / max), fillOpacity: 0.62, color: 'rgba(120,160,220,0.38)', weight: 0.7 }
+          : { fillColor: '#0d1730', fillOpacity: 0.22, color: 'rgba(120,160,220,0.16)', weight: 0.5 };
+      },
+      onEachFeature: (f, lyr) => {
+        const a = agg[f.properties.name]; if (!a) return;
+        const zh = Object.keys(a.zh).sort((x, y) => a.zh[y] - a.zh[x])[0];   // 主中文名（沙特/沙特阿拉伯 合并后取大头）
+        lyr.bindTooltip(
+          '<b>' + esc(countryName(zh)) + '</b><br>' + a.n + (state.lang === 'en' ? ' projects' : ' 个项目') +
+          ' · ≈$' + invMag(a.inv) + (a.mw ? ' · ' + capFmt(a.mw) : ''),
+          { sticky: true, className: 'mk-tip' });
+        lyr.on('click', () => showCountry(zh));
+      },
+    }).addTo(map);
+    const cap = document.querySelector('#choro-legend .hl-cap');
+    if (cap) cap.textContent = state.lang === 'en'
+      ? (state.weight === 'cap' ? 'Capacity by country' : 'Investment by country')
+      : (state.weight === 'cap' ? '国别装机' : '国别投资');
+  }
+
   function updateMap(items) {
     lineLayer.clearLayers();
     markerCluster.clearLayers();
+    // —— 🎨 国别染色模式：整国面着色（点国家开下钻），隐藏标记/热力/飞线 ——
+    if (state.choro) {
+      if (map.hasLayer(markerCluster)) map.removeLayer(markerCluster);
+      if (heatLayer && map.hasLayer(heatLayer)) map.removeLayer(heatLayer);
+      updateChoro(items);
+      return;
+    }
+    if (choroLayer) { map.removeLayer(choroLayer); choroLayer = null; }
     // 连线（输变电/高铁/管道，飞线）—— 可经 ⚡ 按钮显隐
     if (state.lines) items.forEach(p => {
       if (p.route && p.route.length >= 2) {
@@ -650,7 +691,7 @@
     state.cats = new Set(CAT_KEYS); state.subOff.clear(); state.countries.clear(); state.statuses.clear();
     state.regions = new Set(DEFAULT_REGIONS); // 重置后展示全部大区
     state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.q = ''; state.recentOnly = false; state.favOnly = false;
-    state.weight = 'inv'; state.sort = 'inv'; state.heatCat = null;
+    state.weight = 'inv'; state.sort = 'inv'; state.heatCat = null; state.choro = false;
     clearPresetActive();
     const allYp = document.querySelector('.year-presets .yp[data-preset="all"]');
     if (allYp) { allYp.classList.add('on'); pressed(allYp, true); }
@@ -676,9 +717,29 @@
   const btnHeat = document.getElementById('btn-heat');
   btnHeat.addEventListener('click', () => {
     state.heat = !state.heat;
+    if (state.heat && state.choro) setChoroUI(false);   // 热力与国别染色互斥（两种宏观面视图叠加无意义）
     btnHeat.classList.toggle('on', state.heat);
     pressed(btnHeat, state.heat);
     document.body.classList.toggle('heat-on', state.heat);
+    render();
+  });
+
+  // 🎨 国别染色切换（与热力互斥；首次开启懒加载国界 GeoJSON）
+  const btnChoro = document.getElementById('btn-choro');
+  function setChoroUI(on) {
+    state.choro = on;
+    if (btnChoro) { btnChoro.classList.toggle('on', on); pressed(btnChoro, on); }
+    document.body.classList.toggle('choro-on', on);
+  }
+  if (btnChoro) btnChoro.addEventListener('click', () => {
+    const on = !state.choro;
+    if (on && state.heat) {
+      state.heat = false;
+      btnHeat.classList.remove('on'); pressed(btnHeat, false);
+      document.body.classList.remove('heat-on');
+    }
+    setChoroUI(on);
+    if (on) ensureWorldGeo();
     render();
   });
 
@@ -1274,6 +1335,7 @@
     if (state.recentOnly) p.set('recent', '1');
     if (state.favOnly) p.set('fav', '1');
     if (state.heat) p.set('heat', '1');
+    if (state.choro) p.set('choro', '1');
     if (state.weight === 'cap') p.set('w', 'cap');
     if (state.sort === 'cap') p.set('sort', 'cap');
     if (state.lang === 'en') p.set('lang', 'en');
@@ -1302,6 +1364,7 @@
     if (p.has('recent')) state.recentOnly = true;
     if (p.has('fav')) state.favOnly = true; // 收藏本身在各自浏览器本地，分享链接只还原"只看关注"开关
     if (p.has('heat')) state.heat = true;
+    if (p.has('choro')) { state.choro = true; state.heat = false; }
     if (p.get('w') === 'cap') state.weight = 'cap';
     if (p.get('sort') === 'cap') state.sort = 'cap';
     if (p.get('lang') === 'en') state.lang = 'en';
@@ -1446,6 +1509,8 @@
     if (recentBtn) { recentBtn.classList.toggle('on', state.recentOnly); pressed(recentBtn, state.recentOnly); }
     syncFavUI();
     if (btnHeat) { btnHeat.classList.toggle('on', state.heat); pressed(btnHeat, state.heat); document.body.classList.toggle('heat-on', state.heat); }
+    if (btnChoro) { btnChoro.classList.toggle('on', state.choro); pressed(btnChoro, state.choro); document.body.classList.toggle('choro-on', state.choro); }
+    if (state.choro) ensureWorldGeo();
     if (btnWeight) { btnWeight.classList.toggle('on', state.weight === 'cap'); pressed(btnWeight, state.weight === 'cap'); btnWeight.textContent = state.weight === 'cap' ? '⚖️ 容量权重' : '⚖️ 投资权重'; }
     if (sortToggle) sortToggle.textContent = state.sort === 'cap' ? '按装机容量 ⇄' : '按投资额 ⇄';
     if (btnFlow) { btnFlow.classList.toggle('on', state.lines); pressed(btnFlow, state.lines); }

@@ -270,7 +270,58 @@
     cat: { renewable: 'Renewables', nuclear: 'Nuclear', grid: 'Grid & T&D', storage: 'Storage', ci: 'Industry', datacenter: 'Data Center', transport: 'Transport', petro: 'Oil·Gas·Chem', mining: 'Mining', client: 'Key Clients' },
     region: { '中国': 'China', '东亚': 'East Asia', '东南亚': 'SE Asia', '南亚': 'South Asia', '中亚': 'Central Asia', '中东': 'Middle East', '欧洲': 'Europe', '北美': 'N. America', '南美': 'S. America', '非洲': 'Africa', '大洋洲': 'Oceania' },
     status: { '规划': 'Planned', '在建': 'Building', '投运': 'Operating' },
+    // 国名中→英（全库约 139 个原子国名；原在 app.js，下沉至此供 EN 显示与国别染色 geoNameOf 共用）。
+    // 仅用于"显示/映射"，dataset/状态键仍存中文原串；复合国名（"英国—德国"）由调用方逐段翻译。
+    country: {
+      '中国': 'China', '中国台湾': 'Taiwan, China', '中国香港': 'Hong Kong, China', '不丹': 'Bhutan',
+      '丹麦': 'Denmark', '乌克兰': 'Ukraine', '乌兹别克斯坦': 'Uzbekistan', '乌干达': 'Uganda', '乍得': 'Chad',
+      '以色列': 'Israel', '伊拉克': 'Iraq', '伊朗': 'Iran', '佛得角': 'Cape Verde', '俄罗斯': 'Russia',
+      '保加利亚': 'Bulgaria', '克罗地亚': 'Croatia', '冈比亚': 'Gambia', '冰岛': 'Iceland', '几内亚': 'Guinea',
+      '几内亚比绍': 'Guinea-Bissau', '刚果（布）': 'Congo-Brazzaville', '刚果（金）': 'DR Congo', '利比亚': 'Libya',
+      '加拿大': 'Canada', '加纳': 'Ghana', '加蓬': 'Gabon', '匈牙利': 'Hungary', '南苏丹': 'South Sudan',
+      '南非': 'South Africa', '博茨瓦纳': 'Botswana', '卡塔尔': 'Qatar', '卢旺达': 'Rwanda', '印度': 'India',
+      '印度尼西亚': 'Indonesia', '厄瓜多尔': 'Ecuador', '厄立特里亚': 'Eritrea', '吉尔吉斯斯坦': 'Kyrgyzstan',
+      '吉布提': 'Djibouti', '哈萨克斯坦': 'Kazakhstan', '哥伦比亚': 'Colombia', '喀麦隆': 'Cameroon',
+      '土库曼斯坦': 'Turkmenistan', '土耳其': 'Turkey', '圭亚那': 'Guyana', '坦桑尼亚': 'Tanzania', '埃及': 'Egypt',
+      '埃塞俄比亚': 'Ethiopia', '塔吉克斯坦': 'Tajikistan', '塞内加尔': 'Senegal', '塞尔维亚': 'Serbia',
+      '塞浦路斯': 'Cyprus', '墨西哥': 'Mexico', '多哥': 'Togo', '多哥等': 'Togo etc.', '奥地利': 'Austria',
+      '孟加拉国': 'Bangladesh', '安哥拉': 'Angola', '尼日利亚': 'Nigeria', '尼日尔': 'Niger', '尼泊尔': 'Nepal',
+      '巴基斯坦': 'Pakistan', '巴布亚新几内亚': 'Papua New Guinea', '巴拿马': 'Panama', '巴林': 'Bahrain',
+      '巴西': 'Brazil', '布基纳法索': 'Burkina Faso', '布隆迪': 'Burundi', '希腊': 'Greece', '德国': 'Germany',
+      '意大利': 'Italy', '挪威': 'Norway', '捷克': 'Czechia', '摩洛哥': 'Morocco', '文莱': 'Brunei',
+      '斯里兰卡': 'Sri Lanka', '新加坡': 'Singapore', '新西兰': 'New Zealand', '日本': 'Japan', '智利': 'Chile',
+      '柬埔寨': 'Cambodia', '格陵兰': 'Greenland', '欧盟': 'EU', '比利时': 'Belgium', '毛里塔尼亚': 'Mauritania',
+      '沙特': 'Saudi Arabia', '沙特阿拉伯': 'Saudi Arabia', '法国': 'France', '波兰': 'Poland',
+      '波斯尼亚和黑塞哥维那': 'Bosnia & Herzegovina', '波黑': 'Bosnia & Herzegovina', '泰国': 'Thailand',
+      '津巴布韦': 'Zimbabwe', '澳大利亚': 'Australia', '爱尔兰': 'Ireland', '爱沙尼亚': 'Estonia', '牙买加': 'Jamaica',
+      '玻利维亚': 'Bolivia', '瑞典': 'Sweden', '科威特': 'Kuwait', '科特迪瓦': 'Côte d’Ivoire', '秘鲁': 'Peru',
+      '突尼斯': 'Tunisia', '立陶宛': 'Lithuania', '约旦': 'Jordan', '纳米比亚': 'Namibia', '缅甸': 'Myanmar',
+      '罗马尼亚': 'Romania', '美国': 'United States', '老挝': 'Laos', '肯尼亚': 'Kenya', '芬兰': 'Finland',
+      '苏里南': 'Suriname', '英国': 'United Kingdom', '荷兰': 'Netherlands', '莫桑比克': 'Mozambique',
+      '莱索托': 'Lesotho', '菲律宾': 'Philippines', '葡萄牙': 'Portugal', '蒙古': 'Mongolia', '蒙古国': 'Mongolia',
+      '西班牙': 'Spain', '贝宁': 'Benin', '赞比亚': 'Zambia', '赤道几内亚': 'Equatorial Guinea', '越南': 'Vietnam',
+      '阿塞拜疆': 'Azerbaijan', '阿富汗': 'Afghanistan', '阿尔及利亚': 'Algeria', '阿拉伯联合酋长国': 'UAE',
+      '阿曼': 'Oman', '阿根廷': 'Argentina', '阿联酋': 'UAE', '韩国': 'South Korea', '马拉维': 'Malawi',
+      '马来西亚': 'Malaysia', '马耳他': 'Malta', '马达加斯加': 'Madagascar', '马里': 'Mali', '黑山': 'Montenegro',
+    },
   };
+
+  /* ---------- 国别染色：中文国名 → Natural-Earth-110m（lib/world-110m.js）要素名 ----------
+   * 默认走 LABELS_EN.country 的英文名（与 110m 大多一致）；GEO_FIX 覆盖两边叫法不同的国家；
+   * 显式 null = 110m 分辨率下没有该要素（微型经济体），属已知不可染色，不算数据问题。
+   * 复合国名（跨国走廊「英国—法国」）返回 null：染色按单国精确口径，与国别下钻一致。 */
+  const GEO_FIX = {
+    '美国': 'United States of America', '阿联酋': 'United Arab Emirates', '阿拉伯联合酋长国': 'United Arab Emirates',
+    '刚果（金）': 'Dem. Rep. Congo', '刚果（布）': 'Congo', '赤道几内亚': 'Eq. Guinea',
+    '波黑': 'Bosnia and Herz.', '波斯尼亚和黑塞哥维那': 'Bosnia and Herz.', '南苏丹': 'S. Sudan',
+    '中国台湾': 'Taiwan', '科特迪瓦': "Côte d'Ivoire",
+    '新加坡': null, '巴林': null, '佛得角': null, '马耳他': null, '中国香港': null, '欧盟': null, '欧盟多国': null, '多哥等': null,
+  };
+  function geoNameOf(country) {
+    if (!country || /[—、\/]/.test(country)) return null;   // 复合国名不参与染色
+    if (Object.prototype.hasOwnProperty.call(GEO_FIX, country)) return GEO_FIX[country];
+    return LABELS_EN.country[country] || null;
+  }
 
   /* ---------- 装机容量(MW) → 友好显示（GW/MW；null→「—」）---------- */
   function capFmtMW(mw) { return mw == null ? '—' : (mw >= 1000 ? (mw / 1000).toFixed(mw < 10000 ? 1 : 0) + ' GW' : Math.round(mw) + ' MW'); }
@@ -355,5 +406,5 @@
     return out;
   }
 
-  return { SUB_DEFS, classifySub, parseCapacity, wgs2gcj, outOfChina, normalizeOwner, LABELS_EN, capFmtMW, invMagnitude, buildProjects, searchTokens, projectHay, projectPinyin, matchProject };
+  return { SUB_DEFS, classifySub, parseCapacity, wgs2gcj, outOfChina, normalizeOwner, LABELS_EN, capFmtMW, invMagnitude, buildProjects, searchTokens, projectHay, projectPinyin, matchProject, geoNameOf };
 });
