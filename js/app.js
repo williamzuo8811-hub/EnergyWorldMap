@@ -143,7 +143,7 @@
   }
   const state = {
     cats: new Set(CAT_KEYS), subOff: new Set(), regions: new Set(), countries: new Set(), statuses: new Set(),
-    minYear: MIN_YEAR, maxYear: MAX_YEAR, q: '', recentOnly: false, heat: false,
+    minYear: MIN_YEAR, maxYear: MAX_YEAR, q: '', recentOnly: false, favOnly: false, heat: false,
     weight: 'inv', sort: 'inv', // weight: 圆点/热力按 inv 投资 或 cap 装机容量；sort: TOP 排序
     playYear: null,             // 时间轴播放时的"当前年"（用于年份大字 + 当年新项目高亮）
     lang: 'zh',                 // 'zh' | 'en'：项目名称与分析标签的中英切换
@@ -247,6 +247,7 @@
     return geoOK
       && (state.statuses.size === 0 || state.statuses.has(p.status))
       && (!state.recentOnly || isRecent(p))
+      && (!state.favOnly || FAVS.has(p.id))
       && p.year >= state.minYear && p.year <= state.maxYear && matchQ(p, state.q);
   }
   const filtered = () => PROJECTS.filter(p => state.cats.has(p.cat) && !state.subOff.has(p.cat + ':' + p.sub) && passBase(p));
@@ -492,6 +493,69 @@
     statusEl.appendChild(el);
   });
 
+  /* ---------- ⭐ 我的关注（收藏夹：localStorage 持久化，跨设备靠 ⤓/⤒ JSON 备份恢复）---------- */
+  const FAV_KEY = 'ewm.favs.v1';
+  const favStore = (function () { try { return typeof localStorage !== 'undefined' ? localStorage : null; } catch (e) { return null; } })();
+  const FAVS = (function () {
+    try { const d = JSON.parse((favStore && favStore.getItem(FAV_KEY)) || '[]'); return new Set(Array.isArray(d) ? d.map(Number).filter(n => !isNaN(n)) : []); }
+    catch (e) { return new Set(); } // 私密模式/读损坏：退化为内存收藏（本次会话有效）
+  })();
+  function saveFavs() { try { if (favStore) favStore.setItem(FAV_KEY, JSON.stringify([...FAVS])); } catch (e) { /* 存储满/私密模式：忽略 */ } }
+  const isFav = p => FAVS.has(p.id);
+  function syncFavUI() {
+    const b = document.getElementById('fav-toggle');
+    if (b) { b.classList.toggle('on', state.favOnly); pressed(b, state.favOnly); }
+    const c = document.getElementById('fav-count'); if (c) c.textContent = FAVS.size;
+    if (_detailP) {
+      const fb = document.getElementById('d-fav');
+      if (fb) { fb.textContent = isFav(_detailP) ? '★' : '☆'; fb.classList.toggle('on', isFav(_detailP)); pressed(fb, isFav(_detailP)); }
+    }
+  }
+  function toggleFav(id) {
+    id = Number(id);
+    if (FAVS.has(id)) FAVS.delete(id); else FAVS.add(id);
+    saveFavs(); syncFavUI();
+    if (state.favOnly) render();   // 关注筛选开着时，取消收藏即时从地图消失
+    return FAVS.has(id);
+  }
+  const favToggleBtn = document.getElementById('fav-toggle');
+  if (favToggleBtn) favToggleBtn.addEventListener('click', () => {
+    state.favOnly = !state.favOnly;
+    if (state.favOnly && !FAVS.size) toast(state.lang === 'en' ? 'No favorites yet — open a project and tap ☆' : '还没有收藏：打开任意项目详情卡，点 ☆ 收藏');
+    syncFavUI(); render();
+  });
+  // ⤓ 备份收藏（JSON，含名称快照便于人读）/ ⤒ 恢复（合并导入，不清空现有收藏）
+  const favExportBtn = document.getElementById('fav-export');
+  if (favExportBtn) favExportBtn.addEventListener('click', () => {
+    if (!FAVS.size) { toast(state.lang === 'en' ? 'No favorites to export' : '暂无收藏可备份'); return; }
+    const items = [...FAVS].map(id => { const p = PROJECTS.find(x => x.id === id); return { id, name: p ? p.name : '' }; });
+    const data = { app: 'EnergyWorldMap', kind: 'favorites', v: 1, exportedAt: new Date().toISOString().slice(0, 10), ids: [...FAVS], items };
+    saveBlob(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), 'energy-favorites-' + FAVS.size + '.json');
+    toast('⤓ ' + (state.lang === 'en' ? 'Favorites exported (JSON)' : '已备份 ' + FAVS.size + ' 条收藏 (JSON)'));
+  });
+  const favImportBtn = document.getElementById('fav-import');
+  if (favImportBtn) favImportBtn.addEventListener('click', () => {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = '.json,application/json';
+    inp.addEventListener('change', () => {
+      const f = inp.files && inp.files[0]; if (!f) return;
+      const r = new FileReader();
+      r.onload = () => {
+        try {
+          const d = JSON.parse(String(r.result));
+          const ids = Array.isArray(d) ? d : (Array.isArray(d.ids) ? d.ids : null);
+          if (!ids) throw new Error('bad shape');
+          let added = 0;
+          ids.map(Number).filter(n => !isNaN(n)).forEach(id => { if (!FAVS.has(id)) { FAVS.add(id); added++; } });
+          saveFavs(); syncFavUI(); if (state.favOnly) render();
+          toast('⤒ ' + (state.lang === 'en' ? 'Imported ' + added + ' favorites' : '已恢复收藏：新增 ' + added + ' 条，共 ' + FAVS.size + ' 条'));
+        } catch (e) { toast(state.lang === 'en' ? 'Invalid favorites file' : '文件格式不对：请选择 ⤓ 备份导出的 JSON'); }
+      };
+      r.readAsText(f);
+    });
+    inp.click();
+  });
+
   // 🆕 仅看最新动态
   const recentBtn = document.getElementById('recent-toggle');
   recentBtn.addEventListener('click', () => {
@@ -585,7 +649,7 @@
     pausePlay();
     state.cats = new Set(CAT_KEYS); state.subOff.clear(); state.countries.clear(); state.statuses.clear();
     state.regions = new Set(DEFAULT_REGIONS); // 重置后展示全部大区
-    state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.q = ''; state.recentOnly = false;
+    state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.q = ''; state.recentOnly = false; state.favOnly = false;
     state.weight = 'inv'; state.sort = 'inv'; state.heatCat = null;
     clearPresetActive();
     const allYp = document.querySelector('.year-presets .yp[data-preset="all"]');
@@ -832,6 +896,7 @@
       '<div class="d-top"><button class="d-close" id="d-close" aria-label="关闭详情卡" title="关闭">×</button>' +
       '<button class="d-share" id="d-share" aria-label="复制该项目的分享链接" title="复制项目链接">🔗</button>' +
       '<button class="d-lang" id="d-lang" title="中文 / English" aria-label="切换中文 / English">' + (state.lang === 'en' ? '中' : 'EN') + '</button>' +
+      '<button class="d-fav' + (isFav(p) ? ' on' : '') + '" id="d-fav" aria-pressed="' + (isFav(p) ? 'true' : 'false') + '" aria-label="收藏 / 取消收藏" title="收藏到 ⭐ 我的关注">' + (isFav(p) ? '★' : '☆') + '</button>' +
       '<span class="d-cat" style="background:' + c.color + '22;color:' + c.color + '">' + c.icon + ' ' + catName(p.cat) + (subLabel(p) ? ' · ' + subLabel(p) : '') + '</span>' +
       (isRecent(p) ? '<span class="d-new">' + tr('🆕 最新') + '</span>' : '') +
       '<div class="d-name">' + (p.flagship ? '★ ' : '') + esc(nm(p)) + '</div>' +
@@ -857,6 +922,11 @@
     });
     const dlang = document.getElementById('d-lang');
     if (dlang) dlang.addEventListener('click', toggleLang); // toggleLang 内部会重渲染当前详情卡
+    const dfav = document.getElementById('d-fav');
+    if (dfav) dfav.addEventListener('click', () => {
+      const on = toggleFav(p.id);
+      toast(on ? (state.lang === 'en' ? '★ Added to favorites' : '★ 已收藏到「我的关注」') : (state.lang === 'en' ? '☆ Removed from favorites' : '☆ 已取消收藏'));
+    });
     const cl = detailEl.querySelector('.d-country-link');
     if (cl) cl.addEventListener('click', () => showCountry(cl.dataset.country));
     focusEl('d-close');
@@ -1202,6 +1272,7 @@
     if (state.minYear > MIN_YEAR || state.maxYear < MAX_YEAR) p.set('yr', state.minYear + '-' + state.maxYear);
     if (state.q) p.set('q', state.q);
     if (state.recentOnly) p.set('recent', '1');
+    if (state.favOnly) p.set('fav', '1');
     if (state.heat) p.set('heat', '1');
     if (state.weight === 'cap') p.set('w', 'cap');
     if (state.sort === 'cap') p.set('sort', 'cap');
@@ -1229,6 +1300,7 @@
     }
     if (p.has('q')) state.q = p.get('q');
     if (p.has('recent')) state.recentOnly = true;
+    if (p.has('fav')) state.favOnly = true; // 收藏本身在各自浏览器本地，分享链接只还原"只看关注"开关
     if (p.has('heat')) state.heat = true;
     if (p.get('w') === 'cap') state.weight = 'cap';
     if (p.get('sort') === 'cap') state.sort = 'cap';
@@ -1372,6 +1444,7 @@
     syncCountryUI();
     document.querySelectorAll('#status-chips .pill').forEach(el => { const on = state.statuses.has(el.dataset.v); el.classList.toggle('on', on); pressed(el, on); });
     if (recentBtn) { recentBtn.classList.toggle('on', state.recentOnly); pressed(recentBtn, state.recentOnly); }
+    syncFavUI();
     if (btnHeat) { btnHeat.classList.toggle('on', state.heat); pressed(btnHeat, state.heat); document.body.classList.toggle('heat-on', state.heat); }
     if (btnWeight) { btnWeight.classList.toggle('on', state.weight === 'cap'); pressed(btnWeight, state.weight === 'cap'); btnWeight.textContent = state.weight === 'cap' ? '⚖️ 容量权重' : '⚖️ 投资权重'; }
     if (sortToggle) sortToggle.textContent = state.sort === 'cap' ? '按装机容量 ⇄' : '按投资额 ⇄';
@@ -1502,5 +1575,5 @@
   })();
 
   // 调试 / 程序化控制句柄
-  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showLeague, showDetail, PROJECTS, applyLang, buildRegionTree, showCompare, openCompare };
+  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showLeague, showDetail, PROJECTS, applyLang, buildRegionTree, showCompare, openCompare, toggleFav, FAVS };
 })();

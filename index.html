@@ -70,6 +70,13 @@
 
         <button class="recent-toggle" id="recent-toggle" aria-pressed="false" data-i18n="🆕 Latest updates only">🆕 仅看最新动态</button>
 
+        <!-- ⭐ 我的关注：收藏存在本浏览器（localStorage）；⤓/⤒ 备份恢复 JSON 可跨设备迁移 -->
+        <div class="fav-row">
+          <button class="fav-toggle" id="fav-toggle" aria-pressed="false" title="只看我收藏的项目（详情卡点 ☆ 收藏）"><span data-i18n="⭐ My favorites">⭐ 我的关注</span><span class="fc" id="fav-count">0</span></button>
+          <button class="fav-io" id="fav-export" title="备份收藏（下载 JSON）" aria-label="备份收藏为 JSON">⤓</button>
+          <button class="fav-io" id="fav-import" title="恢复收藏（导入 JSON，与现有合并）" aria-label="从 JSON 恢复收藏">⤒</button>
+        </div>
+
         <div class="block">
           <div class="block-title"><span data-i18n="Categories">能源品类</span> <span class="count" data-i18n="click to toggle">点击切换显示</span></div>
           <div class="cat-list" id="cat-list"></div>

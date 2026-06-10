@@ -133,6 +133,14 @@ try {
   ok(typeof h === 'string', 'stateToHash() 返回字符串');
 } catch (e) { fails.push('stateToHash() 抛错：' + (e && e.message)); }
 
+try {
+  APP.toggleFav(1); ok(APP.FAVS.has(1), 'toggleFav(1) 加入收藏集合');
+  APP.state.favOnly = true; APP.render();
+  APP.toggleFav(1); ok(!APP.FAVS.has(1), '再次 toggleFav(1) 取消收藏');
+  APP.state.favOnly = false; APP.render();
+  ok(true, '⭐ 收藏夹 toggleFav / favOnly 筛选渲染不抛错（无 localStorage 环境内存退化）');
+} catch (e) { fails.push('⭐ 收藏夹抛错：' + (e && e.message)); }
+
 try { APP.showClientBoard(); ok(true, 'showClientBoard()（🎯 客户 BD 看板）不抛错'); }
 catch (e) { fails.push('showClientBoard() 抛错：' + (e && e.message)); }
 try { APP.showLeague(); ok(true, 'showLeague()（🏢 企业榜）不抛错'); }
