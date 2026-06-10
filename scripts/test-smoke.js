@@ -48,6 +48,7 @@ const doc = {
   createElement(t) { return new El(t); },
   createElementNS(_ns, t) { return new El(t); },
   addEventListener() {},
+  head: new El('head'),
   body: new El('body'),
   documentElement: new El('html'),
 };
@@ -82,6 +83,7 @@ const L = {
   marker: () => leafObj(),
   polyline: () => leafObj(),
   heatLayer: () => leafObj(),
+  geoJSON: () => leafObj(),
   control: { zoom: () => leafObj() },
   Browser: {},
 };
@@ -107,6 +109,8 @@ try {
     'data-europe', 'data-nuclear', 'data-northam', 'data-southasia', 'data-china-future', 'data-clients2', 'data-refresh2606', 'progress']
     .forEach(f => require(path.join(__dirname, '..', 'js', f + '.js')));
   require(path.join(__dirname, '..', 'js', 'clients-meta.js'));   // window.CLIENT_META（BD 看板用）
+  require(path.join(__dirname, '..', 'js', 'stories.js'));        // window.ENERGY_STORIES（📖 导览剧本）
+  require(path.join(__dirname, '..', 'lib', 'world-110m.js'));    // window.WORLD_GEO（🎨 国别染色用；浏览器里按需懒加载）
   require(path.join(__dirname, '..', 'js', 'app.js'));
 } catch (e) {
   console.error('✘ app.js 初始化抛出异常：\n', e && e.stack || e);
@@ -133,10 +137,36 @@ try {
   ok(typeof h === 'string', 'stateToHash() 返回字符串');
 } catch (e) { fails.push('stateToHash() 抛错：' + (e && e.message)); }
 
+try {
+  APP.toggleFav(1); ok(APP.FAVS.has(1), 'toggleFav(1) 加入收藏集合');
+  APP.state.favOnly = true; APP.render();
+  APP.toggleFav(1); ok(!APP.FAVS.has(1), '再次 toggleFav(1) 取消收藏');
+  APP.state.favOnly = false; APP.render();
+  ok(true, '⭐ 收藏夹 toggleFav / favOnly 筛选渲染不抛错（无 localStorage 环境内存退化）');
+} catch (e) { fails.push('⭐ 收藏夹抛错：' + (e && e.message)); }
+
+try {
+  APP.state.choro = true; APP.render();
+  APP.state.choro = false; APP.render();
+  ok(true, '🎨 国别染色（choropleth）渲染开/关不抛错');
+} catch (e) { fails.push('🎨 国别染色抛错：' + (e && e.message)); }
+
 try { APP.showClientBoard(); ok(true, 'showClientBoard()（🎯 客户 BD 看板）不抛错'); }
 catch (e) { fails.push('showClientBoard() 抛错：' + (e && e.message)); }
 try { APP.showLeague(); ok(true, 'showLeague()（🏢 企业榜）不抛错'); }
 catch (e) { fails.push('showLeague() 抛错：' + (e && e.message)); }
+try { APP.showTrends(); ok(true, 'showTrends()（📈 趋势统计）不抛错'); }
+catch (e) { fails.push('showTrends() 抛错：' + (e && e.message)); }
+
+try {
+  const stories = global.window.ENERGY_STORIES || [];
+  ok(stories.length >= 3, '📖 导览剧本已加载（≥3 条故事线）');
+  APP.showStoryPicker();
+  APP.startStory(stories[0].key);
+  APP.storyStep(1); APP.storyStep(0);
+  APP.exitStory();
+  ok(true, '📖 导览 picker / startStory / storyStep / exitStory 不抛错');
+} catch (e) { fails.push('📖 导览抛错：' + (e && e.message)); }
 
 /* ---------- 汇总 ---------- */
 console.log('═══════════════════════════════════════════════');

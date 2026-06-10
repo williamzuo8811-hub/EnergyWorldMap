@@ -137,6 +137,39 @@ eq(built2[0].detailEn, 'detail-C', 'buildProjects(en)：按 id 合并 detailEn')
 eq(built2[0].descEn, 'desc-C', 'buildProjects(en)：按 id 合并 descEn');
 eq(built2[1].detailEn, 'inline-D', 'buildProjects(en)：源数据已内联 detailEn 时不被覆盖');
 
+/* ---------- geoNameOf（国别染色：中文国名 → Natural-Earth-110m 要素名）---------- */
+const gn = U.geoNameOf;
+eq(gn('美国'), 'United States of America', 'geoNameOf：美国 → 110m 全称（GEO_FIX 修正）');
+eq(gn('沙特'), 'Saudi Arabia', 'geoNameOf：沙特 → Saudi Arabia');
+eq(gn('沙特阿拉伯'), 'Saudi Arabia', 'geoNameOf：沙特阿拉伯 同样并入 Saudi Arabia');
+eq(gn('刚果（金）'), 'Dem. Rep. Congo', 'geoNameOf：刚果（金）→ 110m 缩写名');
+eq(gn('中国台湾'), 'Taiwan', 'geoNameOf：中国台湾 → Taiwan（110m 要素名）');
+eq(gn('新加坡'), null, 'geoNameOf：110m 无微型经济体 → 显式 null（不染色不告警）');
+eq(gn('英国—法国'), null, 'geoNameOf：跨国复合国名不参与染色');
+eq(gn('某未知国'), null, 'geoNameOf：未知国名返回 null');
+
+/* ---------- matchProject（搜索：多词 AND + 拼音全拼/首字母；js/pinyin-map.js 字表）---------- */
+const mp = U.matchProject;
+const PY = { '沙': 'sha', '特': 'te', '绿': 'lv', '氢': 'qing', '储': 'chu', '能': 'neng' };
+const sp = { name: '沙特NEOM绿氢项目', en: 'NEOM Green Hydrogen', country: '沙特', owner: 'ACWA Power', desc: '全球最大绿氢' };
+ok(mp(sp, '', PY), 'matchProject：空查询恒为真');
+ok(mp(sp, '绿氢', PY), 'matchProject：中文子串（原行为兼容）');
+ok(mp(sp, 'neom', PY), 'matchProject：英文名不区分大小写');
+ok(mp(sp, 'acwa', PY), 'matchProject：业主字段可搜');
+ok(mp(sp, 'shate', PY), 'matchProject：拼音全拼连写命中（沙特→shate）');
+ok(mp(sp, 'lvqing', PY), 'matchProject：拼音 ü→v 归一（绿氢→lvqing）');
+ok(mp(sp, 'st', PY), 'matchProject：拼音首字母连写命中（沙特→st）');
+ok(mp(sp, '沙特 绿氢', PY), 'matchProject：多词 AND（两词都命中）');
+ok(mp(sp, 'neom 沙特', PY), 'matchProject：多词中英混搭');
+ok(!mp(sp, '沙特 储能', PY), 'matchProject：多词 AND——有一词不命中即不匹配');
+ok(!mp(sp, 'xyz', PY), 'matchProject：不命中返回 false');
+ok(mp(sp, 'shate', undefined) === false, 'matchProject：无拼音字表时纯字母词退回子串匹配（不抛错）');
+// 生成的静态字表本身可被 Node 加载且包含常用字
+const PYMAP = require('../js/pinyin-map.js');
+ok(PYMAP && typeof PYMAP === 'object' && Object.keys(PYMAP).length > 1000, 'pinyin-map.js：可加载且字数充足');
+eq(PYMAP['沙'], 'sha', 'pinyin-map.js：沙→sha');
+eq(PYMAP['绿'], 'lv', 'pinyin-map.js：绿→lv（ü 已归一为 v）');
+
 /* ---------- 汇总 ---------- */
 console.log('═══════════════════════════════════════════════');
 console.log(' 能源世界地图 · 纯逻辑单元测试');

@@ -9,7 +9,7 @@
   --border-strong: rgba(120, 160, 220, 0.4);
   --txt: #e8eefb;
   --txt-dim: #93a4c4;
-  --txt-faint: #5f718f;
+  --txt-faint: #7b8ca6; /* 辅助文字：暗底对比度 ≥5:1（WCAG AA），勿调暗 */
   --accent: #21c7ff;
   --good: #2ee6a6;
   --warn: #ffb02e;

@@ -9,7 +9,7 @@
   const CAT_KEYS = Object.keys(CATEGORIES);
   // 纯逻辑（子分类规则 / 容量解析 / 坐标纠偏 / 标签映射 / 量级 / 数据装配）抽至 js/util.js，
   // 与 scripts/test-units.js 及 globe.js 共享同一实现
-  const { SUB_DEFS, wgs2gcj, normalizeOwner, LABELS_EN, capFmtMW, invMagnitude, buildProjects } = window.ENERGY_UTIL;
+  const { SUB_DEFS, wgs2gcj, normalizeOwner, LABELS_EN, capFmtMW, invMagnitude, buildProjects, matchProject, geoNameOf } = window.ENERGY_UTIL;
 
   const SUB_LABEL = {};
   Object.keys(SUB_DEFS).forEach(cat => { SUB_LABEL[cat] = {}; SUB_DEFS[cat].forEach(d => { SUB_LABEL[cat][d.key] = d.label; }); });
@@ -35,10 +35,13 @@
   const isRecent = p => (p.updated || '') >= RECENT_SINCE;
 
   /* ---------- 地图与底图 ---------- */
+  // 尊重「减少动态效果」系统偏好：关掉缩放/淡入动画，并把 flyTo 类相机动画降级为瞬时跳转（见 flyTo/flyToBounds 包装）
+  const REDUCED_MOTION = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const map = L.map('map', {
     center: [25, 30], zoom: 3, minZoom: 2, maxZoom: 18,
     zoomControl: false, worldCopyJump: true, attributionControl: true,
     maxBounds: [[-85, -200], [85, 200]], maxBoundsViscosity: 0.6,
+    zoomAnimation: !REDUCED_MOTION, fadeAnimation: !REDUCED_MOTION, markerZoomAnimation: !REDUCED_MOTION,
   });
   // 窄屏把缩放控件放左上角（标题栏下方的空地），彻底避开底部 🔍/📊 浮钮；桌面端仍放左下
   var _isNarrow = !!(window.matchMedia && window.matchMedia('(max-width: 820px)').matches);
@@ -101,7 +104,7 @@
     next.layer.addTo(map);
     activeBaseKey = key;
     currentCRS = next.crs;
-    document.querySelectorAll('#basemap-switch .bm').forEach(el => el.classList.toggle('on', el.dataset.key === key));
+    document.querySelectorAll('#basemap-switch .bm').forEach(el => { const on = el.dataset.key === key; el.classList.toggle('on', on); pressed(el, on); });
     render();
   }
 
@@ -128,10 +131,19 @@
   const DEFAULT_REGIONS = [];
   // 全球取景：fitBounds 自动适配各屏幕（SW [纬,经] → NE [纬,经]）
   const WORLD_BOUNDS = [[-58, -170], [72, 185]];
-  function fitWorld() { map.fitBounds(WORLD_BOUNDS, { padding: [24, 24] }); }
+  function fitWorld() { map.fitBounds(WORLD_BOUNDS, { padding: [24, 24], animate: !REDUCED_MOTION }); }
+  // 相机飞行统一走这两个包装：减少动态偏好下退化为无动画跳转
+  function flyTo(ll, zoom, opts) {
+    if (REDUCED_MOTION) map.setView(ll, zoom, { animate: false });
+    else map.flyTo(ll, zoom, opts);
+  }
+  function flyToBounds(bounds, opts) {
+    if (REDUCED_MOTION) map.fitBounds(bounds, Object.assign({}, opts, { animate: false }));
+    else map.flyToBounds(bounds, opts);
+  }
   const state = {
     cats: new Set(CAT_KEYS), subOff: new Set(), regions: new Set(), countries: new Set(), statuses: new Set(),
-    minYear: MIN_YEAR, maxYear: MAX_YEAR, q: '', recentOnly: false, heat: false,
+    minYear: MIN_YEAR, maxYear: MAX_YEAR, q: '', recentOnly: false, favOnly: false, heat: false, choro: false,
     weight: 'inv', sort: 'inv', // weight: 圆点/热力按 inv 投资 或 cap 装机容量；sort: TOP 排序
     playYear: null,             // 时间轴播放时的"当前年"（用于年份大字 + 当年新项目高亮）
     lang: 'zh',                 // 'zh' | 'en'：项目名称与分析标签的中英切换
@@ -170,40 +182,9 @@
   const catName = k => state.lang === 'en' ? (CAT_EN[k] || (CATEGORIES[k] || {}).name || k) : ((CATEGORIES[k] || {}).name || k);
   const regionName = r => state.lang === 'en' ? (REGION_EN[r] || r) : r;
   const statusName = s => state.lang === 'en' ? (STATUS_EN[s] || s) : s;
-  // 国名中→英（全库约 139 个原子国名；EN 模式下悬浮/列表/详情/国别面板/对比统一显示英文）。
-  // 仅用于"显示"，dataset/状态键仍存中文原串；复合国名（"英国—德国"/"贝宁、多哥等"）逐段翻译再拼接。
-  const COUNTRY_EN = {
-    '中国': 'China', '中国台湾': 'Taiwan, China', '中国香港': 'Hong Kong, China', '不丹': 'Bhutan',
-    '丹麦': 'Denmark', '乌克兰': 'Ukraine', '乌兹别克斯坦': 'Uzbekistan', '乌干达': 'Uganda', '乍得': 'Chad',
-    '以色列': 'Israel', '伊拉克': 'Iraq', '伊朗': 'Iran', '佛得角': 'Cape Verde', '俄罗斯': 'Russia',
-    '保加利亚': 'Bulgaria', '克罗地亚': 'Croatia', '冈比亚': 'Gambia', '冰岛': 'Iceland', '几内亚': 'Guinea',
-    '几内亚比绍': 'Guinea-Bissau', '刚果（布）': 'Congo-Brazzaville', '刚果（金）': 'DR Congo', '利比亚': 'Libya',
-    '加拿大': 'Canada', '加纳': 'Ghana', '加蓬': 'Gabon', '匈牙利': 'Hungary', '南苏丹': 'South Sudan',
-    '南非': 'South Africa', '博茨瓦纳': 'Botswana', '卡塔尔': 'Qatar', '卢旺达': 'Rwanda', '印度': 'India',
-    '印度尼西亚': 'Indonesia', '厄瓜多尔': 'Ecuador', '厄立特里亚': 'Eritrea', '吉尔吉斯斯坦': 'Kyrgyzstan',
-    '吉布提': 'Djibouti', '哈萨克斯坦': 'Kazakhstan', '哥伦比亚': 'Colombia', '喀麦隆': 'Cameroon',
-    '土库曼斯坦': 'Turkmenistan', '土耳其': 'Turkey', '圭亚那': 'Guyana', '坦桑尼亚': 'Tanzania', '埃及': 'Egypt',
-    '埃塞俄比亚': 'Ethiopia', '塔吉克斯坦': 'Tajikistan', '塞内加尔': 'Senegal', '塞尔维亚': 'Serbia',
-    '塞浦路斯': 'Cyprus', '墨西哥': 'Mexico', '多哥': 'Togo', '多哥等': 'Togo etc.', '奥地利': 'Austria',
-    '孟加拉国': 'Bangladesh', '安哥拉': 'Angola', '尼日利亚': 'Nigeria', '尼日尔': 'Niger', '尼泊尔': 'Nepal',
-    '巴基斯坦': 'Pakistan', '巴布亚新几内亚': 'Papua New Guinea', '巴拿马': 'Panama', '巴林': 'Bahrain',
-    '巴西': 'Brazil', '布基纳法索': 'Burkina Faso', '布隆迪': 'Burundi', '希腊': 'Greece', '德国': 'Germany',
-    '意大利': 'Italy', '挪威': 'Norway', '捷克': 'Czechia', '摩洛哥': 'Morocco', '文莱': 'Brunei',
-    '斯里兰卡': 'Sri Lanka', '新加坡': 'Singapore', '新西兰': 'New Zealand', '日本': 'Japan', '智利': 'Chile',
-    '柬埔寨': 'Cambodia', '格陵兰': 'Greenland', '欧盟': 'EU', '比利时': 'Belgium', '毛里塔尼亚': 'Mauritania',
-    '沙特': 'Saudi Arabia', '沙特阿拉伯': 'Saudi Arabia', '法国': 'France', '波兰': 'Poland',
-    '波斯尼亚和黑塞哥维那': 'Bosnia & Herzegovina', '波黑': 'Bosnia & Herzegovina', '泰国': 'Thailand',
-    '津巴布韦': 'Zimbabwe', '澳大利亚': 'Australia', '爱尔兰': 'Ireland', '爱沙尼亚': 'Estonia', '牙买加': 'Jamaica',
-    '玻利维亚': 'Bolivia', '瑞典': 'Sweden', '科威特': 'Kuwait', '科特迪瓦': 'Côte d’Ivoire', '秘鲁': 'Peru',
-    '突尼斯': 'Tunisia', '立陶宛': 'Lithuania', '约旦': 'Jordan', '纳米比亚': 'Namibia', '缅甸': 'Myanmar',
-    '罗马尼亚': 'Romania', '美国': 'United States', '老挝': 'Laos', '肯尼亚': 'Kenya', '芬兰': 'Finland',
-    '苏里南': 'Suriname', '英国': 'United Kingdom', '荷兰': 'Netherlands', '莫桑比克': 'Mozambique',
-    '莱索托': 'Lesotho', '菲律宾': 'Philippines', '葡萄牙': 'Portugal', '蒙古': 'Mongolia', '蒙古国': 'Mongolia',
-    '西班牙': 'Spain', '贝宁': 'Benin', '赞比亚': 'Zambia', '赤道几内亚': 'Equatorial Guinea', '越南': 'Vietnam',
-    '阿塞拜疆': 'Azerbaijan', '阿富汗': 'Afghanistan', '阿尔及利亚': 'Algeria', '阿拉伯联合酋长国': 'UAE',
-    '阿曼': 'Oman', '阿根廷': 'Argentina', '阿联酋': 'UAE', '韩国': 'South Korea', '马拉维': 'Malawi',
-    '马来西亚': 'Malaysia', '马耳他': 'Malta', '马达加斯加': 'Madagascar', '马里': 'Mali', '黑山': 'Montenegro',
-  };
+  // 国名中→英（EN 模式下悬浮/列表/详情/国别面板/对比统一显示英文）。
+  // 表本体已下沉至 util.js LABELS_EN.country（与国别染色 geoNameOf 共用单一真源）。
+  const COUNTRY_EN = LABELS_EN.country;
   const countryName = c => {
     if (state.lang !== 'en' || !c) return c;
     if (COUNTRY_EN[c]) return COUNTRY_EN[c];
@@ -222,12 +203,11 @@
   const usd = p => '≈$' + invMag(p.inv || 0);
   const capFmt = capFmtMW;
   const esc = s => String(s == null ? '' : s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  // 开关类控件统一同步 aria-pressed（无障碍：读屏能听到"已按下/未按下"）
+  const pressed = (el, on) => { if (el && el.setAttribute) el.setAttribute('aria-pressed', on ? 'true' : 'false'); };
 
-  function matchQ(p, q) {
-    if (!q) return true;
-    const hay = (p.name + ' ' + (p.en || '') + ' ' + p.country + ' ' + (p.owner || '') + ' ' + p.desc).toLowerCase();
-    return hay.indexOf(q.toLowerCase()) >= 0;
-  }
+  // 搜索：多词 AND + 拼音全拼/首字母（util.matchProject；字表 js/pinyin-map.js，索引就地缓存在项目对象上）
+  const matchQ = (p, q) => matchProject(p, q, window.PINYIN_MAP);
   function passBase(p) {
     // 地理筛选：选了国家则以国家为准（更具体，覆盖大区选择，避免"大区∩国家"为空的困惑）；否则按大区
     const geoOK = state.countries.size
@@ -236,6 +216,7 @@
     return geoOK
       && (state.statuses.size === 0 || state.statuses.has(p.status))
       && (!state.recentOnly || isRecent(p))
+      && (!state.favOnly || FAVS.has(p.id))
       && p.year >= state.minYear && p.year <= state.maxYear && matchQ(p, state.q);
   }
   const filtered = () => PROJECTS.filter(p => state.cats.has(p.cat) && !state.subOff.has(p.cat + ':' + p.sub) && passBase(p));
@@ -243,13 +224,13 @@
   // 品类 / 大区切换（供品类条、图例、区域格、筛选项共用，保持联动）
   function toggleCat(key) { if (state.cats.has(key)) state.cats.delete(key); else state.cats.add(key); syncCatUI(); render(); }
   function syncCatUI() {
-    document.querySelectorAll('.cat-chip').forEach(el => el.classList.toggle('off', !state.cats.has(el.dataset.key)));
-    document.querySelectorAll('.cat-legend .cl').forEach(el => el.classList.toggle('off', !state.cats.has(el.dataset.key)));
+    document.querySelectorAll('.cat-chip').forEach(el => { const on = state.cats.has(el.dataset.key); el.classList.toggle('off', !on); pressed(el, on); });
+    document.querySelectorAll('.cat-legend .cl').forEach(el => { const on = state.cats.has(el.dataset.key); el.classList.toggle('off', !on); pressed(el, on); });
   }
   function toggleRegion(r) {
     if (state.regions.has(r)) state.regions.delete(r); else state.regions.add(r);
     if (state.countries.size) { state.countries.clear(); syncCountryUI(); }  // 大区与国家是同一地理维度的两种粒度，切大区时清掉国家
-    document.querySelectorAll('#region-chips .rg-pill').forEach(el => el.classList.toggle('on', state.regions.has(el.dataset.v)));
+    document.querySelectorAll('#region-chips .rg-pill').forEach(el => { const on = state.regions.has(el.dataset.v); el.classList.toggle('on', on); pressed(el, on); });
     render();
   }
   // 国家筛选：点击国家即只显示该国项目并飞到其范围；可多选（再次点击取消）
@@ -261,8 +242,10 @@
     if (add) flyToCountries();
   }
   function syncCountryUI() {
-    document.querySelectorAll('#region-chips .country-chip').forEach(el =>
-      el.classList.toggle('on', state.countries.has(el.dataset.country)));
+    document.querySelectorAll('#region-chips .country-chip').forEach(el => {
+      const on = state.countries.has(el.dataset.country);
+      el.classList.toggle('on', on); pressed(el, on);
+    });
     // 含选中国家的大区组自动展开并高亮，便于定位
     document.querySelectorAll('#region-chips .region-group').forEach(g => {
       const has = (REGION_COUNTRIES[g.dataset.region] || []).some(c => state.countries.has(c));
@@ -275,11 +258,11 @@
     if (!state.countries.size) return;
     const pts = PROJECTS.filter(p => state.countries.has(p.country) && p.coord).map(p => toLatLng(p.coord));
     if (!pts.length) return;
-    if (pts.length === 1) { map.flyTo(pts[0], 6, { duration: 0.7 }); return; }
+    if (pts.length === 1) { flyTo(pts[0], 6, { duration: 0.7 }); return; }
     if (L.latLngBounds) {
-      try { map.flyToBounds(L.latLngBounds(pts), { padding: [60, 60], maxZoom: 7, duration: 0.7 }); return; } catch (e) { /* 兜底降级 */ }
+      try { flyToBounds(L.latLngBounds(pts), { padding: [60, 60], maxZoom: 7, duration: 0.7 }); return; } catch (e) { /* 兜底降级 */ }
     }
-    map.flyTo(pts[0], 5, { duration: 0.7 });
+    flyTo(pts[0], 5, { duration: 0.7 });
   }
 
   /* ---------- 地图标记（含聚合） ---------- */
@@ -310,9 +293,81 @@
     },
   }).addTo(map);
 
+  /* ---------- 🎨 国别染色（choropleth）：按国家聚合投资/装机给整国面填色 ----------
+   * 国界 GeoJSON（lib/world-110m.js，~430KB）按需懒加载：首次开启时注入 <script>，载入后自动重渲染。
+   * 口径：单国精确匹配（与国别下钻一致）——跨国走廊复合国名与 110m 没有的微型经济体不上色；
+   *      投资聚合沿用 KPI 的 client 排除规则，避免「国际大客户」与能源品类对同一物理项目双计。 */
+  let choroLayer = null;
+  let _geoState = window.WORLD_GEO ? 'done' : 'idle';
+  function ensureWorldGeo() {
+    if (_geoState !== 'idle') return;
+    _geoState = 'loading';
+    const s = document.createElement('script');
+    s.src = 'lib/world-110m.js'; s.async = true;
+    s.onload = () => { _geoState = 'done'; render(); };
+    s.onerror = () => { _geoState = 'idle'; toast(state.lang === 'en' ? 'Failed to load borders — retry' : '国界数据加载失败，请重试'); };
+    (document.head || document.body).appendChild(s);
+  }
+  // 热力图同款渐变取色：t∈[0,1]，在相邻色标间线性插值
+  const HEAT_STOPS = Object.keys(HEAT_GRADIENT).map(Number).sort((a, b) => a - b);
+  function heatColor(t) {
+    t = Math.max(0, Math.min(1, t));
+    let lo = HEAT_STOPS[0], hi = HEAT_STOPS[HEAT_STOPS.length - 1];
+    for (let i = 1; i < HEAT_STOPS.length; i++) { if (t <= HEAT_STOPS[i]) { lo = HEAT_STOPS[i - 1]; hi = HEAT_STOPS[i]; break; } }
+    const f = hi === lo ? 0 : (t - lo) / (hi - lo);
+    const px = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+    const a = px(HEAT_GRADIENT[lo]), b = px(HEAT_GRADIENT[hi]);
+    return 'rgb(' + a.map((v, i) => Math.round(v + (b[i] - v) * f)).join(',') + ')';
+  }
+  function updateChoro(items) {
+    if (!window.WORLD_GEO) { ensureWorldGeo(); return; }   // 懒加载中：载完会自动 render
+    const clientOnly = state.cats.size === 1 && state.cats.has('client');
+    const agg = {};   // geo要素名 -> { v 权重和, inv, mw, n, zh: {中文国名:项目数} }
+    items.forEach(p => {
+      if (!clientOnly && p.cat === 'client') return;
+      const g = geoNameOf(p.country); if (!g) return;
+      const a = agg[g] || (agg[g] = { v: 0, inv: 0, mw: 0, n: 0, zh: {} });
+      a.n++; a.inv += (p.inv || 0); a.mw += (p.capMW || 0); a.v += weightVal(p) || 0;
+      a.zh[p.country] = (a.zh[p.country] || 0) + 1;
+    });
+    // 与热力图同策略：√ 压缩量级，max 取约 92 分位，避免超大经济体独占色阶
+    const ws = Object.values(agg).map(a => Math.sqrt(a.v)).sort((a, b) => a - b);
+    const max = ws.length ? Math.max(0.5, ws[Math.floor(ws.length * 0.92)] * 1.15) : 1;
+    if (choroLayer) { map.removeLayer(choroLayer); choroLayer = null; }
+    choroLayer = L.geoJSON(window.WORLD_GEO, {
+      style: f => {
+        const a = agg[f.properties.name];
+        return a
+          ? { fillColor: heatColor(Math.sqrt(a.v) / max), fillOpacity: 0.62, color: 'rgba(120,160,220,0.38)', weight: 0.7 }
+          : { fillColor: '#0d1730', fillOpacity: 0.22, color: 'rgba(120,160,220,0.16)', weight: 0.5 };
+      },
+      onEachFeature: (f, lyr) => {
+        const a = agg[f.properties.name]; if (!a) return;
+        const zh = Object.keys(a.zh).sort((x, y) => a.zh[y] - a.zh[x])[0];   // 主中文名（沙特/沙特阿拉伯 合并后取大头）
+        lyr.bindTooltip(
+          '<b>' + esc(countryName(zh)) + '</b><br>' + a.n + (state.lang === 'en' ? ' projects' : ' 个项目') +
+          ' · ≈$' + invMag(a.inv) + (a.mw ? ' · ' + capFmt(a.mw) : ''),
+          { sticky: true, className: 'mk-tip' });
+        lyr.on('click', () => showCountry(zh));
+      },
+    }).addTo(map);
+    const cap = document.querySelector('#choro-legend .hl-cap');
+    if (cap) cap.textContent = state.lang === 'en'
+      ? (state.weight === 'cap' ? 'Capacity by country' : 'Investment by country')
+      : (state.weight === 'cap' ? '国别装机' : '国别投资');
+  }
+
   function updateMap(items) {
     lineLayer.clearLayers();
     markerCluster.clearLayers();
+    // —— 🎨 国别染色模式：整国面着色（点国家开下钻），隐藏标记/热力/飞线 ——
+    if (state.choro) {
+      if (map.hasLayer(markerCluster)) map.removeLayer(markerCluster);
+      if (heatLayer && map.hasLayer(heatLayer)) map.removeLayer(heatLayer);
+      updateChoro(items);
+      return;
+    }
+    if (choroLayer) { map.removeLayer(choroLayer); choroLayer = null; }
     // 连线（输变电/高铁/管道，飞线）—— 可经 ⚡ 按钮显隐
     if (state.lines) items.forEach(p => {
       if (p.route && p.route.length >= 2) {
@@ -376,7 +431,7 @@
     const group = document.createElement('div');
     group.className = 'cat-group'; group.dataset.key = key;
     const chip = document.createElement('div');
-    chip.className = 'cat-chip'; chip.dataset.key = key; chip.tabIndex = 0; chip.setAttribute('role', 'button');
+    chip.className = 'cat-chip'; chip.dataset.key = key; chip.tabIndex = 0; chip.setAttribute('role', 'button'); chip.setAttribute('aria-pressed', 'true');
     chip.innerHTML = '<span class="dot" style="background:' + c.color + ';color:' + c.color + '"></span>' +
       '<span class="nm">' + c.icon + ' ' + c.name + '</span><span class="ct">0</span>' +
       '<span class="caret" title="展开子分类">▸</span>';
@@ -403,12 +458,13 @@
     ordered.forEach(d => {
       if (META) { const t = tierOf(d); if (t !== lastTier) { const tv = document.createElement('div'); tv.className = 'sub-tier'; tv.setAttribute('style', '--tc:' + (TIER_HUE[t] || '#7f8db0')); tv.textContent = TIER_LABEL[t] || t; subWrap.appendChild(tv); lastTier = t; } }
       const s = document.createElement('div');
-      s.className = 'sub-chip'; s.dataset.key = key; s.dataset.sub = d.key; s.tabIndex = 0; s.setAttribute('role', 'button');
+      s.className = 'sub-chip'; s.dataset.key = key; s.dataset.sub = d.key; s.tabIndex = 0; s.setAttribute('role', 'button'); s.setAttribute('aria-pressed', 'true');
       s.innerHTML = '<span class="sdot" style="background:' + c.color + '"></span><span class="snm">' + d.label + '</span><span class="sct">0</span>';
       s.addEventListener('click', () => {
         const id = key + ':' + d.key;
         if (state.subOff.has(id)) state.subOff.delete(id); else state.subOff.add(id);
         s.classList.toggle('off', state.subOff.has(id));
+        pressed(s, !state.subOff.has(id));
         render();
       });
       subWrap.appendChild(s);
@@ -435,6 +491,7 @@
       const pill = document.createElement('span');
       pill.className = 'pill rg-pill'; pill.textContent = regionName(r); pill.dataset.v = r;
       pill.tabIndex = 0; pill.setAttribute('role', 'button'); pill.setAttribute('aria-label', regionName(r) + (en ? ' region filter' : ' 大区筛选'));
+      pill.setAttribute('aria-pressed', state.regions.has(r) ? 'true' : 'false');
       pill.addEventListener('click', () => toggleRegion(r));
       const meta = document.createElement('span');
       meta.className = 'rg-meta'; meta.textContent = countries.length + (en ? ' ctry/reg · ' : ' 国/地区 · ') + regProj;
@@ -449,6 +506,8 @@
       countries.forEach(c => {
         const chip = document.createElement('span');
         chip.className = 'country-chip'; chip.dataset.country = c; chip.tabIndex = 0; chip.setAttribute('role', 'button');
+        chip.setAttribute('aria-label', countryName(c) + (en ? ' country filter' : ' 国家筛选'));
+        chip.setAttribute('aria-pressed', state.countries.has(c) ? 'true' : 'false');
         chip.innerHTML = '<span class="cn">' + esc(countryName(c)) + '</span><i class="cc">' + (COUNTRY_COUNT[c] || 0) + '</i>';
         chip.addEventListener('click', () => toggleCountry(c));
         list.appendChild(chip);
@@ -459,7 +518,7 @@
       regionEl.appendChild(group);
     });
     // 重建后把已选大区/国家的高亮态还原
-    document.querySelectorAll('#region-chips .rg-pill').forEach(el => el.classList.toggle('on', state.regions.has(el.dataset.v)));
+    document.querySelectorAll('#region-chips .rg-pill').forEach(el => { const on = state.regions.has(el.dataset.v); el.classList.toggle('on', on); pressed(el, on); });
     syncCountryUI();
   }
   buildRegionTree();
@@ -467,12 +526,75 @@
   const statusEl = document.getElementById('status-chips');
   STATUS.forEach(s => {
     const el = document.createElement('div');
-    el.className = 'pill status'; el.textContent = s; el.dataset.v = s; el.tabIndex = 0; el.setAttribute('role', 'button');
+    el.className = 'pill status'; el.textContent = s; el.dataset.v = s; el.tabIndex = 0; el.setAttribute('role', 'button'); el.setAttribute('aria-pressed', 'false');
     el.addEventListener('click', () => {
       if (state.statuses.has(s)) state.statuses.delete(s); else state.statuses.add(s);
-      el.classList.toggle('on', state.statuses.has(s)); render();
+      el.classList.toggle('on', state.statuses.has(s)); pressed(el, state.statuses.has(s)); render();
     });
     statusEl.appendChild(el);
+  });
+
+  /* ---------- ⭐ 我的关注（收藏夹：localStorage 持久化，跨设备靠 ⤓/⤒ JSON 备份恢复）---------- */
+  const FAV_KEY = 'ewm.favs.v1';
+  const favStore = (function () { try { return typeof localStorage !== 'undefined' ? localStorage : null; } catch (e) { return null; } })();
+  const FAVS = (function () {
+    try { const d = JSON.parse((favStore && favStore.getItem(FAV_KEY)) || '[]'); return new Set(Array.isArray(d) ? d.map(Number).filter(n => !isNaN(n)) : []); }
+    catch (e) { return new Set(); } // 私密模式/读损坏：退化为内存收藏（本次会话有效）
+  })();
+  function saveFavs() { try { if (favStore) favStore.setItem(FAV_KEY, JSON.stringify([...FAVS])); } catch (e) { /* 存储满/私密模式：忽略 */ } }
+  const isFav = p => FAVS.has(p.id);
+  function syncFavUI() {
+    const b = document.getElementById('fav-toggle');
+    if (b) { b.classList.toggle('on', state.favOnly); pressed(b, state.favOnly); }
+    const c = document.getElementById('fav-count'); if (c) c.textContent = FAVS.size;
+    if (_detailP) {
+      const fb = document.getElementById('d-fav');
+      if (fb) { fb.textContent = isFav(_detailP) ? '★' : '☆'; fb.classList.toggle('on', isFav(_detailP)); pressed(fb, isFav(_detailP)); }
+    }
+  }
+  function toggleFav(id) {
+    id = Number(id);
+    if (FAVS.has(id)) FAVS.delete(id); else FAVS.add(id);
+    saveFavs(); syncFavUI();
+    if (state.favOnly) render();   // 关注筛选开着时，取消收藏即时从地图消失
+    return FAVS.has(id);
+  }
+  const favToggleBtn = document.getElementById('fav-toggle');
+  if (favToggleBtn) favToggleBtn.addEventListener('click', () => {
+    state.favOnly = !state.favOnly;
+    if (state.favOnly && !FAVS.size) toast(state.lang === 'en' ? 'No favorites yet — open a project and tap ☆' : '还没有收藏：打开任意项目详情卡，点 ☆ 收藏');
+    syncFavUI(); render();
+  });
+  // ⤓ 备份收藏（JSON，含名称快照便于人读）/ ⤒ 恢复（合并导入，不清空现有收藏）
+  const favExportBtn = document.getElementById('fav-export');
+  if (favExportBtn) favExportBtn.addEventListener('click', () => {
+    if (!FAVS.size) { toast(state.lang === 'en' ? 'No favorites to export' : '暂无收藏可备份'); return; }
+    const items = [...FAVS].map(id => { const p = PROJECTS.find(x => x.id === id); return { id, name: p ? p.name : '' }; });
+    const data = { app: 'EnergyWorldMap', kind: 'favorites', v: 1, exportedAt: new Date().toISOString().slice(0, 10), ids: [...FAVS], items };
+    saveBlob(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), 'energy-favorites-' + FAVS.size + '.json');
+    toast('⤓ ' + (state.lang === 'en' ? 'Favorites exported (JSON)' : '已备份 ' + FAVS.size + ' 条收藏 (JSON)'));
+  });
+  const favImportBtn = document.getElementById('fav-import');
+  if (favImportBtn) favImportBtn.addEventListener('click', () => {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = '.json,application/json';
+    inp.addEventListener('change', () => {
+      const f = inp.files && inp.files[0]; if (!f) return;
+      const r = new FileReader();
+      r.onload = () => {
+        try {
+          const d = JSON.parse(String(r.result));
+          const ids = Array.isArray(d) ? d : (Array.isArray(d.ids) ? d.ids : null);
+          if (!ids) throw new Error('bad shape');
+          let added = 0;
+          ids.map(Number).filter(n => !isNaN(n)).forEach(id => { if (!FAVS.has(id)) { FAVS.add(id); added++; } });
+          saveFavs(); syncFavUI(); if (state.favOnly) render();
+          toast('⤒ ' + (state.lang === 'en' ? 'Imported ' + added + ' favorites' : '已恢复收藏：新增 ' + added + ' 条，共 ' + FAVS.size + ' 条'));
+        } catch (e) { toast(state.lang === 'en' ? 'Invalid favorites file' : '文件格式不对：请选择 ⤓ 备份导出的 JSON'); }
+      };
+      r.readAsText(f);
+    });
+    inp.click();
   });
 
   // 🆕 仅看最新动态
@@ -480,6 +602,7 @@
   recentBtn.addEventListener('click', () => {
     state.recentOnly = !state.recentOnly;
     recentBtn.classList.toggle('on', state.recentOnly);
+    pressed(recentBtn, state.recentOnly);
     render();
   });
 
@@ -499,7 +622,7 @@
     rdFill.style.right = ((MAX_YEAR - state.maxYear) / span * 100) + '%';
     yearLabel.textContent = (state.minYear <= MIN_YEAR && state.maxYear >= MAX_YEAR) ? '全部' : state.minYear + '–' + state.maxYear;
   }
-  function clearPresetActive() { document.querySelectorAll('.year-presets .yp').forEach(b => b.classList.remove('on')); }
+  function clearPresetActive() { document.querySelectorAll('.year-presets .yp').forEach(b => { b.classList.remove('on'); pressed(b, false); }); }
   function onYearInput(which) {
     pausePlay();
     let lo = +yearMin.value, hi = +yearMax.value;
@@ -516,9 +639,9 @@
       if (pr === 'recent') { state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.recentOnly = true; }
       else if (pr === 'future') { state.minYear = Math.min(2027, MAX_YEAR); state.maxYear = MAX_YEAR; state.recentOnly = false; }
       else { state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.recentOnly = false; }
-      clearPresetActive(); btn.classList.add('on');
+      clearPresetActive(); btn.classList.add('on'); pressed(btn, true);
       yearMin.value = state.minYear; yearMax.value = state.maxYear;
-      if (recentBtn) recentBtn.classList.toggle('on', state.recentOnly);
+      if (recentBtn) { recentBtn.classList.toggle('on', state.recentOnly); pressed(recentBtn, state.recentOnly); }
       syncYearUI(); render();
     });
   });
@@ -528,7 +651,7 @@
   const btnPlay = document.getElementById('btn-play');
   const yearTicker = document.getElementById('year-ticker');
   function setPlayUI(on) {
-    if (btnPlay) { btnPlay.classList.toggle('on', on); btnPlay.textContent = on ? '⏸ 暂停' : '▶ 播放时间轴'; }
+    if (btnPlay) { btnPlay.classList.toggle('on', on); pressed(btnPlay, on); btnPlay.textContent = on ? '⏸ 暂停' : '▶ 播放时间轴'; }
     if (yearTicker) yearTicker.classList.toggle('show', on);
   }
   function playStep(y) {
@@ -567,9 +690,11 @@
     pausePlay();
     state.cats = new Set(CAT_KEYS); state.subOff.clear(); state.countries.clear(); state.statuses.clear();
     state.regions = new Set(DEFAULT_REGIONS); // 重置后展示全部大区
-    state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.q = ''; state.recentOnly = false;
-    state.weight = 'inv'; state.sort = 'inv'; state.heatCat = null;
-    clearPresetActive(); document.querySelector('.year-presets .yp[data-preset="all"]').classList.add('on');
+    state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.q = ''; state.recentOnly = false; state.favOnly = false;
+    state.weight = 'inv'; state.sort = 'inv'; state.heatCat = null; state.choro = false;
+    clearPresetActive();
+    const allYp = document.querySelector('.year-presets .yp[data-preset="all"]');
+    if (allYp) { allYp.classList.add('on'); pressed(allYp, true); }
     if (typeof syncHeatFacets === 'function') syncHeatFacets();
     fitWorld(); // 重置视图取景到全球
     applyUIFromState(); render();
@@ -581,17 +706,40 @@
     const el = document.createElement('div');
     el.className = 'bm' + (b.key === activeBaseKey ? ' on' : ''); el.dataset.key = b.key;
     el.textContent = b.name;
+    el.tabIndex = 0; el.setAttribute('role', 'button');
+    el.setAttribute('aria-pressed', b.key === activeBaseKey ? 'true' : 'false');
     el.addEventListener('click', () => switchBase(b.key));
     bmEl.appendChild(el);
   });
-  document.getElementById('btn-home').addEventListener('click', () => map.flyTo([25, 30], 3, { duration: 0.6 }));
+  document.getElementById('btn-home').addEventListener('click', () => flyTo([25, 30], 3, { duration: 0.6 }));
 
   // 🔥 投资热力图切换
   const btnHeat = document.getElementById('btn-heat');
   btnHeat.addEventListener('click', () => {
     state.heat = !state.heat;
+    if (state.heat && state.choro) setChoroUI(false);   // 热力与国别染色互斥（两种宏观面视图叠加无意义）
     btnHeat.classList.toggle('on', state.heat);
+    pressed(btnHeat, state.heat);
     document.body.classList.toggle('heat-on', state.heat);
+    render();
+  });
+
+  // 🎨 国别染色切换（与热力互斥；首次开启懒加载国界 GeoJSON）
+  const btnChoro = document.getElementById('btn-choro');
+  function setChoroUI(on) {
+    state.choro = on;
+    if (btnChoro) { btnChoro.classList.toggle('on', on); pressed(btnChoro, on); }
+    document.body.classList.toggle('choro-on', on);
+  }
+  if (btnChoro) btnChoro.addEventListener('click', () => {
+    const on = !state.choro;
+    if (on && state.heat) {
+      state.heat = false;
+      btnHeat.classList.remove('on'); pressed(btnHeat, false);
+      document.body.classList.remove('heat-on');
+    }
+    setChoroUI(on);
+    if (on) ensureWorldGeo();
     render();
   });
 
@@ -600,6 +748,7 @@
   btnWeight.addEventListener('click', () => {
     state.weight = state.weight === 'cap' ? 'inv' : 'cap';
     btnWeight.classList.toggle('on', state.weight === 'cap');
+    pressed(btnWeight, state.weight === 'cap');
     btnWeight.textContent = state.weight === 'cap' ? '⚖️ 容量权重' : '⚖️ 投资权重';
     render();
   });
@@ -617,6 +766,7 @@
   if (btnFlow) btnFlow.addEventListener('click', () => {
     state.lines = !state.lines;
     btnFlow.classList.toggle('on', state.lines);
+    pressed(btnFlow, state.lines);
     render();
   });
 
@@ -631,6 +781,10 @@
   // 🆚 国别对比
   const btnCompare = document.getElementById('btn-compare');
   if (btnCompare) btnCompare.addEventListener('click', openCompare);
+
+  // 📈 趋势统计（年度投资/项目数 + 大区×品类矩阵）
+  const btnTrends = document.getElementById('btn-trends');
+  if (btnTrends) btnTrends.addEventListener('click', showTrends);
 
   /* ---------- 英文正文(detailEn/descEn)按需加载 ----------
    * js/i18n-en.js 约 1.4MB，只有英文详情卡正文用得到（英文名/标签均已内联在源数据）。
@@ -666,7 +820,7 @@
       el.textContent = state.lang === 'en' ? el.dataset.i18n : el.dataset.zh;
     });
     const sEl = document.getElementById('search');
-    if (sEl) sEl.placeholder = state.lang === 'en' ? 'Search project / country / owner…' : '搜索项目 / 国家 / 业主…';
+    if (sEl) sEl.placeholder = state.lang === 'en' ? 'Search project / country / owner… (pinyin OK)' : '搜索项目 / 国家 / 业主，支持拼音…';
     if (btnLang) btnLang.textContent = state.lang === 'en' ? '中' : 'EN';
     if (sortToggle) sortToggle.textContent = state.lang === 'en' ? (state.sort === 'cap' ? 'by capacity ⇄' : 'by investment ⇄') : (state.sort === 'cap' ? '按装机容量 ⇄' : '按投资额 ⇄');
     buildCatLegend();   // 地图浮层文案随语言重建
@@ -739,7 +893,7 @@
     const maxC = Math.max(1, ...Object.values(catCount));
     document.getElementById('cat-bars').innerHTML = CAT_KEYS.map(k => {
       const c = CATEGORIES[k], n = catCount[k], dim = state.cats.has(k) ? '' : 'opacity:.35';
-      return '<div class="bar-row" data-key="' + k + '" tabindex="0" role="button" style="cursor:pointer;' + dim + '"><div class="bar-head"><span class="dot" style="background:' + c.color + '"></span>' +
+      return '<div class="bar-row" data-key="' + k + '" tabindex="0" role="button" aria-pressed="' + (state.cats.has(k) ? 'true' : 'false') + '" style="cursor:pointer;' + dim + '"><div class="bar-head"><span class="dot" style="background:' + c.color + '"></span>' +
         '<span class="nm">' + catShort(k) + '</span><span class="vv">' + n + '</span></div>' +
         '<div class="bar-track"><div class="bar-fill" style="width:' + (n / maxC * 100) + '%;background:' + c.color + '"></div></div></div>';
     }).join('');
@@ -756,7 +910,7 @@
     const regCount = {}; REGIONS.forEach(r => regCount[r] = 0);
     items.forEach(p => { if (regCount[p.region] != null) regCount[p.region]++; });
     document.getElementById('region-grid').innerHTML = REGIONS.map(r =>
-      '<div class="region-cell' + (state.regions.has(r) ? ' on' : '') + '" data-region="' + r + '" tabindex="0" role="button"><div class="rv">' + regCount[r] + '</div><div class="rl">' + regionName(r) + '</div></div>').join('');
+      '<div class="region-cell' + (state.regions.has(r) ? ' on' : '') + '" data-region="' + r + '" tabindex="0" role="button" aria-pressed="' + (state.regions.has(r) ? 'true' : 'false') + '"><div class="rv">' + regCount[r] + '</div><div class="rl">' + regionName(r) + '</div></div>').join('');
   }
 
   /* ---------- 项目列表（投资额排序） ---------- */
@@ -775,7 +929,7 @@
     listEl.querySelectorAll('.proj-item').forEach(el => {
       el.addEventListener('click', () => {
         const p = PROJECTS.find(x => String(x.id) === el.dataset.id);
-        if (p) { showDetail(p); map.flyTo(toLatLng(p.coord), 8, { duration: 0.7 }); }
+        if (p) { showDetail(p); flyTo(toLatLng(p.coord), 8, { duration: 0.7 }); }
       });
     });
   }
@@ -807,6 +961,7 @@
       '<div class="d-top"><button class="d-close" id="d-close" aria-label="关闭详情卡" title="关闭">×</button>' +
       '<button class="d-share" id="d-share" aria-label="复制该项目的分享链接" title="复制项目链接">🔗</button>' +
       '<button class="d-lang" id="d-lang" title="中文 / English" aria-label="切换中文 / English">' + (state.lang === 'en' ? '中' : 'EN') + '</button>' +
+      '<button class="d-fav' + (isFav(p) ? ' on' : '') + '" id="d-fav" aria-pressed="' + (isFav(p) ? 'true' : 'false') + '" aria-label="收藏 / 取消收藏" title="收藏到 ⭐ 我的关注">' + (isFav(p) ? '★' : '☆') + '</button>' +
       '<span class="d-cat" style="background:' + c.color + '22;color:' + c.color + '">' + c.icon + ' ' + catName(p.cat) + (subLabel(p) ? ' · ' + subLabel(p) : '') + '</span>' +
       (isRecent(p) ? '<span class="d-new">' + tr('🆕 最新') + '</span>' : '') +
       '<div class="d-name">' + (p.flagship ? '★ ' : '') + esc(nm(p)) + '</div>' +
@@ -832,6 +987,11 @@
     });
     const dlang = document.getElementById('d-lang');
     if (dlang) dlang.addEventListener('click', toggleLang); // toggleLang 内部会重渲染当前详情卡
+    const dfav = document.getElementById('d-fav');
+    if (dfav) dfav.addEventListener('click', () => {
+      const on = toggleFav(p.id);
+      toast(on ? (state.lang === 'en' ? '★ Added to favorites' : '★ 已收藏到「我的关注」') : (state.lang === 'en' ? '☆ Removed from favorites' : '☆ 已取消收藏'));
+    });
     const cl = detailEl.querySelector('.d-country-link');
     if (cl) cl.addEventListener('click', () => showCountry(cl.dataset.country));
     focusEl('d-close');
@@ -923,7 +1083,7 @@
     });
     countryPanel.querySelectorAll('.proj-item').forEach(el => el.addEventListener('click', () => {
       const p = PROJECTS.find(x => String(x.id) === el.dataset.id);
-      if (p) { hideCountry(); showDetail(p); map.flyTo(toLatLng(p.coord), 8, { duration: 0.7 }); }
+      if (p) { hideCountry(); showDetail(p); flyTo(toLatLng(p.coord), 8, { duration: 0.7 }); }
     }));
   }
   countryBackdrop.addEventListener('click', hideCountry);
@@ -994,7 +1154,7 @@
     countryPanel.querySelectorAll('.cmp-pick').forEach(el => el.addEventListener('click', () => addCompare(el.dataset.pick)));
     countryPanel.querySelectorAll('.cmp-top').forEach(el => el.addEventListener('click', () => {
       const p = PROJECTS.find(x => String(x.id) === el.dataset.id);
-      if (p) { hideCountry(); showDetail(p); map.flyTo(toLatLng(p.coord), 8, { duration: 0.7 }); }
+      if (p) { hideCountry(); showDetail(p); flyTo(toLatLng(p.coord), 8, { duration: 0.7 }); }
     }));
     const cs = document.getElementById('cmp-search');
     if (cs) cs.addEventListener('input', () => {
@@ -1109,11 +1269,181 @@
       const allBtn = document.querySelector('.year-presets .yp[data-preset="all"]'); if (allBtn) allBtn.classList.add('on');
       applyUIFromState(); render();
       const pts = PROJECTS.filter(p => p.cat === 'client' && p.sub === sub && p.coord).map(p => toLatLng(p.coord));
-      if (pts.length === 1) map.flyTo(pts[0], 6, { duration: 0.7 });
-      else if (pts.length && L.latLngBounds) { try { map.flyToBounds(L.latLngBounds(pts), { padding: [50, 50], maxZoom: 6, duration: 0.7 }); } catch (e) { /* ignore */ } }
+      if (pts.length === 1) flyTo(pts[0], 6, { duration: 0.7 });
+      else if (pts.length && L.latLngBounds) { try { flyToBounds(L.latLngBounds(pts), { padding: [50, 50], maxZoom: 6, duration: 0.7 }); } catch (e) { /* ignore */ } }
       toast((en ? 'Filtered to ' : '已筛选客户：') + (SUB_LABEL.client[sub] || sub));
     }));
   }
+
+  /* ---------- 📈 趋势统计（按当前筛选：年度投资/项目数 + 大区×品类矩阵热格）----------
+   * 既有右栏统计都是"当前切片"的横截面；这里补时间维度的纵向视角。复用 countryPanel 宽弹层。 */
+  function showTrends() {
+    const items = filtered();
+    const en = state.lang === 'en';
+    if (!items.length) { toast(tr('无匹配项目，请调整筛选条件')); return; }
+    // 年度投资沿用 KPI 口径（排除国际大客户防双计；仅看 client 时照常计入）；项目数按全部所选
+    const clientOnly = state.cats.size === 1 && state.cats.has('client');
+    const stat = clientOnly ? items : items.filter(p => p.cat !== 'client');
+    const invY = {}, cntY = {};
+    items.forEach(p => { cntY[p.year] = (cntY[p.year] || 0) + 1; });
+    stat.forEach(p => { invY[p.year] = (invY[p.year] || 0) + (p.inv || 0); });
+    const yearsAll = Object.keys(cntY).map(Number);
+    const y0 = Math.min(...yearsAll), y1 = Math.max(...yearsAll);
+    const years = []; for (let y = y0; y <= y1; y++) years.push(y);
+
+    // —— 图1：年度投资额（柱）+ 年度项目数（折线，独立比例）——
+    const W = 660, H = 210, PL = 14, PR = 14, PT = 16, PB = 36, plotH = H - PT - PB;
+    const maxInv = Math.max(1, ...years.map(y => invY[y] || 0));
+    const maxCnt = Math.max(1, ...years.map(y => cntY[y] || 0));
+    const slotW = (W - PL - PR) / years.length;
+    const xOf = i => PL + i * slotW + slotW / 2;
+    const bars = years.map((y, i) => {
+      const v = invY[y] || 0, h = Math.max(v > 0 ? 2 : 0, v / maxInv * plotH);
+      return '<rect x="' + (xOf(i) - slotW * 0.31).toFixed(1) + '" y="' + (PT + plotH - h).toFixed(1) +
+        '" width="' + (slotW * 0.62).toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2" fill="url(#trg)">' +
+        '<title>' + y + (en ? ': ≈$' : '：≈$') + invMag(v) + ' · ' + (cntY[y] || 0) + (en ? ' projects' : ' 个项目') + '</title></rect>';
+    }).join('');
+    const line = years.map((y, i) => (i ? 'L' : 'M') + xOf(i).toFixed(1) + ' ' + (PT + plotH - (cntY[y] || 0) / maxCnt * plotH).toFixed(1)).join(' ');
+    const dots = years.map((y, i) =>
+      '<circle cx="' + xOf(i).toFixed(1) + '" cy="' + (PT + plotH - (cntY[y] || 0) / maxCnt * plotH).toFixed(1) + '" r="2.6" fill="#ffb02e"><title>' + y + (en ? ': ' : '：') + (cntY[y] || 0) + (en ? ' projects' : ' 个项目') + '</title></circle>').join('');
+    const step = Math.max(1, Math.ceil(years.length / 9));
+    const axis = years.map((y, i) => (i % step === 0 || i === years.length - 1)
+      ? '<text x="' + xOf(i).toFixed(1) + '" y="' + (H - 12) + '" font-size="10.5" fill="#7b8ca6" text-anchor="middle">' + y + '</text>' : '').join('');
+    const chart = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="tr-svg" role="img" aria-label="' + (en ? 'Investment & project count by year' : '年度投资额与项目数') + '">' +
+      '<defs><linearGradient id="trg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#21c7ff"/><stop offset="1" stop-color="rgba(33,199,255,0.25)"/></linearGradient></defs>' +
+      '<line x1="' + PL + '" y1="' + (PT + plotH) + '" x2="' + (W - PR) + '" y2="' + (PT + plotH) + '" stroke="rgba(120,160,220,0.3)"/>' +
+      bars + '<path d="' + line + '" fill="none" stroke="#ffb02e" stroke-width="2"/>' + dots + axis + '</svg>';
+
+    // —— 图2：大区 × 品类矩阵热格（数字=项目数；色深=该桶投资额，√ 压缩）——
+    const mInv = {}, mCnt = {};
+    items.forEach(p => {
+      const k = p.region + '|' + p.cat;
+      mCnt[k] = (mCnt[k] || 0) + 1; mInv[k] = (mInv[k] || 0) + (p.inv || 0);
+    });
+    const regs = REGIONS.filter(r => CAT_KEYS.some(k => mCnt[r + '|' + k]));
+    const maxCell = Math.max(1, ...Object.values(mInv).map(v => Math.sqrt(v)));
+    const head = '<div class="trm-corner"></div>' + CAT_KEYS.map(k =>
+      '<div class="trm-h" title="' + esc(catName(k)) + '"><span class="d" style="background:' + CATEGORIES[k].color + '"></span>' + catShort(k) + '</div>').join('');
+    const rows = regs.map(r => '<div class="trm-r">' + esc(regionName(r)) + '</div>' + CAT_KEYS.map(k => {
+      const key = r + '|' + k, n = mCnt[key] || 0, v = mInv[key] || 0;
+      const t = n ? Math.sqrt(v) / maxCell : 0;
+      const bg = n ? heatColor(t) : 'transparent';
+      return '<div class="trm-c' + (n ? ' has' : '') + '" data-region="' + esc(r) + '" data-cat="' + k + '"' +
+        (n ? ' tabindex="0" role="button" aria-label="' + esc(regionName(r)) + ' × ' + esc(catShort(k)) + ' ' + n + (en ? ' projects' : ' 个项目') + '"' : '') +
+        ' style="--cbg:' + bg + ';--ca:' + (0.16 + t * 0.72).toFixed(2) + '" title="' + esc(regionName(r)) + ' × ' + esc(catShort(k)) + (en ? ': ' : '：') + n + (en ? ' proj · ≈$' : ' 个 · ≈$') + invMag(v) + '">' + (n || '') + '</div>';
+    }).join('')).join('');
+
+    countryPanel.classList.add('wide');
+    countryPanel.innerHTML =
+      '<div class="cp-head"><span style="font-size:20px">📈</span><div class="cp-name">' + (en ? 'Trends' : '趋势统计') + '</div>' +
+      '<button class="cp-close" id="cp-close" aria-label="关闭面板" title="关闭">×</button></div>' +
+      '<div class="cp-body">' +
+      '<div class="cp-sec-title">' + (en ? 'BY YEAR — investment (bars, USD) · project count (line)' : '年度趋势 —— 投资额（柱，美元）· 项目数（折线）') +
+      ' <span class="tr-cap">' + items.length + (en ? ' projects in current filter' : ' 个项目 · 按当前筛选') + '</span></div>' +
+      chart +
+      '<div class="cp-sec-title">' + (en ? 'REGION × CATEGORY — number = projects · color = investment' : '大区 × 品类矩阵 —— 数字=项目数 · 色深=投资额') + '</div>' +
+      '<div class="tr-matrix" style="--cols:' + CAT_KEYS.length + '">' + head + rows + '</div>' +
+      '<div class="cp-note">* ' + (en
+        ? 'Annual investment follows the KPI rule (Key-Clients excluded to avoid double counting). Click a matrix cell to filter the map to that region × category.'
+        : '年度投资沿用 KPI 口径（不含「国际大客户」防双计）；矩阵色深为该桶投资额（√ 压缩）。点矩阵格子可把地图筛选到对应「大区 × 品类」。') + '</div>' +
+      '</div>';
+    countryBackdrop.classList.add('show'); countryPanel.classList.add('show');
+    document.getElementById('cp-close').addEventListener('click', hideCountry);
+    focusEl('cp-close');
+    countryPanel.querySelectorAll('.trm-c.has').forEach(el => el.addEventListener('click', () => {
+      state.cats = new Set([el.dataset.cat]); state.subOff.clear();
+      state.regions = new Set([el.dataset.region]); state.countries.clear();
+      hideCountry(); applyUIFromState(); render();
+      toast((en ? 'Filtered: ' : '已筛选：') + regionName(el.dataset.region) + ' × ' + catShort(el.dataset.cat));
+    }));
+  }
+
+  /* ---------- 📖 导览 / 故事模式（js/stories.js 剧本：逐站飞行 + 底部解说条）----------
+   * 不改动用户当前筛选；每站 showDetail + flyTo，解说条上一站/下一站/自动播放/退出。
+   * 深链：#story=<key>&stop=<n> 直接开播（分享传播入口）。 */
+  const STORIES = window.ENERGY_STORIES || [];
+  const storyCard = document.getElementById('story-card');
+  let _story = null, _storyIdx = 0, _storyAuto = null;
+  function showStoryPicker() {
+    const en = state.lang === 'en';
+    countryPanel.classList.remove('wide');
+    countryPanel.innerHTML =
+      '<div class="cp-head"><span style="font-size:20px">📖</span><div class="cp-name">' + (en ? 'Guided tours' : '导览 · 故事模式') + '</div>' +
+      '<button class="cp-close" id="cp-close" aria-label="关闭面板" title="关闭">×</button></div>' +
+      '<div class="cp-body"><div class="cp-note" style="margin:0 0 10px">' +
+      (en ? 'Pick a storyline — the map flies stop by stop with narration. Your current filters stay untouched.'
+          : '选一条故事线，地图逐站飞行并配解说；不改动你当前的筛选条件。') + '</div>' +
+      STORIES.map(s =>
+        '<div class="story-row" data-key="' + s.key + '" tabindex="0" role="button">' +
+        '<span class="sr-ico">' + s.icon + '</span><div class="sr-main"><div class="sr-t">' + esc(s.title) + '</div>' +
+        '<div class="sr-d">' + esc(s.desc) + '</div></div><span class="sr-n">' + s.steps.length + (en ? ' stops ▸' : ' 站 ▸') + '</span></div>'
+      ).join('') + '</div>';
+    countryBackdrop.classList.add('show'); countryPanel.classList.add('show');
+    document.getElementById('cp-close').addEventListener('click', hideCountry);
+    focusEl('cp-close');
+    countryPanel.querySelectorAll('.story-row').forEach(el =>
+      el.addEventListener('click', () => { hideCountry(); startStory(el.dataset.key); }));
+  }
+  function stopStoryAuto() { if (_storyAuto) { clearInterval(_storyAuto); _storyAuto = null; } }
+  function startStory(key, step) {
+    const s = STORIES.find(x => x.key === key);
+    if (!s || !s.steps.length) return;
+    stopStoryAuto();
+    _story = s;
+    document.body.classList.add('story-on');
+    storyStep(step || 0);
+  }
+  function exitStory() {
+    stopStoryAuto();
+    _story = null;
+    if (storyCard) storyCard.classList.remove('show');
+    document.body.classList.remove('story-on');
+    hideDetail();
+  }
+  function storyStep(i) {
+    if (!_story) return;
+    _storyIdx = Math.max(0, Math.min(i, _story.steps.length - 1));
+    const st = _story.steps[_storyIdx];
+    const p = PROJECTS.find(x => x.id === st.id);
+    if (p && p.coord) { showDetail(p); flyTo(toLatLng(p.coord), st.zoom || 6, { duration: 1.1 }); }
+    renderStoryCard(st);
+  }
+  function renderStoryCard(st) {
+    if (!storyCard || !_story) return;
+    const en = state.lang === 'en';
+    const n = _story.steps.length;
+    const dots = _story.steps.map((_, i) =>
+      '<i class="' + (i === _storyIdx ? 'on' : '') + '" data-i="' + i + '" role="button" tabindex="0" aria-label="' + (en ? 'Stop ' : '第') + (i + 1) + (en ? '' : ' 站') + '"></i>').join('');
+    storyCard.innerHTML =
+      '<div class="sc-top"><span class="sc-badge">' + _story.icon + ' ' + esc(_story.title) + '</span>' +
+      '<span class="sc-step">' + (_storyIdx + 1) + ' / ' + n + '</span>' +
+      '<button class="sc-x" id="sc-x" aria-label="退出导览" title="退出导览">×</button></div>' +
+      '<div class="sc-t">' + esc(st.t) + '</div>' +
+      '<div class="sc-txt">' + esc(st.txt) + '</div>' +
+      '<div class="sc-nav">' +
+      '<button class="sc-btn" id="sc-prev"' + (_storyIdx === 0 ? ' disabled' : '') + '>‹ ' + (en ? 'Prev' : '上一站') + '</button>' +
+      '<div class="sc-dots">' + dots + '</div>' +
+      '<button class="sc-btn" id="sc-auto" aria-pressed="' + (_storyAuto ? 'true' : 'false') + '" title="' + (en ? 'Auto play' : '自动播放（9 秒/站）') + '">' + (_storyAuto ? '⏸' : '▶') + '</button>' +
+      '<button class="sc-btn sc-next" id="sc-next">' + (_storyIdx >= n - 1 ? (en ? 'Done ✓' : '完成 ✓') : (en ? 'Next ›' : '下一站 ›')) + '</button>' +
+      '</div>';
+    storyCard.classList.add('show');
+    const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
+    on('sc-x', exitStory);
+    on('sc-prev', () => { stopStoryAuto(); storyStep(_storyIdx - 1); });
+    on('sc-next', () => { stopStoryAuto(); if (_storyIdx >= n - 1) exitStory(); else storyStep(_storyIdx + 1); });
+    on('sc-auto', () => {
+      if (_storyAuto) { stopStoryAuto(); renderStoryCard(st); return; }
+      _storyAuto = setInterval(() => {
+        if (!_story || _storyIdx >= _story.steps.length - 1) { stopStoryAuto(); if (_story) renderStoryCard(_story.steps[_storyIdx]); return; }
+        storyStep(_storyIdx + 1);
+      }, 9000);
+      renderStoryCard(st);
+    });
+    storyCard.querySelectorAll('.sc-dots i').forEach(d =>
+      d.addEventListener('click', () => { stopStoryAuto(); storyStep(+d.dataset.i); }));
+  }
+  const btnStory = document.getElementById('btn-story');
+  if (btnStory) btnStory.addEventListener('click', showStoryPicker);
 
   /* ---------- 品类色图例（地图左上，点击=切换该品类；随语言重建）---------- */
   const legendEl = document.getElementById('cat-legend');
@@ -1132,8 +1462,10 @@
   const heatFacetsEl = document.getElementById('heat-facets');
   function syncHeatFacets() {
     if (!heatFacetsEl) return;
-    heatFacetsEl.querySelectorAll('.hf').forEach(el =>
-      el.classList.toggle('on', (el.dataset.cat || '') === (state.heatCat || '')));
+    heatFacetsEl.querySelectorAll('.hf').forEach(el => {
+      const on = (el.dataset.cat || '') === (state.heatCat || '');
+      el.classList.toggle('on', on); pressed(el, on);
+    });
   }
   function buildHeatFacets() {
     if (!heatFacetsEl) return;
@@ -1143,6 +1475,7 @@
       state.heatCat = el.dataset.cat || null;
       syncHeatFacets(); render();
     }));
+    syncHeatFacets();
   }
   buildHeatFacets();
 
@@ -1174,16 +1507,20 @@
     if (state.minYear > MIN_YEAR || state.maxYear < MAX_YEAR) p.set('yr', state.minYear + '-' + state.maxYear);
     if (state.q) p.set('q', state.q);
     if (state.recentOnly) p.set('recent', '1');
+    if (state.favOnly) p.set('fav', '1');
     if (state.heat) p.set('heat', '1');
+    if (state.choro) p.set('choro', '1');
     if (state.weight === 'cap') p.set('w', 'cap');
     if (state.sort === 'cap') p.set('sort', 'cap');
     if (state.lang === 'en') p.set('lang', 'en');
     if (!state.lines) p.set('lines', '0');
     if (state.heatCat) p.set('hcat', state.heatCat);
     if (state.compare.length) p.set('cmp', state.compare.join('~'));
+    if (_story) { p.set('story', _story.key); if (_storyIdx) p.set('stop', String(_storyIdx)); }
     return p.toString();
   }
   let pendingProjectId = null;  // 深链接 #project=<id>：首屏渲染后打开该项目
+  let pendingStory = null, pendingStop = 0; // 深链接 #story=<key>&stop=<n>：首屏后直接开播导览
   function applyHash() {
     const h = (location.hash || '').replace(/^#/, '');
     if (!h) return;
@@ -1201,7 +1538,9 @@
     }
     if (p.has('q')) state.q = p.get('q');
     if (p.has('recent')) state.recentOnly = true;
+    if (p.has('fav')) state.favOnly = true; // 收藏本身在各自浏览器本地，分享链接只还原"只看关注"开关
     if (p.has('heat')) state.heat = true;
+    if (p.has('choro')) { state.choro = true; state.heat = false; }
     if (p.get('w') === 'cap') state.weight = 'cap';
     if (p.get('sort') === 'cap') state.sort = 'cap';
     if (p.get('lang') === 'en') state.lang = 'en';
@@ -1209,6 +1548,7 @@
     if (p.has('hcat') && CATEGORIES[p.get('hcat')]) state.heatCat = p.get('hcat');
     if (p.has('cmp')) state.compare = p.get('cmp').split('~').filter(Boolean).slice(0, 4);
     if (p.has('project')) pendingProjectId = p.get('project');
+    if (p.has('story')) { pendingStory = p.get('story'); pendingStop = parseInt(p.get('stop'), 10) || 0; }
   }
   document.getElementById('btn-share').addEventListener('click', () => {
     const hash = stateToHash();
@@ -1281,7 +1621,7 @@
       const val = sortCap ? capFmt(p.capMW) : usd(p);
       return '<g transform="translate(620,' + y + ')">' +
         '<rect x="0" y="-16" width="3" height="22" rx="1.5" fill="' + c.color + '"/>' +
-        '<text x="14" y="-2" font-size="13" font-weight="800" fill="#5f718f">' + (i + 1) + '</text>' +
+        '<text x="14" y="-2" font-size="13" font-weight="800" fill="#7b8ca6">' + (i + 1) + '</text>' +
         '<text x="36" y="0" font-size="15" fill="#e8eefb">' + X(clip(nm(p), 22)) + '</text>' +
         '<text x="520" y="0" font-size="14" font-weight="700" fill="#2ee6a6" text-anchor="end">' + X(val) + '</text></g>';
     }).join('');
@@ -1299,10 +1639,10 @@
       kpiCard(1, countries, en ? 'Countries' : '覆盖国家', '#e8eefb') +
       kpiCard(2, '≈$' + fmtInv(totalInv), en ? 'Investment' : '总投资(美元)', '#2ee6a6') +
       kpiCard(3, recentN, en ? 'Latest' : '🆕 最新', '#ffb02e') +
-      '<text x="60" y="360" font-size="14" letter-spacing="1" fill="#5f718f">' + (en ? 'BY CATEGORY (count)' : '分品类（项目数）') + '</text>' +
-      '<text x="620" y="360" font-size="14" letter-spacing="1" fill="#5f718f">' + (en ? (sortCap ? 'TOP (by capacity)' : 'TOP (by investment)') : (sortCap ? '重点项目 TOP（按装机）' : '重点项目 TOP（按投资）')) + '</text>' +
+      '<text x="60" y="360" font-size="14" letter-spacing="1" fill="#7b8ca6">' + (en ? 'BY CATEGORY (count)' : '分品类（项目数）') + '</text>' +
+      '<text x="620" y="360" font-size="14" letter-spacing="1" fill="#7b8ca6">' + (en ? (sortCap ? 'TOP (by capacity)' : 'TOP (by investment)') : (sortCap ? '重点项目 TOP（按装机）' : '重点项目 TOP（按投资）')) + '</text>' +
       catRows + topRows +
-      '<text x="60" y="652" font-size="13" fill="#5f718f">' + items.length + (en ? ' projects · ' : ' 个项目 · ') + countries + (en ? ' countries/regions' : ' 国/地区') + '  ·  ' + X(en ? 'Generated from Global Energy Projects Map' : '由「全球能源项目世界地图」生成') + '</text>' +
+      '<text x="60" y="652" font-size="13" fill="#7b8ca6">' + items.length + (en ? ' projects · ' : ' 个项目 · ') + countries + (en ? ' countries/regions' : ' 国/地区') + '  ·  ' + X(en ? 'Generated from Global Energy Projects Map' : '由「全球能源项目世界地图」生成') + '</text>' +
       '</svg>';
   }
   function saveBlob(blob, name) {
@@ -1339,15 +1679,18 @@
   /* ---------- 由 state 同步所有筛选 UI（用于 URL 载入与重置）---------- */
   function applyUIFromState() {
     syncCatUI();
-    document.querySelectorAll('.sub-chip').forEach(el => el.classList.toggle('off', state.subOff.has(el.dataset.key + ':' + el.dataset.sub)));
-    document.querySelectorAll('#region-chips .rg-pill').forEach(el => el.classList.toggle('on', state.regions.has(el.dataset.v)));
+    document.querySelectorAll('.sub-chip').forEach(el => { const off = state.subOff.has(el.dataset.key + ':' + el.dataset.sub); el.classList.toggle('off', off); pressed(el, !off); });
+    document.querySelectorAll('#region-chips .rg-pill').forEach(el => { const on = state.regions.has(el.dataset.v); el.classList.toggle('on', on); pressed(el, on); });
     syncCountryUI();
-    document.querySelectorAll('#status-chips .pill').forEach(el => el.classList.toggle('on', state.statuses.has(el.dataset.v)));
-    if (recentBtn) recentBtn.classList.toggle('on', state.recentOnly);
-    if (btnHeat) { btnHeat.classList.toggle('on', state.heat); document.body.classList.toggle('heat-on', state.heat); }
-    if (btnWeight) { btnWeight.classList.toggle('on', state.weight === 'cap'); btnWeight.textContent = state.weight === 'cap' ? '⚖️ 容量权重' : '⚖️ 投资权重'; }
+    document.querySelectorAll('#status-chips .pill').forEach(el => { const on = state.statuses.has(el.dataset.v); el.classList.toggle('on', on); pressed(el, on); });
+    if (recentBtn) { recentBtn.classList.toggle('on', state.recentOnly); pressed(recentBtn, state.recentOnly); }
+    syncFavUI();
+    if (btnHeat) { btnHeat.classList.toggle('on', state.heat); pressed(btnHeat, state.heat); document.body.classList.toggle('heat-on', state.heat); }
+    if (btnChoro) { btnChoro.classList.toggle('on', state.choro); pressed(btnChoro, state.choro); document.body.classList.toggle('choro-on', state.choro); }
+    if (state.choro) ensureWorldGeo();
+    if (btnWeight) { btnWeight.classList.toggle('on', state.weight === 'cap'); pressed(btnWeight, state.weight === 'cap'); btnWeight.textContent = state.weight === 'cap' ? '⚖️ 容量权重' : '⚖️ 投资权重'; }
     if (sortToggle) sortToggle.textContent = state.sort === 'cap' ? '按装机容量 ⇄' : '按投资额 ⇄';
-    if (btnFlow) btnFlow.classList.toggle('on', state.lines);
+    if (btnFlow) { btnFlow.classList.toggle('on', state.lines); pressed(btnFlow, state.lines); }
     const sEl = document.getElementById('search'); if (sEl) sEl.value = state.q;
     if (yearMin) { yearMin.value = state.minYear; yearMax.value = state.maxYear; syncYearUI(); }
   }
@@ -1397,7 +1740,10 @@
   const mapTools = document.querySelector('.map-tools');
   const toolsToggle = document.getElementById('tools-toggle');
   if (toolsToggle && mapTools) {
-    toolsToggle.addEventListener('click', () => mapTools.classList.toggle('tools-open'));
+    toolsToggle.addEventListener('click', () => {
+      const open = mapTools.classList.toggle('tools-open');
+      toolsToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
     // 点击任一工具按钮后自动收起菜单（底图切换条除外，便于连续切换）
     mapTools.addEventListener('click', e => {
       const b = e.target.closest('button');
@@ -1408,9 +1754,22 @@
   /* ---------- Esc 关闭浮层（详情卡 / 国别面板·企业榜 / 移动端抽屉）---------- */
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
+    if (_story) { exitStory(); return; }
     if (detailEl.classList.contains('show')) hideDetail();
     if (countryPanel.classList.contains('show')) hideCountry();
     closeDrawers();
+  });
+
+  /* ---------- 模态焦点圈：国别/对比/企业榜/客户看板共用 countryPanel，Tab 不逃出弹层 ---------- */
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Tab' || !countryPanel.classList.contains('show')) return;
+    const focusables = countryPanel.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (!focusables.length) return;
+    const first = focusables[0], last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+    if (!countryPanel.contains(active)) { e.preventDefault(); first.focus(); }
+    else if (e.shiftKey && active === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
   });
 
   /* ---------- 键盘可达性：role=button 的自定义控件支持 Enter/Space 触发 ---------- */
@@ -1434,10 +1793,12 @@
   syncHeatFacets();
   render();
 
-  // 深链接：#project=<id> 打开该项目详情并定位；#cmp=… 直接打开国别对比
-  if (pendingProjectId != null) {
+  // 深链接：#story=… 开播导览；#project=<id> 打开该项目详情并定位；#cmp=… 直接打开国别对比
+  if (pendingStory != null) {
+    startStory(pendingStory, pendingStop);
+  } else if (pendingProjectId != null) {
     const pp = PROJECTS.find(x => String(x.id) === String(pendingProjectId));
-    if (pp) { showDetail(pp); map.flyTo(toLatLng(pp.coord), 7, { duration: 0.8 }); }
+    if (pp) { showDetail(pp); flyTo(toLatLng(pp.coord), 7, { duration: 0.8 }); }
   } else if (state.compare.length >= 2) {
     showCompare();
   }
@@ -1459,5 +1820,5 @@
   })();
 
   // 调试 / 程序化控制句柄
-  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showLeague, showDetail, PROJECTS, applyLang, buildRegionTree, showCompare, openCompare };
+  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showLeague, showDetail, PROJECTS, applyLang, buildRegionTree, showCompare, openCompare, toggleFav, FAVS, showTrends, startStory, storyStep, exitStory, showStoryPicker };
 })();

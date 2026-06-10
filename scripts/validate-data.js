@@ -213,6 +213,57 @@ if (UTIL && UTIL.classifySub) {
   });
 })();
 
+// 5g) 拼音字表覆盖（js/pinyin-map.js，搜索框拼音匹配用）：新数据批次可能引入新汉字 → 提示重跑 build-pinyin
+(function () {
+  let PY = null;
+  try { PY = require(path.join(ROOT, 'js/pinyin-map.js')); } catch (e) { W('js/pinyin-map.js 缺失或不可加载（搜索的拼音匹配将退化为子串匹配）：node scripts/build-pinyin.js 生成'); return; }
+  const missing = new Set();
+  const feed = s => { for (const ch of String(s || '')) if (/[㐀-鿿]/.test(ch) && !PY[ch]) missing.add(ch); };
+  PROJECTS.forEach(p => { if (p) { feed(p.name); feed(p.country); feed(p.owner); } });
+  if (missing.size) W(`拼音字表缺 ${missing.size} 个汉字（新数据引入；这些字暂无法被拼音搜索命中）：${[...missing].slice(0, 20).join('')}${missing.size > 20 ? ' …' : ''} → 重跑 node scripts/build-pinyin.js`);
+})();
+
+// 5h) 国别染色映射覆盖（util.geoNameOf ↔ lib/world-110m.js）：新国家进库时提示补 LABELS_EN.country / GEO_FIX
+if (UTIL && UTIL.geoNameOf) {
+  try {
+    require(path.join(ROOT, 'lib/world-110m.js'));
+    const GEO = new Set((((global.window.WORLD_GEO || {}).features) || []).map(f => f.properties && f.properties.name));
+    const bad = new Map();
+    PROJECTS.forEach(p => {
+      if (!p || !p.country || /[—、\/]/.test(p.country)) return;   // 复合走廊不参与染色
+      const g = UTIL.geoNameOf(p.country);
+      if (g === null) {
+        // 显式 null（GEO_FIX 里 110m 没有的微型经济体/多国聚合）合法；完全未知的国名才告警
+        const known = (UTIL.LABELS_EN.country && Object.prototype.hasOwnProperty.call(UTIL.LABELS_EN.country, p.country)) ||
+          (UTIL.GEO_FIX && Object.prototype.hasOwnProperty.call(UTIL.GEO_FIX, p.country));
+        if (!known) bad.set(p.country, (bad.get(p.country) || 0) + 1);
+      } else if (GEO.size && !GEO.has(g)) {
+        bad.set(p.country + '→"' + g + '"(110m 无此要素，需在 util.js GEO_FIX 修正)', (bad.get(p.country) || 0) + 1);
+      }
+    });
+    if (bad.size) W(`国别染色映射缺口 ${bad.size} 个国名（这些国家不会被染色；补 util.js LABELS_EN.country / GEO_FIX）：` +
+      [...bad.entries()].slice(0, 8).map(([k, n]) => `${k}(${n})`).join(' · ') + (bad.size > 8 ? ' …' : ''));
+  } catch (e) { W(`无法加载 lib/world-110m.js（跳过国别染色映射检查）：${e.message}`); }
+}
+
+// 5i) 导览剧本（js/stories.js）：key 唯一、每站 id 必须能对上项目（孤儿=ERROR，会导致该站飞行/详情卡落空）
+(function () {
+  const f = path.join(ROOT, 'js/stories.js');
+  if (!fs.existsSync(f)) return;
+  try { require(f); } catch (e) { E(`js/stories.js 加载失败：${e.message}`); return; }
+  const stories = global.window.ENERGY_STORIES || [];
+  const keys = new Set();
+  stories.forEach(s => {
+    if (!s.key || keys.has(s.key)) E(`stories：剧本 key 缺失或重复：${JSON.stringify(s.key)}（${s.title || '?'}）`);
+    keys.add(s.key);
+    if (!Array.isArray(s.steps) || s.steps.length < 2) { W(`stories：「${s.title}」步骤少于 2`); return; }
+    s.steps.forEach((st, i) => {
+      if (!idSet.has(st.id)) E(`stories：「${s.title}」第 ${i + 1} 站 id=${st.id} 对不上任何项目`);
+      if (!st.t || !st.txt) W(`stories：「${s.title}」第 ${i + 1} 站缺标题(t)/解说(txt)`);
+    });
+  });
+})();
+
 /* ---------- 6) 概览 ---------- */
 const by = (key) => PROJECTS.reduce((m, p) => { const k = p[key]; m[k] = (m[k] || 0) + 1; return m; }, {});
 const capPresent = PROJECTS.filter(p => p.cap && /\d/.test(p.cap)).length;

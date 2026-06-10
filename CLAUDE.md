@@ -37,24 +37,31 @@ verify in a browser — there is no build step.
 
 **Automated checks** (zero-dep, also wired into CI via `.github/workflows/validate.yml` on push/PR):
 
-- `node scripts/validate-data.js` — after editing any `js/data*.js`. Loads the data in
+- `node scripts/validate-data.js` — after editing any `js/data*.js` (or `js/stories.js`). Loads the data in
   `index.html`'s real `<script>` order and checks required fields, enum validity
   (`cat`/`region`/`status`), coordinate ↔ region consistency (catches sign errors like positive
   longitude in the Americas), duplicate `name`s (which `app.js` silently drops) and `id`s,
   per-file id-range overlaps, orphan `ENERGY_PROGRESS` entries, and orphan `ENERGY_EN` ids (English
   body that maps to no project — ERROR); also reports English-body coverage. Also reports data-health
   warnings: reused/placeholder coordinates, `inv` outliers, malformed `route` coords (ERROR),
-  and capacity-parse blind spots. Non-zero exit on any ERROR; warnings don't fail.
+  capacity-parse blind spots, pinyin-table coverage (5g: new Chinese chars in data → re-run
+  `build-pinyin.js`), choropleth name-map coverage (5h: country missing from `LABELS_EN.country` /
+  `GEO_FIX`), and tour-script integrity (5i: `js/stories.js` step `id`s that map to no project — ERROR).
+  Non-zero exit on any ERROR; warnings don't fail.
 - `node scripts/test-units.js` — after editing `js/util.js`. Asserts `parseCapacity`,
-  `classifySub` (matcher order/catch-all), `wgs2gcj`/`outOfChina`, `normalizeOwner`, and the
-  shared helpers `invMagnitude`/`capFmtMW`/`buildProjects`.
+  `classifySub` (matcher order/catch-all), `wgs2gcj`/`outOfChina`, `normalizeOwner`, the
+  shared helpers `invMagnitude`/`capFmtMW`/`buildProjects`, the search matcher
+  (`matchProject`: multi-token AND + pinyin full/initials, plus the generated `js/pinyin-map.js`
+  table itself), and `geoNameOf` (zh country → Natural-Earth-110m feature name for the choropleth).
 - `node scripts/test-clients-meta.js` — after editing `js/clients-meta.js` or `SUB_DEFS.client`
   in `js/util.js`. Asserts the `CLIENT_META` ↔ `SUB_DEFS.client` contract is two-way consistent
   (no missing/orphan keys, `tier`/`fit` enums + required fields valid), and warns on owners that
   fall into the `other` catch-all bucket. (`clients-meta.js` is otherwise outside `validate-data.js`.)
-- `node scripts/test-smoke.js` — after editing `js/app.js`. Loads util + data + `app.js` under a
-  minimal DOM/Leaflet stub and asserts the IIFE init, `render()`, `buildSnapshotSVG()` and
-  `stateToHash()` run without throwing (catches runtime reference errors with no browser).
+- `node scripts/test-smoke.js` — after editing `js/app.js`. Loads util + data + `stories.js` +
+  `world-110m.js` + `app.js` under a minimal DOM/Leaflet stub and asserts the IIFE init, `render()`,
+  `buildSnapshotSVG()`, `stateToHash()`, favorites (`toggleFav`/`favOnly`), the choropleth render
+  path (`state.choro`), `showTrends()` and the tour engine (`startStory`/`storyStep`/`exitStory`)
+  run without throwing (catches runtime reference errors with no browser).
 - `node scripts/test-globe.js` — after editing `js/globe.js`. Loads util + data + `lib/world-110m.js`
   under a minimal DOM + `Globe` stub and asserts the IIFE init, the extruded-column (`buildPoints`) and
   cross-border-arc (`buildArcs`) assembly, `render()` and `focusProject()` run without throwing (no WebGL needed).
@@ -63,7 +70,27 @@ verify in a browser — there is no build step.
   `window.__COACH__` exposure, the opportunity-pool assembly (from `PROJECTS` × `CLIENT_META`), persona /
   context derivation, the **offline deterministic scorer** (`scoreFree` rubric coverage + tone dictionary —
   a quality pitch must out-score a groveling one; `scoreChoice`), `levelOf`, and a full / single-stage
-  `startDeal()` + `render()` running without throwing.
+  `startDeal()` + `render()` running without throwing; also asserts `migrateProgress` (progress-schema
+  versioning: v1/dirty saves normalize to `PROG_VER` without losing XP/badges).
+
+**Advisory CI checks** (zero-dep, warnings-only unless noted; same workflow):
+
+- `node scripts/check-freshness.js` — `::warning::` when `META.lastUpdated` is >2 months old.
+- `node scripts/check-budget.js` — size budgets: warn when a single `js/data*.js` >600 KB or the
+  synchronous first-paint script chain >6.5 MB (lazy `i18n-en.js` / `world-110m.js` listed separately).
+- `node scripts/check-links.js` — internal `href`/`src`/markdown links must exist on disk (**ERROR**,
+  they 404 after deploy); external links are probed with warnings only (401/403/429 = bot-blocked,
+  counts as alive; `CHECK_LINKS_EXTERNAL=0` skips). Node ≥18 built-in `fetch`.
+- Lighthouse trend job in `validate.yml` (CI-only `npx lighthouse`, `continue-on-error`) +
+  `scripts/check-lighthouse.js` thresholds: perf ≥60 · a11y ≥90 · best-practices/SEO ≥80, warnings only.
+
+**Generators** (run on demand, output is committed):
+
+- `node scripts/build-pinyin.js` — regenerates `js/pinyin-map.js` (zh char → toneless pinyin, ü→v)
+  from all project `name`/`country`/`owner` text. Needs `pinyin-pro` **at build time only**
+  (`npm i --no-save pinyin-pro`); runtime and CI stay zero-dep. Re-run when `validate-data.js`
+  5g warns about missing chars after a data batch.
+- `node scripts/build-og.js` — social card + PWA icons (see above).
 
 ## Architecture
 
@@ -148,7 +175,10 @@ and `js/coach.js`. `coach.js` rebuilds `PROJECTS` with `util.buildProjects` (no 
   `scoreChoice` = preset value; both map to 1–5★ + XP. An optional **AI 复核** button (when AI is configured) returns a
   natural "做得好 / 该改进 / 改写示范" critique on top of the deterministic score.
   Progress (XP / level / deals / per-stage best incl. 抗压指数 / history) persists in `localStorage` (memory fallback under
-  Node/private mode). A **measurable growth loop** sits on top: a 6-axis **能力雷达** (`prog.skills`, EWMA-updated from each free
+  Node/private mode); the saved shape carries a `ver` field and **all loads go through `migrateProgress`**
+  (`PROG_VER`, normalizes v1/dirty saves without losing XP/badges — add a migration branch there on schema
+  change; storage key stays `coach.v1`), and the 成长档案 page has **⤓ 备份 / ⤒ 恢复** buttons (JSON download /
+  confirmed-overwrite import, never includes the `coach.ai` API key) for cross-device migration. A **measurable growth loop** sits on top: a 6-axis **能力雷达** (`prog.skills`, EWMA-updated from each free
   answer's tone buckets via `updateSkills`), an **错题本** (rounds scored <55 auto-enrol, ≥70 auto-clear; `startMistake` re-serves
   any round by id from the `ALL_ROUNDS` index), and a **结业认证考试** (`startExam` = one round per stage, no hints/golden, runs under
   the 成长档案 tab) whose first run is recorded as the **入营诊断** baseline and whose result issues a cert level + radar snapshot.
@@ -179,12 +209,23 @@ and `js/coach.js`. `coach.js` rebuilds `PROJECTS` with `util.buildProjects` (no 
 - `js/data.js` defines `window.ENERGY = { META, CATEGORIES, REGIONS, STATUS, PROJECTS }` — the
   core curated projects plus all the shared config (categories, regions, statuses, update dates).
 - `js/data-extra.js` defines `window.ENERGY_EXTRA = [ ... ]` (the bulk-research projects).
-- **Every other regional data file** (`data-brazil.js`, `data-mideast.js`, `data-russia-ca.js`,
-  `data-clients.js`, `data-clients2.js`, `data-brazil-future.js`, `data-saudi-future.js`, `data-seasia.js`,
-  `data-africa.js`) **appends** via `window.ENERGY_EXTRA = (window.ENERGY_EXTRA || []).concat([ ... ])`.
-  They must load *after* `data-extra.js` and *before* `app.js`.
+- **Every other data file appends** via `window.ENERGY_EXTRA = (window.ENERGY_EXTRA || []).concat([ ... ])`.
+  They must load *after* `data-extra.js` and *before* `app.js`. Current files and id ranges
+  (`validate-data.js` prints the live list — keep this in sync when adding a batch):
+  `data.js` 1–87 · `data-extra.js` 101–1225 · `data-brazil.js` 1230–1325 · `data-mideast.js` 1330–1443 ·
+  `data-russia-ca.js` 1450–1567 · `data-clients.js` 1570–1698 · `data-brazil-future.js` 1710–1824 ·
+  `data-saudi-future.js` 1830–1936 · `data-seasia.js` 1950–2105 · `data-africa.js` 2200–2572 ·
+  `data-oceania.js` 2600–2682 · `data-europe.js` 2700–2763 · `data-nuclear.js` 2800–2834 ·
+  `data-northam.js` 2900–3068 · `data-southasia.js` 3100–3323 · `data-china-future.js` 3400–3626 ·
+  `data-clients2.js` 4000–4522 · `data-refresh2606.js` 4600–5920 · `data-refresh2606b.js` 6100–6306.
 - `js/progress.js` defines `window.ENERGY_PROGRESS = { <id>: "<latest progress text>" }`, merged
   into projects by `id`.
+- `js/pinyin-map.js` (generated by `scripts/build-pinyin.js`, do not hand-edit) defines
+  `window.PINYIN_MAP = { <汉字>: '<pinyin>' }` for the search box's pinyin matching (~17 KB).
+- `js/stories.js` defines `window.ENERGY_STORIES = [ {key, icon, title, desc, steps:[{id, t, txt}]} ]` —
+  the 📖 guided-tour scripts (5 storylines: 沙特2030 / AI 数据中心竞赛 / 非洲资源走廊 / 中国企业出海 /
+  核电复兴). Each step binds a real project `id` (validated by `validate-data.js` 5i) plus original
+  narration; loads with the data chain, before `app.js`.
 - `js/i18n-en.js` defines `window.ENERGY_EN = { <id>: { descEn, detailEn } }` (English body text for the
   bilingual detail card), merged into projects by `id` **only when the source data has no inline
   `descEn`/`detailEn`** — same id-merge model as `progress.js`. This keeps translations separate from the
@@ -225,12 +266,32 @@ or that category's projects get no subcategory chips.
 
 ### Render pipeline
 
-`render()` → `filtered()` (applies category/subcategory/region/status/year/search/recent filters) →
+`render()` → `filtered()` (applies category/subcategory/region/status/year/search/recent/favorites filters) →
 `updateMap` + `updateStats` + `updateList`. Markers go into a `markerClusterGroup`; `route`
 polylines ("flowlines" for grids/HSR/pipelines) are always shown and never clustered. Heatmap mode
 (`state.heat`) hides markers and renders a `√inv`-weighted `L.heatLayer` instead; an on-map facet strip
 (`#heat-facets`) lets you focus a single category via `state.heatCat` without disturbing the main filters.
-A first-paint loader (`#app-loader`) fades out once the base tiles load (or a timeout fallback fires).
+**Choropleth mode** (`state.choro`, the `🎨 国别染色` button, mutually exclusive with heat) lazy-loads
+`lib/world-110m.js` on first use, aggregates the filtered projects per country (exact-country only —
+composite corridor names skipped; KPI's client-exclusion rule applied) and paints whole countries via
+`L.geoJSON` with the heat gradient (√weight, 92-percentile cap; `state.weight` switches 投资⇄装机);
+country zh-name → GeoJSON feature name goes through `util.geoNameOf` (`LABELS_EN.country` + `GEO_FIX`,
+explicit `null` for micro-states absent at 110m); clicking a country opens `showCountry`. Search
+(`matchQ` → `util.matchProject`) is multi-token AND with pinyin full/initial matching via
+`window.PINYIN_MAP`; per-project search indexes are cached in-place (`_hay`/`_py`). **Favorites**
+(`⭐ 我的关注`): `FAVS` id-set persisted in `localStorage` (`ewm.favs.v1`, memory fallback), toggled
+from the detail card's ☆ button, filterable via `state.favOnly` (`fav=1` in the hash), with JSON
+backup/restore buttons in the left panel. The **📖 tour mode** (`showStoryPicker`/`startStory`/
+`storyStep`/`exitStory`) plays `ENERGY_STORIES` scripts: per stop it flies the camera + opens the
+detail card + shows a bottom narration bar (prev/next/dots/9s autoplay/Esc); deep link
+`story=<key>&stop=<n>`; user filters are never touched. **📈 Trends** (`showTrends`, reusing the wide
+`countryPanel` modal) adds the time axis: an SVG bars+line chart of investment/count per year (KPI
+client-exclusion applied) and a region×category matrix heat-grid (number = count, color = bucket
+investment) whose cells click-filter the map. A first-paint loader (`#app-loader`) fades out once the
+base tiles load (or a timeout fallback fires). Reduced-motion is honored end-to-end: `REDUCED_MOTION`
+disables Leaflet zoom/fade animations and turns `flyTo`/`flyToBounds` into instant jumps (the 3D globe
+likewise skips auto-rotate and camera easing). All toggle-like controls sync `aria-pressed` (helper
+`pressed()`); the shared `countryPanel` modal has `role=dialog` + a Tab focus trap.
 A debug handle is exposed at `window.__APP__`.
 
 Year filtering is an interval `[state.minYear, state.maxYear]` driven by a dual-handle range slider
@@ -250,7 +311,8 @@ country pick never yields the empty `region ∩ country` intersection), and `tog
 `stateToHash`/`applyHash` (only non-default fields encoded) — the 🔗 share button copies the link and
 `applyHash`+`applyUIFromState` restore it on load; `applyUIFromState` is the single place that syncs
 every toggle's visual from `state` (also used by reset). The hash also carries `lang`, `lines`, the heat
-facet (`hcat`), the comparison set (`cmp`), the selected countries (`cty`), and a one-shot `project=<id>` **deep link** (the detail card's
+facet (`hcat`), the choropleth flag (`choro`), the favorites-only flag (`fav`), the comparison set (`cmp`),
+the selected countries (`cty`), a running tour (`story`+`stop`), and a one-shot `project=<id>` **deep link** (the detail card's
 🔗 button copies it; on load the project's detail opens and the map flies to it). ⤓ export dumps
 `filtered()` to a BOM-prefixed CSV; 📸 snapshot (`buildSnapshotSVG`) renders the current view's KPIs / top
 categories / top projects as an infographic and exports **PNG** (rasterized via SVG→canvas; falls back to

@@ -2,6 +2,8 @@ name: validate
 
 # 数据校验 + 纯逻辑单元测试（零依赖，无需 npm install）
 # 在 push 与 PR 上自动跑，把 CLAUDE.md 里「提交前必须 validate-data.js」变成机器门禁。
+# 另有三条「提醒线」检查（新鲜度/体积/链接，零依赖）与一个 Lighthouse 趋势 job
+# （仅 CI 内 npx 拉取，不引入项目依赖；失败不挡合并）。
 
 on:
   push:
@@ -28,3 +30,32 @@ jobs:
         run: node scripts/test-clients-meta.js
       - name: 国际销售话术陪练 coach.js 初始化冒烟测试
         run: node scripts/test-coach.js
+      - name: 数据新鲜度告警（META.lastUpdated 落后 >2 个月仅 warning）
+        run: node scripts/check-freshness.js
+      - name: 体积预算（单 data 文件 ≤600KB · 首屏同步 JS ≤6.5MB，超线仅 warning）
+        run: node scripts/check-budget.js
+      - name: 链接检查（站内缺失=ERROR；外链不可达仅 warning）
+        run: node scripts/check-links.js
+
+  # Lighthouse 趋势线：性能/无障碍/最佳实践/SEO 打分（阈值见 scripts/check-lighthouse.js）。
+  # 分数受 CI 机器波动影响，定位为趋势提醒而非门禁：整个 job 失败不挡合并。
+  lighthouse:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: 启动静态服务器
+        run: |
+          python3 -m http.server 4173 &
+          sleep 2
+      - name: Lighthouse 跑分（仅 CI 内 npx，不进项目依赖）
+        run: >
+          npx --yes lighthouse@12 http://localhost:4173/
+          --output=json --output-path=./lh.json --quiet
+          --only-categories=performance,accessibility,best-practices,seo
+          --chrome-flags="--headless=new --no-sandbox --disable-gpu"
+      - name: 评分阈值检查（性能≥60 · 无障碍≥90 · 最佳实践/SEO≥80 警告线）
+        run: node scripts/check-lighthouse.js lh.json
