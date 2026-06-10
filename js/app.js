@@ -35,13 +35,15 @@
   const isRecent = p => (p.updated || '') >= RECENT_SINCE;
 
   /* ---------- 地图与底图 ---------- */
-  // 尊重「减少动态效果」系统偏好：关掉缩放/淡入动画，并把 flyTo 类相机动画降级为瞬时跳转（见 flyTo/flyToBounds 包装）
+  // 「减少动态效果」偏好只作用于装饰性/大幅运动：CSS 脉冲与飞线动画（styles.css 媒体查询）
+  // 和长途相机飞行（flyTo/flyToBounds 包装退化为瞬时跳转）。
+  // 缩放/淡入等基础动画保持 Leaflet 默认【常开】：关掉它们会让每次滚轮变成硬跳 +
+  // 全量标记同步重聚合（无动画帧过渡），体感是"卡顿/点击无反馈"，比动画本身更伤体验。
   const REDUCED_MOTION = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const map = L.map('map', {
     center: [25, 30], zoom: 3, minZoom: 2, maxZoom: 18,
     zoomControl: false, worldCopyJump: true, attributionControl: true,
     maxBounds: [[-85, -200], [85, 200]], maxBoundsViscosity: 0.6,
-    zoomAnimation: !REDUCED_MOTION, fadeAnimation: !REDUCED_MOTION, markerZoomAnimation: !REDUCED_MOTION,
   });
   // 窄屏把缩放控件放左上角（标题栏下方的空地），彻底避开底部 🔍/📊 浮钮；桌面端仍放左下
   var _isNarrow = !!(window.matchMedia && window.matchMedia('(max-width: 820px)').matches);
@@ -344,11 +346,39 @@
     });
     return geo;
   }
+  /* 性能关键：L.geoJSON 世界图层只构建【一次】并跨渲染复用——每次 render 只重算聚合
+   * 并 setStyle 刷颜色（整层重建会让染色模式下拖年份滑块/搜索逐字符都重新解析 426KB
+   * 几何，肉眼可见卡顿）。tooltip 绑内容函数（打开时求值），点击读 choroAgg 实时数据。 */
+  let choroAgg = null, choroMax = 1;
+  function choroStyle(f) {
+    const a = (choroAgg || {})[(f.properties || {}).name];
+    return a
+      ? { fillColor: heatColor(Math.sqrt(a.v) / choroMax), fillOpacity: 0.62, color: 'rgba(120,160,220,0.38)', weight: 0.7 }
+      : { fillColor: '#0d1730', fillOpacity: 0.22, color: 'rgba(120,160,220,0.16)', weight: 0.5 };
+  }
+  function ensureChoroLayer() {
+    if (choroLayer || !window.WORLD_GEO || !L.geoJSON) return;
+    fixWorldGeo(window.WORLD_GEO);
+    choroLayer = L.geoJSON(window.WORLD_GEO, {
+      style: choroStyle,
+      onEachFeature: (f, lyr) => {
+        const name = (f.properties || {}).name;
+        lyr.bindTooltip(() => {
+          const a = (choroAgg || {})[name];
+          if (!a) return '<b>' + esc(name) + '</b><br>' + (state.lang === 'en' ? 'No projects in current filter' : '当前筛选无收录项目');
+          return '<b>' + esc(countryName(a.topZh)) + '</b><br>' + a.n + (state.lang === 'en' ? ' projects' : ' 个项目') +
+            ' · ≈$' + invMag(a.inv) + (a.mw ? ' · ' + capFmt(a.mw) : '');
+        }, { sticky: true, className: 'mk-tip' });
+        lyr.on('click', () => { const a = (choroAgg || {})[name]; if (a) showCountry(a.topZh); });
+      },
+    });
+  }
   function updateChoro(items) {
     if (!window.WORLD_GEO) { ensureWorldGeo(); return; }   // 懒加载中：载完会自动 render
-    fixWorldGeo(window.WORLD_GEO);
+    ensureChoroLayer();
+    if (!choroLayer) return;
     const clientOnly = state.cats.size === 1 && state.cats.has('client');
-    const agg = {};   // geo要素名 -> { v 权重和, inv, mw, n, zh: {中文国名:项目数} }
+    const agg = {};   // geo要素名 -> { v 权重和, inv, mw, n, zh: {中文国名:项目数}, topZh 主中文名 }
     items.forEach(p => {
       if (!clientOnly && p.cat === 'client') return;
       const g = geoNameOf(p.country); if (!g) return;
@@ -356,27 +386,14 @@
       a.n++; a.inv += (p.inv || 0); a.mw += (p.capMW || 0); a.v += weightVal(p) || 0;
       a.zh[p.country] = (a.zh[p.country] || 0) + 1;
     });
+    // 主中文名（沙特/沙特阿拉伯 合并后取大头），供 tooltip/点击下钻用
+    Object.values(agg).forEach(a => { a.topZh = Object.keys(a.zh).sort((x, y) => a.zh[y] - a.zh[x])[0]; });
     // 与热力图同策略：√ 压缩量级，max 取约 92 分位，避免超大经济体独占色阶
     const ws = Object.values(agg).map(a => Math.sqrt(a.v)).sort((a, b) => a - b);
-    const max = ws.length ? Math.max(0.5, ws[Math.floor(ws.length * 0.92)] * 1.15) : 1;
-    if (choroLayer) { map.removeLayer(choroLayer); choroLayer = null; }
-    choroLayer = L.geoJSON(window.WORLD_GEO, {
-      style: f => {
-        const a = agg[f.properties.name];
-        return a
-          ? { fillColor: heatColor(Math.sqrt(a.v) / max), fillOpacity: 0.62, color: 'rgba(120,160,220,0.38)', weight: 0.7 }
-          : { fillColor: '#0d1730', fillOpacity: 0.22, color: 'rgba(120,160,220,0.16)', weight: 0.5 };
-      },
-      onEachFeature: (f, lyr) => {
-        const a = agg[f.properties.name]; if (!a) return;
-        const zh = Object.keys(a.zh).sort((x, y) => a.zh[y] - a.zh[x])[0];   // 主中文名（沙特/沙特阿拉伯 合并后取大头）
-        lyr.bindTooltip(
-          '<b>' + esc(countryName(zh)) + '</b><br>' + a.n + (state.lang === 'en' ? ' projects' : ' 个项目') +
-          ' · ≈$' + invMag(a.inv) + (a.mw ? ' · ' + capFmt(a.mw) : ''),
-          { sticky: true, className: 'mk-tip' });
-        lyr.on('click', () => showCountry(zh));
-      },
-    }).addTo(map);
+    choroAgg = agg;
+    choroMax = ws.length ? Math.max(0.5, ws[Math.floor(ws.length * 0.92)] * 1.15) : 1;
+    if (!map.hasLayer(choroLayer)) choroLayer.addTo(map);
+    choroLayer.setStyle(choroStyle);
     const cap = document.querySelector('#choro-legend .hl-cap');
     if (cap) cap.textContent = state.lang === 'en'
       ? (state.weight === 'cap' ? 'Capacity by country' : 'Investment by country')
@@ -393,7 +410,7 @@
       updateChoro(items);
       return;
     }
-    if (choroLayer) { map.removeLayer(choroLayer); choroLayer = null; }
+    if (choroLayer && map.hasLayer(choroLayer)) map.removeLayer(choroLayer);   // 图层保留复用，只摘下不销毁
     // 连线（输变电/高铁/管道，飞线）—— 可经 ⚡ 按钮显隐
     if (state.lines) items.forEach(p => {
       if (p.route && p.route.length >= 2) {
