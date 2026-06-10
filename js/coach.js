@@ -346,20 +346,68 @@
    * 进度 / 成长档案（localStorage）
    * ============================================================ */
   const DEF_SKILLS = { expertise: 40, customer: 40, value: 40, poise: 40, drive: 40, resilience: 40 };
+  /* 档案 schema 版本：存档带 ver 字段，migrateProgress 负责把任意旧版/缺字段/脏数据
+   * 归一成当前结构——schema 变更时在此追加迁移分支，老用户的 XP/徽章/错题本不再静默清零。
+   * （存储键固定 coach.v1 不随 ver 变，否则老用户存档会被直接遗弃。）*/
+  const PROG_VER = 2;
+  function migrateProgress(d) {
+    d = (d && typeof d === 'object') ? d : {};
+    // ver 缺失（最初版）→ 当前：逐字段补默认值并校正类型；未来 ver=3 的迁移在此之前追加分支
+    const num = (v, def) => (typeof v === 'number' && isFinite(v)) ? v : def;
+    const arr = v => Array.isArray(v) ? v : [];
+    return {
+      ver: PROG_VER,
+      xp: num(d.xp, 0), dealsClosed: num(d.dealsClosed, 0), dealsRun: num(d.dealsRun, 0),
+      stageBest: (d.stageBest && typeof d.stageBest === 'object') ? d.stageBest : {},
+      history: arr(d.history),
+      skills: Object.assign({}, DEF_SKILLS, (d.skills && typeof d.skills === 'object') ? d.skills : {}),
+      mistakes: arr(d.mistakes), cert: d.cert || null, diagnostic: d.diagnostic || null,
+      badges: arr(d.badges), streakWins: num(d.streakWins, 0), dayStreak: num(d.dayStreak, 0), lastDay: d.lastDay || '',
+    };
+  }
   function loadProgress() {
     let d = {};
     try { d = JSON.parse(store.get('coach.v1') || '{}') || {}; } catch (e) { d = {}; }
-    return {
-      xp: d.xp || 0, dealsClosed: d.dealsClosed || 0, dealsRun: d.dealsRun || 0,
-      stageBest: d.stageBest || {}, history: d.history || [],
-      skills: Object.assign({}, DEF_SKILLS, d.skills || {}),
-      mistakes: d.mistakes || [], cert: d.cert || null, diagnostic: d.diagnostic || null,
-      badges: d.badges || [], streakWins: d.streakWins || 0, dayStreak: d.dayStreak || 0, lastDay: d.lastDay || '',
-    };
+    return migrateProgress(d);
   }
-  const BLANK_PROG = () => ({ xp: 0, dealsClosed: 0, dealsRun: 0, stageBest: {}, history: [], skills: Object.assign({}, DEF_SKILLS), mistakes: [], cert: null, diagnostic: null, badges: [], streakWins: 0, dayStreak: 0, lastDay: '' });
+  const BLANK_PROG = () => migrateProgress({});
   function saveProgress() { try { store.set('coach.v1', JSON.stringify(prog)); } catch (e) { /* ignore */ } }
   let prog = loadProgress();
+
+  /* ---------- ⤓ 备份 / ⤒ 恢复（JSON 文件，换设备/换浏览器迁移档案的唯一通道）----------
+   * 备份内容仅含成长档案（绝不包含 coach.ai 里的 API Key 等敏感配置）。恢复=整体覆盖（先确认）。 */
+  function exportProgress() {
+    const data = { app: 'EnergyWorldMap-coach', kind: 'coach-progress', ver: PROG_VER, exportedAt: new Date().toISOString().slice(0, 10), progress: prog };
+    try {
+      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+      dlData(url, 'tgood-coach-progress.json');
+      setTimeout(function () { try { URL.revokeObjectURL(url); } catch (e) {} }, 1000);
+      flash('⤓ 已备份成长档案（JSON）——请妥善保存，换设备用「恢复」导入');
+    } catch (e) { flash('备份失败：' + e.message); }
+  }
+  function importProgress() {
+    try {
+      const inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = '.json,application/json';
+      inp.addEventListener('change', function () {
+        const f = inp.files && inp.files[0]; if (!f) return;
+        const r = new FileReader();
+        r.onload = function () {
+          try {
+            const d = JSON.parse(String(r.result));
+            const raw = (d && d.kind === 'coach-progress') ? d.progress : d;   // 也容忍直接选了裸 progress JSON
+            if (!raw || typeof raw !== 'object' || raw.xp === undefined) throw new Error('不是陪练进度备份文件');
+            if (!confirmSafe('将用备份覆盖当前成长档案（XP ' + prog.xp + ' → ' + (raw.xp || 0) + '）。继续？')) return;
+            prog = migrateProgress(raw);
+            saveProgress(); render();
+            flash('⤒ 已恢复成长档案：' + prog.xp + ' XP · 成交 ' + (prog.dealsClosed || 0) + ' · 徽章 ' + (prog.badges || []).length);
+          } catch (e) { flash('恢复失败：' + e.message); }
+        };
+        r.readAsText(f);
+      });
+      inp.click();
+    } catch (e) { flash('恢复失败：' + e.message); }
+  }
 
   function levelOf(xp) {
     const L = C.levels; let idx = 0;
@@ -1144,6 +1192,8 @@
       '<div class="psec"><h3>近期成交</h3><div class="hist">' + hist + '</div></div>' +
       '<div class="psec"><h3>资深销售心法</h3><ul class="tips">' + tips + '</ul></div>' +
       '<div class="act-row"><button class="btn-ghost" data-act="share-prof">📸 导出能力卡</button>' +
+      '<button class="btn-ghost" data-act="backup" title="下载 JSON 备份（不含 AI Key），换设备/换浏览器用「恢复」导入">⤓ 备份进度</button>' +
+      '<button class="btn-ghost" data-act="restore" title="从 JSON 备份恢复（覆盖当前档案，先确认）">⤒ 恢复进度</button>' +
       '<button class="btn-ghost danger" data-act="wipe">⚠ 清空成长档案</button></div>');
   }
 
@@ -1215,7 +1265,9 @@
       render();
     }
     else if (act === 'copy') { doCopy(t.getAttribute('data-txt')); }
-    else if (act === 'wipe') { if (confirmSafe('确定清空全部成长档案与进度？此操作不可恢复。')) { prog = BLANK_PROG(); saveProgress(); render(); } }
+    else if (act === 'backup') { exportProgress(); }
+    else if (act === 'restore') { importProgress(); }
+    else if (act === 'wipe') { if (confirmSafe('确定清空全部成长档案与进度？此操作不可恢复。（建议先「⤓ 备份进度」）')) { prog = BLANK_PROG(); saveProgress(); render(); } }
     else if (act === 'exam-start') { startExam(); state.mode = 'profile'; render(); }
     else if (act === 'exam-exit') { clearDeal(); state.deal = null; state.answered = null; render(); }
     else if (act === 'mistake') { startMistake(t.getAttribute('data-id')); state.mode = 'drill'; render(); }
@@ -1315,6 +1367,7 @@
     updateSkills: updateSkills, startExam: startExam, startMistake: startMistake, ALL_ROUNDS: ALL_ROUNDS, prog: function () { return prog; },
     startEnglish: startEnglish, dealSnapshot: dealSnapshot, saveDeal: saveDeal, loadSavedDeal: loadSavedDeal, resumeDeal: resumeDeal, clearDeal: clearDeal,
     buildShareSVG: buildShareSVG, exportShareCard: exportShareCard,
+    migrateProgress: migrateProgress, PROG_VER: PROG_VER,
   };
 
   if (typeof document !== 'undefined' && document.addEventListener) {

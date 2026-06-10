@@ -374,6 +374,19 @@ try {
   ok(vb && Array.isArray(vb.rubric), '价值阶段新增「综合评标」开放回合（含 rubric）');
 } catch (e) { fails.push('销售军规 抛错：' + (e && e.stack || e)); }
 
+/* ---------- 档案 schema 迁移（migrateProgress：备份/恢复与版本升级的核心）---------- */
+try {
+  const K = global.window.__COACH__;
+  ok(typeof K.migrateProgress === 'function' && typeof K.PROG_VER === 'number', 'migrateProgress / PROG_VER 已暴露');
+  const m1 = K.migrateProgress({ xp: 5 });                       // 最初版存档（无 ver、缺大部分字段）
+  ok(m1.ver === K.PROG_VER, '迁移后 ver 升至当前版本');
+  ok(m1.xp === 5 && Array.isArray(m1.badges) && Array.isArray(m1.mistakes) && Array.isArray(m1.history), 'v1 存档迁移：保留 xp，补齐数组字段');
+  ok(m1.skills && typeof m1.skills.expertise === 'number', '迁移补齐 6 维能力雷达默认值');
+  const m2 = K.migrateProgress({ xp: 'bad', badges: 'oops', skills: { poise: 77 } });   // 脏数据
+  ok(m2.xp === 0 && Array.isArray(m2.badges) && m2.skills.poise === 77 && m2.skills.value === 40, '脏数据归一：类型校正且不丢有效字段');
+  ok(K.migrateProgress(null).ver === K.PROG_VER, 'null 输入返回全新空档案');
+} catch (e) { fails.push('migrateProgress 抛错：' + (e && e.stack || e)); }
+
 /* ---------- 汇总 ---------- */
 console.log('═══════════════════════════════════════════════');
 console.log(' 国际销售话术陪练 · coach.js 初始化冒烟测试');
