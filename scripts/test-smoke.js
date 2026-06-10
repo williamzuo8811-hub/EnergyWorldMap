@@ -149,6 +149,15 @@ try {
   APP.state.choro = true; APP.render();
   APP.state.choro = false; APP.render();
   ok(true, '🎨 国别染色（choropleth）渲染开/关不抛错');
+  // 跨 ±180° 要素已解卷：横贯全图的色带 bug 的回归测试
+  const geo = global.window.WORLD_GEO;
+  ok(!geo.features.some(f => (f.properties || {}).name === 'Antarctica'), '🎨 南极洲已从染色 GeoJSON 剔除');
+  const hasJump = geo.features.some(f => {
+    const g = f.geometry; if (!g) return false;
+    const polys = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : [];
+    return polys.some(p => p.some(ring => ring.some((pt, i) => i > 0 && Math.abs(pt[0] - ring[i - 1][0]) > 180)));
+  });
+  ok(!hasJump, '🎨 跨 ±180° 要素（俄罗斯/斐济）已解卷，无相邻点经度跳变 >180°');
 } catch (e) { fails.push('🎨 国别染色抛错：' + (e && e.message)); }
 
 try { APP.showClientBoard(); ok(true, 'showClientBoard()（🎯 客户 BD 看板）不抛错'); }
