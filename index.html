@@ -131,6 +131,7 @@
           <button class="tools-toggle" id="tools-toggle" aria-label="展开 / 收起地图工具" aria-expanded="false" title="地图工具">⋯</button>
           <div class="basemap-switch" id="basemap-switch" role="group" aria-label="底图切换"></div>
           <a class="btn-globe3d" id="btn-globe3d" href="globe.html" title="3D 地球版：投资挤出柱 + 跨境弧线" aria-label="打开 3D 地球版" data-i18n="🌐 3D Globe">🌐 3D 地球</a>
+          <button class="btn-story" id="btn-story" title="导览·故事模式：沙特2030 / AI算力竞赛 / 非洲走廊… 逐站飞行配解说" aria-label="打开导览故事模式" data-i18n="📖 Tours">📖 导览</button>
           <!-- 🎓 销售陪练入口：暂未公开，仅口令访问（去掉 hidden + display:none 即可重新公开） -->
           <a class="btn-coach" id="btn-coach" href="coach.html" hidden style="display:none" title="国际销售话术陪练：用真实项目把生意从零练到成交" aria-label="打开国际销售话术陪练" data-i18n="🎓 Sales Coach">🎓 销售陪练</a>
           <button class="btn-heat" id="btn-heat" aria-pressed="false" title="按当前权重显示宏观热力格局" aria-label="切换投资热力图" data-i18n="🔥 Heatmap">🔥 热力图</button>
@@ -143,6 +144,8 @@
           <button class="btn-trends" id="btn-trends" title="按当前筛选看时间维度：年度投资/项目数 + 大区×品类矩阵" aria-label="打开趋势统计" data-i18n="📈 Trends">📈 趋势</button>
           <button class="btn-home" id="btn-home" title="复位视图" aria-label="复位地图视图" data-i18n="⤢ Reset">⤢ 复位</button>
         </div>
+        <!-- 📖 导览解说条（故事模式时显示在地图底部居中） -->
+        <div class="story-card" id="story-card" role="region" aria-label="导览解说"></div>
         <div class="heat-facets" id="heat-facets"></div>
         <div class="heat-legend" id="heat-legend">
           <span class="hl-cap">投资热力</span>
@@ -211,6 +214,8 @@
   <script defer src="js/progress.js"></script>
   <!-- 拼音字表（~17KB，scripts/build-pinyin.js 生成）：搜索框拼音/首字母匹配用 -->
   <script defer src="js/pinyin-map.js"></script>
+  <!-- 📖 导览剧本（故事模式数据；步骤 id 由 validate-data.js 校验） -->
+  <script defer src="js/stories.js"></script>
   <!-- i18n-en.js（英文正文 ~1.4MB）不在此同步加载：只有英文详情卡正文用得到（英文名/标签均已内联），
        改由 app.js 在切到英文 / 带 ?lang=en 深链时按需注入，避免拖慢中文访客首屏可交互时间。 -->
   <script defer src="js/util.js"></script>

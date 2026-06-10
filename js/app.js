@@ -1358,6 +1358,93 @@
     }));
   }
 
+  /* ---------- 📖 导览 / 故事模式（js/stories.js 剧本：逐站飞行 + 底部解说条）----------
+   * 不改动用户当前筛选；每站 showDetail + flyTo，解说条上一站/下一站/自动播放/退出。
+   * 深链：#story=<key>&stop=<n> 直接开播（分享传播入口）。 */
+  const STORIES = window.ENERGY_STORIES || [];
+  const storyCard = document.getElementById('story-card');
+  let _story = null, _storyIdx = 0, _storyAuto = null;
+  function showStoryPicker() {
+    const en = state.lang === 'en';
+    countryPanel.classList.remove('wide');
+    countryPanel.innerHTML =
+      '<div class="cp-head"><span style="font-size:20px">📖</span><div class="cp-name">' + (en ? 'Guided tours' : '导览 · 故事模式') + '</div>' +
+      '<button class="cp-close" id="cp-close" aria-label="关闭面板" title="关闭">×</button></div>' +
+      '<div class="cp-body"><div class="cp-note" style="margin:0 0 10px">' +
+      (en ? 'Pick a storyline — the map flies stop by stop with narration. Your current filters stay untouched.'
+          : '选一条故事线，地图逐站飞行并配解说；不改动你当前的筛选条件。') + '</div>' +
+      STORIES.map(s =>
+        '<div class="story-row" data-key="' + s.key + '" tabindex="0" role="button">' +
+        '<span class="sr-ico">' + s.icon + '</span><div class="sr-main"><div class="sr-t">' + esc(s.title) + '</div>' +
+        '<div class="sr-d">' + esc(s.desc) + '</div></div><span class="sr-n">' + s.steps.length + (en ? ' stops ▸' : ' 站 ▸') + '</span></div>'
+      ).join('') + '</div>';
+    countryBackdrop.classList.add('show'); countryPanel.classList.add('show');
+    document.getElementById('cp-close').addEventListener('click', hideCountry);
+    focusEl('cp-close');
+    countryPanel.querySelectorAll('.story-row').forEach(el =>
+      el.addEventListener('click', () => { hideCountry(); startStory(el.dataset.key); }));
+  }
+  function stopStoryAuto() { if (_storyAuto) { clearInterval(_storyAuto); _storyAuto = null; } }
+  function startStory(key, step) {
+    const s = STORIES.find(x => x.key === key);
+    if (!s || !s.steps.length) return;
+    stopStoryAuto();
+    _story = s;
+    document.body.classList.add('story-on');
+    storyStep(step || 0);
+  }
+  function exitStory() {
+    stopStoryAuto();
+    _story = null;
+    if (storyCard) storyCard.classList.remove('show');
+    document.body.classList.remove('story-on');
+    hideDetail();
+  }
+  function storyStep(i) {
+    if (!_story) return;
+    _storyIdx = Math.max(0, Math.min(i, _story.steps.length - 1));
+    const st = _story.steps[_storyIdx];
+    const p = PROJECTS.find(x => x.id === st.id);
+    if (p && p.coord) { showDetail(p); flyTo(toLatLng(p.coord), st.zoom || 6, { duration: 1.1 }); }
+    renderStoryCard(st);
+  }
+  function renderStoryCard(st) {
+    if (!storyCard || !_story) return;
+    const en = state.lang === 'en';
+    const n = _story.steps.length;
+    const dots = _story.steps.map((_, i) =>
+      '<i class="' + (i === _storyIdx ? 'on' : '') + '" data-i="' + i + '" role="button" tabindex="0" aria-label="' + (en ? 'Stop ' : '第') + (i + 1) + (en ? '' : ' 站') + '"></i>').join('');
+    storyCard.innerHTML =
+      '<div class="sc-top"><span class="sc-badge">' + _story.icon + ' ' + esc(_story.title) + '</span>' +
+      '<span class="sc-step">' + (_storyIdx + 1) + ' / ' + n + '</span>' +
+      '<button class="sc-x" id="sc-x" aria-label="退出导览" title="退出导览">×</button></div>' +
+      '<div class="sc-t">' + esc(st.t) + '</div>' +
+      '<div class="sc-txt">' + esc(st.txt) + '</div>' +
+      '<div class="sc-nav">' +
+      '<button class="sc-btn" id="sc-prev"' + (_storyIdx === 0 ? ' disabled' : '') + '>‹ ' + (en ? 'Prev' : '上一站') + '</button>' +
+      '<div class="sc-dots">' + dots + '</div>' +
+      '<button class="sc-btn" id="sc-auto" aria-pressed="' + (_storyAuto ? 'true' : 'false') + '" title="' + (en ? 'Auto play' : '自动播放（9 秒/站）') + '">' + (_storyAuto ? '⏸' : '▶') + '</button>' +
+      '<button class="sc-btn sc-next" id="sc-next">' + (_storyIdx >= n - 1 ? (en ? 'Done ✓' : '完成 ✓') : (en ? 'Next ›' : '下一站 ›')) + '</button>' +
+      '</div>';
+    storyCard.classList.add('show');
+    const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
+    on('sc-x', exitStory);
+    on('sc-prev', () => { stopStoryAuto(); storyStep(_storyIdx - 1); });
+    on('sc-next', () => { stopStoryAuto(); if (_storyIdx >= n - 1) exitStory(); else storyStep(_storyIdx + 1); });
+    on('sc-auto', () => {
+      if (_storyAuto) { stopStoryAuto(); renderStoryCard(st); return; }
+      _storyAuto = setInterval(() => {
+        if (!_story || _storyIdx >= _story.steps.length - 1) { stopStoryAuto(); if (_story) renderStoryCard(_story.steps[_storyIdx]); return; }
+        storyStep(_storyIdx + 1);
+      }, 9000);
+      renderStoryCard(st);
+    });
+    storyCard.querySelectorAll('.sc-dots i').forEach(d =>
+      d.addEventListener('click', () => { stopStoryAuto(); storyStep(+d.dataset.i); }));
+  }
+  const btnStory = document.getElementById('btn-story');
+  if (btnStory) btnStory.addEventListener('click', showStoryPicker);
+
   /* ---------- 品类色图例（地图左上，点击=切换该品类；随语言重建）---------- */
   const legendEl = document.getElementById('cat-legend');
   function buildCatLegend() {
@@ -1429,9 +1516,11 @@
     if (!state.lines) p.set('lines', '0');
     if (state.heatCat) p.set('hcat', state.heatCat);
     if (state.compare.length) p.set('cmp', state.compare.join('~'));
+    if (_story) { p.set('story', _story.key); if (_storyIdx) p.set('stop', String(_storyIdx)); }
     return p.toString();
   }
   let pendingProjectId = null;  // 深链接 #project=<id>：首屏渲染后打开该项目
+  let pendingStory = null, pendingStop = 0; // 深链接 #story=<key>&stop=<n>：首屏后直接开播导览
   function applyHash() {
     const h = (location.hash || '').replace(/^#/, '');
     if (!h) return;
@@ -1459,6 +1548,7 @@
     if (p.has('hcat') && CATEGORIES[p.get('hcat')]) state.heatCat = p.get('hcat');
     if (p.has('cmp')) state.compare = p.get('cmp').split('~').filter(Boolean).slice(0, 4);
     if (p.has('project')) pendingProjectId = p.get('project');
+    if (p.has('story')) { pendingStory = p.get('story'); pendingStop = parseInt(p.get('stop'), 10) || 0; }
   }
   document.getElementById('btn-share').addEventListener('click', () => {
     const hash = stateToHash();
@@ -1664,6 +1754,7 @@
   /* ---------- Esc 关闭浮层（详情卡 / 国别面板·企业榜 / 移动端抽屉）---------- */
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
+    if (_story) { exitStory(); return; }
     if (detailEl.classList.contains('show')) hideDetail();
     if (countryPanel.classList.contains('show')) hideCountry();
     closeDrawers();
@@ -1702,8 +1793,10 @@
   syncHeatFacets();
   render();
 
-  // 深链接：#project=<id> 打开该项目详情并定位；#cmp=… 直接打开国别对比
-  if (pendingProjectId != null) {
+  // 深链接：#story=… 开播导览；#project=<id> 打开该项目详情并定位；#cmp=… 直接打开国别对比
+  if (pendingStory != null) {
+    startStory(pendingStory, pendingStop);
+  } else if (pendingProjectId != null) {
     const pp = PROJECTS.find(x => String(x.id) === String(pendingProjectId));
     if (pp) { showDetail(pp); flyTo(toLatLng(pp.coord), 7, { duration: 0.8 }); }
   } else if (state.compare.length >= 2) {
@@ -1727,5 +1820,5 @@
   })();
 
   // 调试 / 程序化控制句柄
-  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showLeague, showDetail, PROJECTS, applyLang, buildRegionTree, showCompare, openCompare, toggleFav, FAVS, showTrends };
+  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showLeague, showDetail, PROJECTS, applyLang, buildRegionTree, showCompare, openCompare, toggleFav, FAVS, showTrends, startStory, storyStep, exitStory, showStoryPicker };
 })();

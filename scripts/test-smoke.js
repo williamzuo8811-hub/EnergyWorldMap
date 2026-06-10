@@ -109,6 +109,7 @@ try {
     'data-europe', 'data-nuclear', 'data-northam', 'data-southasia', 'data-china-future', 'data-clients2', 'data-refresh2606', 'progress']
     .forEach(f => require(path.join(__dirname, '..', 'js', f + '.js')));
   require(path.join(__dirname, '..', 'js', 'clients-meta.js'));   // window.CLIENT_META（BD 看板用）
+  require(path.join(__dirname, '..', 'js', 'stories.js'));        // window.ENERGY_STORIES（📖 导览剧本）
   require(path.join(__dirname, '..', 'lib', 'world-110m.js'));    // window.WORLD_GEO（🎨 国别染色用；浏览器里按需懒加载）
   require(path.join(__dirname, '..', 'js', 'app.js'));
 } catch (e) {
@@ -156,6 +157,16 @@ try { APP.showLeague(); ok(true, 'showLeague()（🏢 企业榜）不抛错'); }
 catch (e) { fails.push('showLeague() 抛错：' + (e && e.message)); }
 try { APP.showTrends(); ok(true, 'showTrends()（📈 趋势统计）不抛错'); }
 catch (e) { fails.push('showTrends() 抛错：' + (e && e.message)); }
+
+try {
+  const stories = global.window.ENERGY_STORIES || [];
+  ok(stories.length >= 3, '📖 导览剧本已加载（≥3 条故事线）');
+  APP.showStoryPicker();
+  APP.startStory(stories[0].key);
+  APP.storyStep(1); APP.storyStep(0);
+  APP.exitStory();
+  ok(true, '📖 导览 picker / startStory / storyStep / exitStory 不抛错');
+} catch (e) { fails.push('📖 导览抛错：' + (e && e.message)); }
 
 /* ---------- 汇总 ---------- */
 console.log('═══════════════════════════════════════════════');

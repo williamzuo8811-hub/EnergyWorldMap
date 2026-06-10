@@ -246,6 +246,24 @@ if (UTIL && UTIL.geoNameOf) {
   } catch (e) { W(`无法加载 lib/world-110m.js（跳过国别染色映射检查）：${e.message}`); }
 }
 
+// 5i) 导览剧本（js/stories.js）：key 唯一、每站 id 必须能对上项目（孤儿=ERROR，会导致该站飞行/详情卡落空）
+(function () {
+  const f = path.join(ROOT, 'js/stories.js');
+  if (!fs.existsSync(f)) return;
+  try { require(f); } catch (e) { E(`js/stories.js 加载失败：${e.message}`); return; }
+  const stories = global.window.ENERGY_STORIES || [];
+  const keys = new Set();
+  stories.forEach(s => {
+    if (!s.key || keys.has(s.key)) E(`stories：剧本 key 缺失或重复：${JSON.stringify(s.key)}（${s.title || '?'}）`);
+    keys.add(s.key);
+    if (!Array.isArray(s.steps) || s.steps.length < 2) { W(`stories：「${s.title}」步骤少于 2`); return; }
+    s.steps.forEach((st, i) => {
+      if (!idSet.has(st.id)) E(`stories：「${s.title}」第 ${i + 1} 站 id=${st.id} 对不上任何项目`);
+      if (!st.t || !st.txt) W(`stories：「${s.title}」第 ${i + 1} 站缺标题(t)/解说(txt)`);
+    });
+  });
+})();
+
 /* ---------- 6) 概览 ---------- */
 const by = (key) => PROJECTS.reduce((m, p) => { const k = p[key]; m[k] = (m[k] || 0) + 1; return m; }, {});
 const capPresent = PROJECTS.filter(p => p.cap && /\d/.test(p.cap)).length;
