@@ -68,7 +68,7 @@
           <input id="search" type="text" placeholder="搜索项目 / 国家 / 业主…" aria-label="搜索项目 / 国家 / 业主">
         </div>
 
-        <button class="recent-toggle" id="recent-toggle" data-i18n="🆕 Latest updates only">🆕 仅看最新动态</button>
+        <button class="recent-toggle" id="recent-toggle" aria-pressed="false" data-i18n="🆕 Latest updates only">🆕 仅看最新动态</button>
 
         <div class="block">
           <div class="block-title"><span data-i18n="Categories">能源品类</span> <span class="count" data-i18n="click to toggle">点击切换显示</span></div>
@@ -88,9 +88,9 @@
         <div class="block">
           <div class="block-title"><span data-i18n="Year range">年份区间</span> <span class="count" id="year-label">全部</span></div>
           <div class="year-presets">
-            <button class="yp on" data-preset="all" data-i18n="All">全部</button>
-            <button class="yp" data-preset="recent" data-i18n="🆕 Latest">🆕 最新</button>
-            <button class="yp" data-preset="future" data-i18n="Future 2027+">未来管线 2027+</button>
+            <button class="yp on" data-preset="all" aria-pressed="true" data-i18n="All">全部</button>
+            <button class="yp" data-preset="recent" aria-pressed="false" data-i18n="🆕 Latest">🆕 最新</button>
+            <button class="yp" data-preset="future" aria-pressed="false" data-i18n="Future 2027+">未来管线 2027+</button>
           </div>
           <div class="year-wrap">
             <div class="year-val"><b id="year-min-lab">2024</b><span>—</span><b id="year-max-lab">2036</b></div>
@@ -101,7 +101,7 @@
               <input id="year-max" type="range" min="2024" max="2036" step="1" value="2036">
             </div>
           </div>
-          <button class="btn-play" id="btn-play" title="逐年累计揭示，看能源版图如何'长'出来">▶ 播放时间轴</button>
+          <button class="btn-play" id="btn-play" aria-pressed="false" title="逐年累计揭示，看能源版图如何'长'出来">▶ 播放时间轴</button>
         </div>
 
         <div class="action-row">
@@ -117,18 +117,18 @@
         <div id="map" role="region" aria-label="全球能源项目地图"></div>
         <div class="year-ticker" id="year-ticker"></div>
         <div class="cat-legend" id="cat-legend"></div>
-        <div class="detail" id="detail"></div>
+        <div class="detail" id="detail" role="region" aria-label="项目详情"></div>
         <div class="country-backdrop" id="country-backdrop"></div>
-        <div class="country-panel" id="country-panel"></div>
+        <div class="country-panel" id="country-panel" role="dialog" aria-modal="true" aria-label="数据看板"></div>
         <div class="map-tools" role="toolbar" aria-label="地图工具">
-          <button class="tools-toggle" id="tools-toggle" aria-label="展开 / 收起地图工具" title="地图工具">⋯</button>
+          <button class="tools-toggle" id="tools-toggle" aria-label="展开 / 收起地图工具" aria-expanded="false" title="地图工具">⋯</button>
           <div class="basemap-switch" id="basemap-switch" role="group" aria-label="底图切换"></div>
           <a class="btn-globe3d" id="btn-globe3d" href="globe.html" title="3D 地球版：投资挤出柱 + 跨境弧线" aria-label="打开 3D 地球版" data-i18n="🌐 3D Globe">🌐 3D 地球</a>
           <!-- 🎓 销售陪练入口：暂未公开，仅口令访问（去掉 hidden + display:none 即可重新公开） -->
           <a class="btn-coach" id="btn-coach" href="coach.html" hidden style="display:none" title="国际销售话术陪练：用真实项目把生意从零练到成交" aria-label="打开国际销售话术陪练" data-i18n="🎓 Sales Coach">🎓 销售陪练</a>
-          <button class="btn-heat" id="btn-heat" title="按当前权重显示宏观热力格局" aria-label="切换投资热力图" data-i18n="🔥 Heatmap">🔥 热力图</button>
-          <button class="btn-weight" id="btn-weight" title="圆点大小与热力按 投资额 或 装机容量(MW) 加权" aria-label="切换加权口径：投资额或装机容量">⚖️ 投资权重</button>
-          <button class="btn-flow on" id="btn-flow" title="显隐输变电/高铁/管道飞线" aria-label="显隐飞线" data-i18n="⚡ Flowlines">⚡ 飞线</button>
+          <button class="btn-heat" id="btn-heat" aria-pressed="false" title="按当前权重显示宏观热力格局" aria-label="切换投资热力图" data-i18n="🔥 Heatmap">🔥 热力图</button>
+          <button class="btn-weight" id="btn-weight" aria-pressed="false" title="圆点大小与热力按 投资额 或 装机容量(MW) 加权" aria-label="切换加权口径：投资额或装机容量">⚖️ 投资权重</button>
+          <button class="btn-flow on" id="btn-flow" aria-pressed="true" title="显隐输变电/高铁/管道飞线" aria-label="显隐飞线" data-i18n="⚡ Flowlines">⚡ 飞线</button>
           <button class="btn-league" id="btn-league" title="企业 / 业主全球排行榜" aria-label="打开企业排行榜" data-i18n="🏢 Companies">🏢 企业榜</button>
           <button class="btn-board" id="btn-board" title="国际大客户 BD 看板（按梯队 / 产品契合 / 海外场景）" aria-label="打开国际大客户 BD 看板" data-i18n="🎯 Clients">🎯 客户</button>
           <button class="btn-compare" id="btn-compare" title="多国能源组合并排对比" aria-label="打开国别对比" data-i18n="🆚 Compare">🆚 对比</button>

@@ -470,8 +470,8 @@
       '<text x="40" y="208" fill="#21c7ff" font-size="60" font-weight="800">' + esc(s.big) + '</text>' +
       '<text x="' + (60 + String(s.big).length * 36) + '" y="208" fill="#93a4c4" font-size="14">' + esc(s.bigLabel || '') + '</text>' +
       rowsSVG + radar +
-      '<text x="40" y="' + (H - 24) + '" fill="#5f718f" font-size="12">' + esc(s.footnote || '') + '</text>' +
-      '<text x="' + (W - 40) + '" y="' + (H - 24) + '" text-anchor="end" fill="#5f718f" font-size="12">爱思考的杨帆William 制作</text></svg>';
+      '<text x="40" y="' + (H - 24) + '" fill="#7b8ca6" font-size="12">' + esc(s.footnote || '') + '</text>' +
+      '<text x="' + (W - 40) + '" y="' + (H - 24) + '" text-anchor="end" fill="#7b8ca6" font-size="12">爱思考的杨帆William 制作</text></svg>';
   }
   function dlData(href, name) { try { const a = document.createElement('a'); a.href = href; a.download = name; a.click(); } catch (e) { /* ignore */ } }
   function exportShareCard() {

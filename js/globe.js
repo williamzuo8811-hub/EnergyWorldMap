@@ -17,6 +17,8 @@
   const CAT_KEYS = Object.keys(CATEGORIES);
   const { buildProjects, LABELS_EN, capFmtMW, invMagnitude } = window.ENERGY_UTIL;
   const LAND = (window.WORLD_GEO && window.WORLD_GEO.features) || [];
+  // 尊重「减少动态效果」系统偏好：默认不自转，相机飞行降级为瞬时跳转
+  const REDUCED_MOTION = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   /* ---------- 数据装配（与 app.js 同口径，共用 util.buildProjects；3D 只保留有 coord 的项目）----------
    * 不传 en：globe 详情卡正文始终用中文 desc/detail，从不读 descEn/detailEn，故无需加载 i18n-en.js。 */
@@ -188,7 +190,8 @@
   try {
     controls = world.controls();
     if (controls) {
-      controls.autoRotate = true; controls.autoRotateSpeed = 0.42;
+      controls.autoRotate = !REDUCED_MOTION; controls.autoRotateSpeed = 0.42;
+      if (REDUCED_MOTION) { state.rotate = false; const rb = document.getElementById('btn-rotate'); if (rb && rb.classList) rb.classList.remove('on'); }
       controls.enableDamping = true; controls.dampingFactor = 0.12;
       controls.minDistance = 140; controls.maxDistance = 700;
     }
@@ -228,7 +231,7 @@
     state.focus = p.id;
     setRotate(false);
     try {
-      world.pointOfView({ lat: p.coord[1], lng: p.coord[0], altitude: 1.5 }, 1100);
+      world.pointOfView({ lat: p.coord[1], lng: p.coord[0], altitude: 1.5 }, REDUCED_MOTION ? 0 : 1100);
       world.ringsData([{ lat: p.coord[1], lng: p.coord[0], color: CATEGORIES[p.cat].color }]);
     } catch (e) {}
     showDetail(p);
@@ -361,8 +364,8 @@
       document.querySelectorAll('#year-presets .yp').forEach(b => b.classList.toggle('on', b.dataset.preset === 'all'));
       const bw = document.getElementById('btn-weight'); if (bw) { bw.classList.remove('on'); bw.textContent = L('weightInv'); }
       const ba = document.getElementById('btn-arcs'); if (ba) ba.classList.add('on');
-      setRotate(true);
-      try { world.pointOfView({ lat: 22, lng: 80, altitude: 2.6 }, 1000); } catch (e) {}
+      setRotate(!REDUCED_MOTION);
+      try { world.pointOfView({ lat: 22, lng: 80, altitude: 2.6 }, REDUCED_MOTION ? 0 : 1000); } catch (e) {}
       render();
     });
     // 语言

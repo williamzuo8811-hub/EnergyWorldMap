@@ -11,7 +11,7 @@
   --border-strong: rgba(120, 160, 220, 0.34);
   --txt: #e8eefb;
   --txt-dim: #93a4c4;
-  --txt-faint: #5f718f;
+  --txt-faint: #7b8ca6; /* 辅助文字：对 --bg / #101a30 卡底对比度 ≥5:1（WCAG AA），勿调暗 */
   --accent: #21c7ff;
   --good: #2ee6a6;
   --warn: #ffb02e;
@@ -418,7 +418,19 @@ input[type=range]::-webkit-slider-thumb {
   .sub-chip { padding: 8px; min-height: 34px; }
   .country-chip { padding: 7px 11px; }
   .rg-caret { width: 34px; height: 34px; }
-  input[type=range]::-webkit-slider-thumb { width: 22px; height: 22px; }
+  /* 滑块拇指触控目标 ≥44px：透明边框扩大命中区（双滑块只有拇指接收事件），视觉圆点仍 ~20px */
+  input[type=range]::-webkit-slider-thumb,
+  .range-dual input[type=range]::-webkit-slider-thumb {
+    width: 44px; height: 44px; border: 12px solid transparent;
+    background-clip: padding-box; box-shadow: none;
+  }
+  .range-dual input[type=range]::-moz-range-thumb {
+    width: 44px; height: 44px; border: 12px solid transparent;
+    background-clip: padding-box; box-shadow: none;
+  }
+  .range-dual { height: 44px; }
+  .range-dual input[type=range] { height: 44px; }
+  .range-dual .rd-track, .range-dual .rd-fill { top: 20px; }
 
   /* 右上角工具栏折叠成「⋯」菜单，点开才展开 8 个按钮，避免竖排占满屏。
      用 .map-tools .tools-toggle 提高优先级，压过后文 .tools-toggle{display:none} 基础规则 */
