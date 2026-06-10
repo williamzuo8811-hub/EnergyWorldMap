@@ -319,8 +319,34 @@
     const a = px(HEAT_GRADIENT[lo]), b = px(HEAT_GRADIENT[hi]);
     return 'rgb(' + a.map((v, i) => Math.round(v + (b[i] - v) * f)).join(',') + ')';
   }
+  /* Natural-Earth 110m 的俄罗斯/斐济跨 ±180° 经线：Leaflet 不裁剪日界线，直接绘制会变成
+   * 横贯全图的色带。加载后一次性"解卷"——环内相邻点经度跳变 >180° 时累计 ±360° 补偿，
+   * 让环在连续经度空间闭合（俄东楚科奇画到 180°E 右侧，配合 worldCopyJump 视觉正确）。
+   * 南极洲的环沿极点经 ±180° 闭合无法解卷，且永远不会有项目：直接剔除。 */
+  function unwrapRing(ring) {
+    const out = [[ring[0][0], ring[0][1]]];
+    let off = 0;
+    for (let i = 1; i < ring.length; i++) {
+      const d = ring[i][0] - ring[i - 1][0];
+      if (d > 180) off -= 360; else if (d < -180) off += 360;
+      out.push([ring[i][0] + off, ring[i][1]]);
+    }
+    return out;
+  }
+  function fixWorldGeo(geo) {
+    if (!geo || geo._unwrapped) return geo;
+    geo._unwrapped = true;
+    geo.features = geo.features.filter(f => (f.properties || {}).name !== 'Antarctica');
+    geo.features.forEach(f => {
+      const g = f.geometry; if (!g) return;
+      if (g.type === 'Polygon') g.coordinates = g.coordinates.map(unwrapRing);
+      else if (g.type === 'MultiPolygon') g.coordinates = g.coordinates.map(p => p.map(unwrapRing));
+    });
+    return geo;
+  }
   function updateChoro(items) {
     if (!window.WORLD_GEO) { ensureWorldGeo(); return; }   // 懒加载中：载完会自动 render
+    fixWorldGeo(window.WORLD_GEO);
     const clientOnly = state.cats.size === 1 && state.cats.has('client');
     const agg = {};   // geo要素名 -> { v 权重和, inv, mw, n, zh: {中文国名:项目数} }
     items.forEach(p => {

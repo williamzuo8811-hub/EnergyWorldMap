@@ -38,7 +38,9 @@ jobs:
         run: node scripts/check-links.js
 
   # Lighthouse 趋势线：性能/无障碍/最佳实践/SEO 打分（阈值见 scripts/check-lighthouse.js）。
-  # 分数受 CI 机器波动影响，定位为趋势提醒而非门禁：整个 job 失败不挡合并。
+  # 分数受 CI 机器波动影响，定位为趋势提醒而非门禁：CI 跑器的无头 Chrome 偶发
+  # "Unable to connect to Chrome"，自动重试一次，仍失败降级为 ::warning::（步骤恒退 0，
+  # job 不再显示红叉——红叉留给真正的门禁 validate）。
   lighthouse:
     runs-on: ubuntu-latest
     continue-on-error: true
@@ -51,11 +53,15 @@ jobs:
         run: |
           python3 -m http.server 4173 &
           sleep 2
-      - name: Lighthouse 跑分（仅 CI 内 npx，不进项目依赖）
-        run: >
-          npx --yes lighthouse@12 http://localhost:4173/
-          --output=json --output-path=./lh.json --quiet
-          --only-categories=performance,accessibility,best-practices,seo
-          --chrome-flags="--headless=new --no-sandbox --disable-gpu"
+      - name: Lighthouse 跑分（仅 CI 内 npx；Chrome 启动抖动自动重试，失败仅 warning）
+        run: |
+          run_lh() {
+            npx --yes lighthouse@12 http://localhost:4173/ \
+              --output=json --output-path=./lh.json --quiet \
+              --only-categories=performance,accessibility,best-practices,seo \
+              --chrome-flags="--headless=new --no-sandbox --disable-gpu"
+          }
+          run_lh || { echo "::warning::Lighthouse 首次启动失败（常见为 CI 无头 Chrome 抖动），15 秒后重试"; sleep 15; run_lh; } \
+            || echo "::warning::Lighthouse 两次尝试均失败，跳过本轮打分（趋势线，不影响合并）"
       - name: 评分阈值检查（性能≥60 · 无障碍≥90 · 最佳实践/SEO≥80 警告线）
         run: node scripts/check-lighthouse.js lh.json
