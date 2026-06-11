@@ -788,11 +788,14 @@
 
   // ⚖️ 加权口径切换：投资额 ↔ 装机容量（影响圆点大小与热力）
   const btnWeight = document.getElementById('btn-weight');
+  const weightLabel = () => state.lang === 'en'
+    ? (state.weight === 'cap' ? '⚖️ By capacity' : '⚖️ By investment')
+    : (state.weight === 'cap' ? '⚖️ 容量权重' : '⚖️ 投资权重');
   btnWeight.addEventListener('click', () => {
     state.weight = state.weight === 'cap' ? 'inv' : 'cap';
     btnWeight.classList.toggle('on', state.weight === 'cap');
     pressed(btnWeight, state.weight === 'cap');
-    btnWeight.textContent = state.weight === 'cap' ? '⚖️ 容量权重' : '⚖️ 投资权重';
+    btnWeight.textContent = weightLabel();
     render();
   });
 
@@ -866,6 +869,7 @@
     if (sEl) sEl.placeholder = state.lang === 'en' ? 'Search project / country / owner… (pinyin OK)' : '搜索项目 / 国家 / 业主，支持拼音…';
     if (btnLang) btnLang.textContent = state.lang === 'en' ? '中' : 'EN';
     if (sortToggle) sortToggle.textContent = state.lang === 'en' ? (state.sort === 'cap' ? 'by capacity ⇄' : 'by investment ⇄') : (state.sort === 'cap' ? '按装机容量 ⇄' : '按投资额 ⇄');
+    if (btnWeight) btnWeight.textContent = weightLabel(); // ⚖️ 权重钮文案由 JS 改写、不走 data-i18n，这里随语言刷新
     buildCatLegend();   // 地图浮层文案随语言重建
     buildHeatFacets();
     buildRegionTree();  // 左侧大区/国家树随语言整树重建（含国名中英切换）
@@ -1731,7 +1735,7 @@
     if (btnHeat) { btnHeat.classList.toggle('on', state.heat); pressed(btnHeat, state.heat); document.body.classList.toggle('heat-on', state.heat); }
     if (btnChoro) { btnChoro.classList.toggle('on', state.choro); pressed(btnChoro, state.choro); document.body.classList.toggle('choro-on', state.choro); }
     if (state.choro) ensureWorldGeo();
-    if (btnWeight) { btnWeight.classList.toggle('on', state.weight === 'cap'); pressed(btnWeight, state.weight === 'cap'); btnWeight.textContent = state.weight === 'cap' ? '⚖️ 容量权重' : '⚖️ 投资权重'; }
+    if (btnWeight) { btnWeight.classList.toggle('on', state.weight === 'cap'); pressed(btnWeight, state.weight === 'cap'); btnWeight.textContent = weightLabel(); }
     if (sortToggle) sortToggle.textContent = state.sort === 'cap' ? '按装机容量 ⇄' : '按投资额 ⇄';
     if (btnFlow) { btnFlow.classList.toggle('on', state.lines); pressed(btnFlow, state.lines); }
     const sEl = document.getElementById('search'); if (sEl) sEl.value = state.q;
