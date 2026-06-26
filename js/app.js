@@ -145,6 +145,8 @@
   }
   const state = {
     cats: new Set(CAT_KEYS), subOff: new Set(), regions: new Set(), countries: new Set(), statuses: new Set(),
+    clientFilter: null,         // 选中某国际大客户(业主)时，按业主跨品类筛其全部项目（覆盖品类/子类）
+
     minYear: MIN_YEAR, maxYear: MAX_YEAR, q: '', recentOnly: false, favOnly: false, heat: false, choro: false,
     weight: 'inv', sort: 'inv', // weight: 圆点/热力按 inv 投资 或 cap 装机容量；sort: TOP 排序
     playYear: null,             // 时间轴播放时的"当前年"（用于年份大字 + 当年新项目高亮）
@@ -221,10 +223,31 @@
       && (!state.favOnly || FAVS.has(p.id))
       && p.year >= state.minYear && p.year <= state.maxYear && matchQ(p, state.q);
   }
-  const filtered = () => PROJECTS.filter(p => state.cats.has(p.cat) && !state.subOff.has(p.cat + ':' + p.sub) && passBase(p));
+  // 国际大客户「按业主全口径」：复用 SUB_DEFS.client 的 fn 命中 owner，跨所有品类识别客户（带缓存）
+  function clientKeyOf(p) {
+    if (p._ck !== undefined) return p._ck;
+    let r = null; const defs = SUB_DEFS.client || [];
+    for (const d of defs) { if (d.fn && d.fn('', '', p)) { r = d.key; break; } }
+    return (p._ck = r);
+  }
+  let CLIENT_STATS = null;  // 各客户(业主)全口径统计 { n, inv, countries:Set, recentN }（全库一次性，缓存）
+  function clientStats() {
+    if (CLIENT_STATS) return CLIENT_STATS;
+    CLIENT_STATS = {};
+    PROJECTS.forEach(p => {
+      const k = clientKeyOf(p); if (!k) return;
+      const s = CLIENT_STATS[k] || (CLIENT_STATS[k] = { n: 0, inv: 0, countries: new Set(), recentN: 0 });
+      s.n++; s.inv += (p.inv || 0); s.countries.add(p.country); if (isRecent(p)) s.recentN++;
+    });
+    return CLIENT_STATS;
+  }
+  // 选中某客户时（state.clientFilter）按业主跨品类筛其全部项目；否则按品类/子类常规筛选
+  const filtered = () => state.clientFilter
+    ? PROJECTS.filter(p => clientKeyOf(p) === state.clientFilter && passBase(p))
+    : PROJECTS.filter(p => state.cats.has(p.cat) && !state.subOff.has(p.cat + ':' + p.sub) && passBase(p));
 
   // 品类 / 大区切换（供品类条、图例、区域格、筛选项共用，保持联动）
-  function toggleCat(key) { if (state.cats.has(key)) state.cats.delete(key); else state.cats.add(key); syncCatUI(); render(); }
+  function toggleCat(key) { state.clientFilter = null; if (state.cats.has(key)) state.cats.delete(key); else state.cats.add(key); syncCatUI(); render(); }
   function syncCatUI() {
     document.querySelectorAll('.cat-chip').forEach(el => { const on = state.cats.has(el.dataset.key); el.classList.toggle('off', !on); pressed(el, on); });
     document.querySelectorAll('.cat-legend .cl').forEach(el => { const on = state.cats.has(el.dataset.key); el.classList.toggle('off', !on); pressed(el, on); });
@@ -505,9 +528,16 @@
       s.innerHTML = '<span class="sdot" style="background:' + c.color + '"></span><span class="snm">' + d.label + '</span><span class="sct">0</span>';
       s.addEventListener('click', () => {
         const id = key + ':' + d.key;
+        if (key === 'client') {  // 国际大客户：点子分类=按业主聚光该公司全部品类项目（再点取消）
+          state.clientFilter = (state.clientFilter === d.key) ? null : d.key;
+          applyUIFromState(); render();
+          return;
+        }
+        const wasClient = !!state.clientFilter; state.clientFilter = null;  // 操作其他品类子类即退出客户聚光
         if (state.subOff.has(id)) state.subOff.delete(id); else state.subOff.add(id);
         s.classList.toggle('off', state.subOff.has(id));
         pressed(s, !state.subOff.has(id));
+        if (wasClient) applyUIFromState();
         render();
       });
       subWrap.appendChild(s);
@@ -731,6 +761,7 @@
 
   document.getElementById('btn-reset').addEventListener('click', () => {
     pausePlay();
+    state.clientFilter = null;
     state.cats = new Set(CAT_KEYS); state.subOff.clear(); state.countries.clear(); state.statuses.clear();
     state.regions = new Set(DEFAULT_REGIONS); // 重置后展示全部大区
     state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.q = ''; state.recentOnly = false; state.favOnly = false;
@@ -948,8 +979,11 @@
 
     const subCount = {};
     base.forEach(p => { const id = p.cat + ':' + p.sub; subCount[id] = (subCount[id] || 0) + 1; });
+    const cstat = clientStats();  // 国际大客户子分类按"业主全口径"计数（跨所有品类），反映客户真实规模
     document.querySelectorAll('.sub-chip').forEach(el => {
-      const n = subCount[el.dataset.key + ':' + el.dataset.sub] || 0;
+      const n = el.dataset.key === 'client'
+        ? ((cstat[el.dataset.sub] || {}).n || 0)
+        : (subCount[el.dataset.key + ':' + el.dataset.sub] || 0);
       el.querySelector('.sct').textContent = n;
       el.classList.toggle('is-zero', n === 0);
     });
@@ -1251,13 +1285,7 @@
   /* ---------- 🎯 国际大客户 BD 看板（按梯队/产品契合；点公司即筛其全部海外项目）---------- */
   function showClientBoard() {
     const META = window.CLIENT_META || {};
-    const stat = {};
-    PROJECTS.forEach(p => {
-      if (p.cat !== 'client') return;
-      const k = p.sub || 'other';
-      if (!stat[k]) stat[k] = { n: 0, inv: 0, countries: new Set(), recentN: 0 };
-      stat[k].n++; stat[k].inv += (p.inv || 0); stat[k].countries.add(p.country); if (isRecent(p)) stat[k].recentN++;
-    });
+    const stat = clientStats();  // 按业主全口径统计（跨所有品类），反映客户真实项目规模
     const en = state.lang === 'en';
     const TIER_ORDER = ['第一梯队', '第二梯队', '第三梯队', '其他'];
     const TIER_EN = { '第一梯队': 'Tier 1', '第二梯队': 'Tier 2', '第三梯队': 'Tier 3', '其他': 'Other' };
@@ -1308,14 +1336,14 @@
     focusEl('cp-close');
     countryPanel.querySelectorAll('.bd-row').forEach(el => el.addEventListener('click', () => {
       const sub = el.dataset.sub;
-      state.cats = new Set(['client']);
-      state.subOff = new Set(SUB_DEFS.client.filter(d => d.key !== sub).map(d => 'client:' + d.key));
-      state.regions.clear(); state.countries.clear(); state.statuses.clear();
+      state.clientFilter = sub;  // 按业主聚光该公司全部品类项目
+      state.cats = new Set(CAT_KEYS); state.subOff.clear();
+      state.regions = new Set(DEFAULT_REGIONS); state.countries.clear(); state.statuses.clear();
       state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.recentOnly = false; state.q = '';
       hideCountry(); clearPresetActive();
       const allBtn = document.querySelector('.year-presets .yp[data-preset="all"]'); if (allBtn) allBtn.classList.add('on');
       applyUIFromState(); render();
-      const pts = PROJECTS.filter(p => p.cat === 'client' && p.sub === sub && p.coord).map(p => toLatLng(p.coord));
+      const pts = PROJECTS.filter(p => clientKeyOf(p) === sub && p.coord).map(p => toLatLng(p.coord));
       if (pts.length === 1) flyTo(pts[0], 6, { duration: 0.7 });
       else if (pts.length && L.latLngBounds) { try { flyToBounds(L.latLngBounds(pts), { padding: [50, 50], maxZoom: 6, duration: 0.7 }); } catch (e) { /* ignore */ } }
       toast((en ? 'Filtered to ' : '已筛选客户：') + (SUB_LABEL.client[sub] || sub));
@@ -1548,6 +1576,7 @@
     const offCats = CAT_KEYS.filter(k => !state.cats.has(k));
     if (offCats.length) p.set('coff', offCats.join('~'));
     if (state.subOff.size) p.set('soff', [...state.subOff].join('~'));
+    if (state.clientFilter) p.set('client', state.clientFilter);
     if (state.regions.size) p.set('reg', [...state.regions].join('~'));
     if (state.countries.size) p.set('cty', [...state.countries].join('~'));
     if (state.statuses.size) p.set('st', [...state.statuses].join('~'));
@@ -1574,6 +1603,7 @@
     const p = new URLSearchParams(h);
     if (p.has('coff')) { const off = new Set(p.get('coff').split('~')); state.cats = new Set(CAT_KEYS.filter(k => !off.has(k))); }
     if (p.has('soff')) state.subOff = new Set(p.get('soff').split('~').filter(Boolean));
+    if (p.has('client')) state.clientFilter = p.get('client');
     if (p.has('reg')) state.regions = new Set(p.get('reg').split('~').filter(Boolean));
     if (p.has('cty')) state.countries = new Set(p.get('cty').split('~').filter(Boolean));
     if (p.has('st')) state.statuses = new Set(p.get('st').split('~').filter(Boolean));
@@ -1727,6 +1757,12 @@
   function applyUIFromState() {
     syncCatUI();
     document.querySelectorAll('.sub-chip').forEach(el => { const off = state.subOff.has(el.dataset.key + ':' + el.dataset.sub); el.classList.toggle('off', off); pressed(el, !off); });
+    // 国际大客户聚光：选中某公司时高亮该子分类、淡化其余 client 子分类
+    document.querySelectorAll('.sub-chip[data-key="client"]').forEach(el => {
+      const sel = !!state.clientFilter && el.dataset.sub === state.clientFilter;
+      el.classList.toggle('cl-sel', sel);
+      if (state.clientFilter) { el.classList.toggle('off', !sel); pressed(el, sel); }
+    });
     document.querySelectorAll('#region-chips .rg-pill').forEach(el => { const on = state.regions.has(el.dataset.v); el.classList.toggle('on', on); pressed(el, on); });
     syncCountryUI();
     document.querySelectorAll('#status-chips .pill').forEach(el => { const on = state.statuses.has(el.dataset.v); el.classList.toggle('on', on); pressed(el, on); });
