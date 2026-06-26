@@ -147,6 +147,13 @@
       { key: 'cooec',     label: '海油工程',     fn: (h, l, p) => /海油工程|COOEC/.test(p.owner || '') },
       { key: 'cncec',     label: '中国化学',     fn: (h, l, p) => /中国化学|CNCEC/.test(p.owner || '') },
       { key: 'crrc',      label: '中国中车',     fn: (h, l, p) => /中国中车|中车|CRRC/.test(p.owner || '') },
+      // —— 六大全球矿业巨头（特锐德海外重点目标客户；matcher 命中 owner，置于中资客户之后以免抢占既有归类）——
+      { key: 'bhp',       label: '必和必拓BHP',    fn: (h, l, p) => /必和必拓|BHP/.test(p.owner || '') },
+      { key: 'riotinto',  label: '力拓RioTinto',   fn: (h, l, p) => /力拓|Rio Tinto|RioTinto/.test(p.owner || '') },
+      { key: 'fortescue', label: '福特斯库FMG',    fn: (h, l, p) => /福特斯库|Fortescue|FMG/.test(p.owner || '') },
+      { key: 'glencore',  label: '嘉能可Glencore', fn: (h, l, p) => /嘉能可|Glencore/.test(p.owner || '') },
+      { key: 'anglo',     label: '英美资源Anglo',  fn: (h, l, p) => /英美资源|Anglo American|Anglo Platinum|Valterra Platinum|Kumba Iron Ore/.test(p.owner || '') },
+      { key: 'vale',      label: '淡水河谷Vale',   fn: (h, l, p) => /淡水河谷|Vale/.test(p.owner || '') },
       { key: 'other', label: '其他客户' },
     ],
   };

@@ -69,4 +69,11 @@ window.CLIENT_META = {
   chindata:    { tier: '其他', fit: '高',   type: '海外数据中心(秦淮)', product: 'E-house·中压配电', scenario: '东南亚/南亚数据中心', approach: '从数据中心配电与扩容切入' },
   byd:         { tier: '其他', fit: '中高', type: '新能源车/电池/储能(比亚迪)', product: '园区配电·储能并网舱', scenario: '海外整车/电池厂、储能', approach: '从工厂园区配电与储能并网切入' },
   catl:        { tier: '其他', fit: '中高', type: '电池/储能(宁德时代)', product: '储能并网舱·园区配电', scenario: '海外电池厂、储能电站', approach: '从储能并网与工厂配电切入' },
+  // ===== 六大全球矿业巨头（非中资，海外重点目标客户：矿山/冶炼负荷大、偏远矿点多，移动变与预制舱极契合）=====
+  bhp:         { tier: '第一梯队', fit: '极高', type: '全球矿业巨头(必和必拓BHP)', product: '矿山预制舱变电站·车载移动应急变·矿区微网·E-house', scenario: '智利/澳洲/秘鲁/加拿大铜·铁·钾·镍矿', approach: '从矿区保供电、停产损失与偏远矿点快速恢复供电切入，移动变与预制舱最适配' },
+  riotinto:    { tier: '第一梯队', fit: '极高', type: '全球矿业/铝业巨头(力拓Rio Tinto)', product: '矿山升压站·移动变·铝厂高负荷配电·E-house', scenario: '蒙古/澳洲/美国/几内亚/加拿大铜·铁·铝·锂', approach: '矿山供电可靠性+铝冶炼高负荷配电双线切入，重本地认证与绿电并网' },
+  fortescue:   { tier: '第一梯队', fit: '极高', type: '铁矿/绿色能源巨头(福特斯库Fortescue)', product: '矿区光储微网并网舱·移动变·预制舱升压站', scenario: '西澳皮尔巴拉铁矿、绿氢、加蓬铁矿', approach: '从皮尔巴拉零碳电网(风光储)并网与离网微网切入，移动变保供电' },
+  glencore:    { tier: '第一梯队', fit: '极高', type: '全球多金属矿业巨头(嘉能可Glencore)', product: '矿山预制舱变电站·移动应急变·冶炼厂配电', scenario: '刚果金/智利/秘鲁/澳洲/加拿大/哈萨克铜钴镍锌', approach: '从弱电网国家(刚果金/赞比亚)保供电与停产损失切入' },
+  anglo:       { tier: '第一梯队', fit: '极高', type: '全球矿业巨头(英美资源Anglo American)', product: '矿山升压站·移动变·选厂/海淡配电·E-house', scenario: '秘鲁/智利铜、南非铂铁、巴西铁、英欧钾铜', approach: '从智利/秘鲁铜矿海淡输水配电与南非铂矿供电切入' },
+  vale:        { tier: '第一梯队', fit: '极高', type: '全球铁矿/镍业巨头(淡水河谷Vale)', product: '矿区预制舱·移动变·冶炼厂E-house·球团厂配电', scenario: '巴西铁铜、加拿大/印尼镍、阿曼球团', approach: '从巴西铁矿与印尼镍冶炼高负荷配电、移动应急变切入' },
 };
