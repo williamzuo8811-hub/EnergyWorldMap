@@ -1291,6 +1291,23 @@
 
   /* ---------- 🌍 区域能源洞察：弹出某大区的能源结构 / 电网 / 最新动态洞察卡 ---------- */
   const REGION_ORDER = REGIONS.filter(r => (REGION_COUNTRIES[r] || []).length);
+  /* 「最新动态」里的国名 → 可点击下钻：仅当该国确实在数据集（COUNTRY_COUNT 命中）时才挂链，
+   * 保证「点了必中」。口语短名 → 数据集规范名的少量别名（数据集用全称、动态文案用简称的几处）。 */
+  const RI_C_ALIAS = {
+    '沙特阿拉伯': ['沙特'], '印度尼西亚': ['印尼'], '孟加拉国': ['孟加拉'],
+    '哈萨克斯坦': ['哈萨克'], '乌兹别克斯坦': ['乌兹别克'], '土库曼斯坦': ['土库曼'],
+    '吉尔吉斯斯坦': ['吉尔吉斯'], '塔吉克斯坦': ['塔吉克'], '刚果(金)': ['刚果金'], '埃塞俄比亚': ['埃塞'],
+  };
+  // 在一条动态文本里识别出现的、本区重点国家中可下钻的国名（按出现先后去重）
+  function dynCountries(text, ins) {
+    const out = [];
+    (ins.countries || []).forEach(c => {
+      if (COUNTRY_COUNT[c.name] == null || out.indexOf(c.name) >= 0) return;
+      const forms = [c.name].concat(RI_C_ALIAS[c.name] || []);
+      if (forms.some(f => text.indexOf(f) >= 0)) out.push(c.name);
+    });
+    return out;
+  }
   // 把地图飞到某大区项目范围
   function flyToRegion(region) {
     const pts = PROJECTS.filter(p => p.region === region && p.coord).map(p => toLatLng(p.coord));
@@ -1316,7 +1333,10 @@
     const mwTxt = d.totalMW >= 1000 ? (d.totalMW / 1000).toFixed(1) + ' GW' : Math.round(d.totalMW) + ' MW';
     const sec = (icon, title, body) => body ? '<div class="ri-sec"><div class="ri-h"><span class="ri-ic">' + icon + '</span>' + title + '</div><div class="ri-b">' + body + '</div></div>' : '';
     const dynList = (ins.dynamics && ins.dynamics.length)
-      ? '<ul class="ri-dyn">' + ins.dynamics.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '';
+      ? '<ul class="ri-dyn">' + ins.dynamics.map(x => {
+          const cc = dynCountries(x, ins).map(c => '<button class="ri-dyn-cty" data-country="' + esc(c) + '" title="' + (en ? 'View ' : '查看 ') + esc(countryName(c)) + '">📍' + esc(countryName(c)) + '</button>').join('');
+          return '<li>' + esc(x) + (cc ? '<span class="ri-dyn-ccs">' + cc + '</span>' : '') + '</li>';
+        }).join('') + '</ul>' : '';
     const countryCards = (ins.countries && ins.countries.length)
       ? '<div class="ri-countries">' + ins.countries.map(c => {
           const has = COUNTRY_COUNT[c.name] != null;
@@ -1378,6 +1398,10 @@
       el.addEventListener('click', go);
       el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
     });
+    // 「最新动态」里的国名标签 → 该国下钻看板（其面板顶部有 📍地图筛选 可进一步筛选地图）
+    countryPanel.querySelectorAll('.ri-dyn-cty').forEach(el => el.addEventListener('click', () => {
+      const c = el.dataset.country; if (c) showCountry(c);
+    }));
   }
 
   /* ---------- 🌍 区域图例：地图上浮出大区色块芯片（点击选区 + 飞行）---------- */

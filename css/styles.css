@@ -996,6 +996,9 @@ body.insight-on .region-legend { display: flex; }
 .ri-dyn { margin: 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 7px; }
 .ri-dyn li { position: relative; padding-left: 16px; font-size: 12.5px; line-height: 1.6; color: var(--txt-dim); }
 .ri-dyn li::before { content: '▸'; position: absolute; left: 0; top: 0; color: var(--accent); }
+.ri-dyn-ccs { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: 6px; vertical-align: baseline; }
+.ri-dyn-cty { font-size: 10.5px; font-weight: 600; color: #b6f5df; background: rgba(46, 230, 166, 0.12); border: 1px solid rgba(46, 230, 166, 0.34); border-radius: 11px; padding: 1px 7px; cursor: pointer; white-space: nowrap; transition: all .15s; }
+.ri-dyn-cty:hover { color: #fff; background: rgba(46, 230, 166, 0.24); border-color: var(--good); }
 .ri-countries { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
 .ri-cc { border: 1px solid var(--border); border-radius: 11px; background: rgba(255, 255, 255, 0.025); padding: 10px 12px; }
 .ri-cc.link { cursor: pointer; transition: border-color .15s, background .15s; }
