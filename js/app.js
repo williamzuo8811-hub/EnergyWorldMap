@@ -45,9 +45,19 @@
     zoomControl: false, worldCopyJump: true, attributionControl: true,
     maxBounds: [[-85, -200], [85, 200]], maxBoundsViscosity: 0.6,
   });
-  // 窄屏把缩放控件放左上角（标题栏下方的空地），彻底避开底部 🔍/📊 浮钮；桌面端仍放左下
-  var _isNarrow = !!(window.matchMedia && window.matchMedia('(max-width: 820px)').matches);
-  L.control.zoom({ position: _isNarrow ? 'topleft' : 'bottomleft' }).addTo(map);
+  // 窄屏 / 手机横屏把缩放控件放左上角（标题栏下方的空地），彻底避开底部 🔍/📊 浮钮；桌面端仍放左下。
+  // 横屏手机宽度常落在 820–1180（被宽度断点误当小桌面），故与 CSS 一致用「窄屏 OR 矮屏横向」判定。
+  const NARROW_MQ = '(max-width: 820px), (max-width: 1180px) and (max-height: 500px) and (orientation: landscape)';
+  function isNarrowNow() { return !!(window.matchMedia && window.matchMedia(NARROW_MQ).matches); }
+  var _isNarrow = isNarrowNow();
+  const _zoomCtl = L.control.zoom({ position: _isNarrow ? 'topleft' : 'bottomleft' }).addTo(map);
+  // 旋转屏幕 / 改变窗口尺寸时同步缩放控件位置（matchMedia / addEventListener 缺失的测试桩里跳过）
+  if (window.matchMedia && window.addEventListener) {
+    window.addEventListener('resize', function () {
+      const n = isNarrowNow();
+      if (n !== _isNarrow) { _isNarrow = n; if (_zoomCtl.setPosition) _zoomCtl.setPosition(n ? 'topleft' : 'bottomleft'); }
+    });
+  }
   map.attributionControl.setPrefix('');
 
   const esriDarkBase = L.tileLayer('https://{s}.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
