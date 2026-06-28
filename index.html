@@ -141,6 +141,7 @@
             <div class="tool-group" role="group" aria-label="图层模式">
               <button class="btn-heat" id="btn-heat" aria-pressed="false" title="按当前权重显示宏观热力格局" aria-label="切换投资热力图" data-i18n="🔥 Heatmap">🔥 热力图</button>
               <button class="btn-choro" id="btn-choro" aria-pressed="false" title="按国家聚合投资/装机，整国面填色（点国家看下钻）" aria-label="切换国别染色" data-i18n="🎨 Choropleth">🎨 国别染色</button>
+              <button class="btn-region" id="btn-region" aria-pressed="false" title="按大区染色，点大区看能源结构 / 电网 / 最新动态洞察" aria-label="切换区域能源洞察" data-i18n="🌍 Regions">🌍 区域洞察</button>
               <button class="btn-weight" id="btn-weight" aria-pressed="false" title="圆点大小与热力按 投资额 或 装机容量(MW) 加权" aria-label="切换加权口径：投资额或装机容量">⚖️ 投资权重</button>
               <button class="btn-flow on" id="btn-flow" aria-pressed="true" title="显隐输变电/高铁/管道飞线" aria-label="显隐飞线" data-i18n="⚡ Flowlines">⚡ 飞线</button>
             </div>
@@ -156,6 +157,8 @@
         <!-- 📖 导览解说条（故事模式时显示在地图底部居中） -->
         <div class="story-card" id="story-card" role="region" aria-label="导览解说"></div>
         <div class="heat-facets" id="heat-facets"></div>
+        <!-- 🌍 区域能源洞察：大区色块图例（点击选区 + 飞行 + 弹洞察卡）-->
+        <div class="region-legend" id="region-legend"></div>
         <div class="heat-legend" id="heat-legend">
           <span class="hl-cap">投资热力</span>
           <i class="hl-bar"></i>
@@ -239,6 +242,8 @@
        改由 app.js 在切到英文 / 带 ?lang=en 深链时按需注入，避免拖慢中文访客首屏可交互时间。 -->
   <script defer src="js/util.js"></script>
   <script defer src="js/clients-meta.js"></script>
+  <!-- 🌍 区域能源洞察：各大区能源结构/电网/最新动态文字内容（window.REGION_INSIGHT，非项目数据） -->
+  <script defer src="js/region-insights.js"></script>
   <script defer src="js/app.js"></script>
   <!-- PWA：注册 Service Worker（离线 + 重访秒开）。失败静默，不影响纯静态站点。 -->
   <script>
