@@ -109,6 +109,7 @@ try {
     'data-europe', 'data-nuclear', 'data-northam', 'data-southasia', 'data-china-future', 'data-clients2', 'data-refresh2606', 'progress']
     .forEach(f => require(path.join(__dirname, '..', 'js', f + '.js')));
   require(path.join(__dirname, '..', 'js', 'clients-meta.js'));   // window.CLIENT_META（BD 看板用）
+  require(path.join(__dirname, '..', 'js', 'region-insights.js')); // window.REGION_INSIGHT（🌍 区域洞察文字内容）
   require(path.join(__dirname, '..', 'js', 'stories.js'));        // window.ENERGY_STORIES（📖 导览剧本）
   require(path.join(__dirname, '..', 'lib', 'world-110m.js'));    // window.WORLD_GEO（🎨 国别染色用；浏览器里按需懒加载）
   require(path.join(__dirname, '..', 'js', 'app.js'));
@@ -159,6 +160,14 @@ try {
   });
   ok(!hasJump, '🎨 跨 ±180° 要素（俄罗斯/斐济）已解卷，无相邻点经度跳变 >180°');
 } catch (e) { fails.push('🎨 国别染色抛错：' + (e && e.message)); }
+
+try {
+  APP.state.insight = true; APP.render();
+  ok(global.window.REGION_INSIGHT && Object.keys(global.window.REGION_INSIGHT).length >= 8, '🌍 区域洞察内容已加载（≥8 大区）');
+  APP.showRegionInsight('中东'); APP.showRegionInsight('非洲');
+  APP.state.insight = false; APP.state.insightRegion = null; APP.render();
+  ok(true, '🌍 区域能源洞察 render 开/关 + showRegionInsight 不抛错');
+} catch (e) { fails.push('🌍 区域洞察抛错：' + (e && e.message)); }
 
 try { APP.showClientBoard(); ok(true, 'showClientBoard()（🎯 客户 BD 看板）不抛错'); }
 catch (e) { fails.push('showClientBoard() 抛错：' + (e && e.message)); }

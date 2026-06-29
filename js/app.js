@@ -158,6 +158,8 @@
     clientFilter: null,         // 选中某国际大客户(业主)时，按业主跨品类筛其全部项目（覆盖品类/子类）
 
     minYear: MIN_YEAR, maxYear: MAX_YEAR, q: '', recentOnly: false, favOnly: false, heat: false, choro: false,
+    insight: false,             // 🌍 区域能源洞察：按大区染色 + 区域能源/电网/最新动态洞察卡
+    insightRegion: null,        // 当前选中的大区（洞察卡内容 + 地图高亮）
     weight: 'inv', sort: 'inv', // weight: 圆点/热力按 inv 投资 或 cap 装机容量；sort: TOP 排序
     playYear: null,             // 时间轴播放时的"当前年"（用于年份大字 + 当年新项目高亮）
     lang: 'zh',                 // 'zh' | 'en'：项目名称与分析标签的中英切换
@@ -175,6 +177,35 @@
     PROJECTS.forEach(p => { if (p.region === r) seen[p.country] = true; });
     REGION_COUNTRIES[r] = Object.keys(seen).sort((a, b) => (COUNTRY_COUNT[b] - COUNTRY_COUNT[a]) || a.localeCompare(b, 'zh-Hans-CN'));
   });
+
+  /* ---------- 🌍 区域能源洞察：大区识别色 + 文字洞察（能源/电网/最新动态）---------- */
+  // 区域洞察文字内容（能源结构 / 电网情况 / 最新动态 / 设备商机会 / 重点国家）来自 js/region-insights.js；
+  // 缺省为空对象，缺数据时图层仍能按大区染色，洞察卡显示"内容整理中"。
+  const REGION_INSIGHT = window.REGION_INSIGHT || {};
+  // 每个大区一种识别色（暗色底图上可区分；区域染色与图例芯片共用单一真源）
+  const REGION_COLOR = {
+    '东亚': '#ef5a6f', '东南亚': '#27c2a0', '南亚': '#f4a13c', '中亚': '#b98a4e', '中东': '#e7c84b',
+    '欧洲': '#4d8bf0', '北美': '#8d6cf0', '南美': '#4fb86a', '非洲': '#e066c4', '大洋洲': '#33c6e0',
+  };
+  // GeoJSON 要素名 → 大区（静态，覆盖所有有项目的国家；首个出现的项目所属大区为准）
+  const GEO_REGION = {};
+  PROJECTS.forEach(p => { const g = geoNameOf(p.country); if (g && !GEO_REGION[g]) GEO_REGION[g] = p.region; });
+  // 各大区项目数（严格按 region 字段统计，与洞察卡 KPI 口径一致；图例芯片用）
+  const REGION_PROJ_COUNT = {};
+  PROJECTS.forEach(p => { REGION_PROJ_COUNT[p.region] = (REGION_PROJ_COUNT[p.region] || 0) + 1; });
+  // 单大区聚合（洞察卡 KPI 用；投资/装机口径与 computeCountry 一致，排除「国际大客户」双计）
+  function computeRegion(region) {
+    const ps = PROJECTS.filter(p => p.region === region);
+    const base = ps.filter(p => p.cat !== 'client');
+    const invBase = base.length ? base : ps;
+    const totalInv = invBase.reduce((s, p) => s + (p.inv || 0), 0);
+    const totalMW = invBase.reduce((s, p) => s + (p.capMW || 0), 0);
+    const catCount = {}, catInv = {};
+    ps.forEach(p => { catCount[p.cat] = (catCount[p.cat] || 0) + 1; catInv[p.cat] = (catInv[p.cat] || 0) + (p.inv || 0); });
+    const recentN = ps.filter(isRecent).length;
+    const countries = (REGION_COUNTRIES[region] || []).length;
+    return { region, ps, totalInv, totalMW, catCount, catInv, recentN, countries, hasClient: ps.some(p => p.cat === 'client') };
+  }
 
   /* ---------- 中 / EN 语言（项目名走 en 字段；分类/大区/状态/界面标签走映射） ---------- */
   const CAT_EN = LABELS_EN.cat, REGION_EN = LABELS_EN.region, STATUS_EN = LABELS_EN.status;
@@ -389,22 +420,58 @@
       ? { fillColor: heatColor(Math.sqrt(a.v) / choroMax), fillOpacity: 0.62, color: 'rgba(120,160,220,0.38)', weight: 0.7 }
       : { fillColor: '#0d1730', fillOpacity: 0.22, color: 'rgba(120,160,220,0.16)', weight: 0.5 };
   }
+  /* 🌍 区域洞察染色：整国面按【所属大区】上色（静态身份色，不随筛选/量级变化）；
+   * 选中大区时整区高亮（描边加亮、不透明度抬升），其余大区压暗。 */
+  function insightStyle(f) {
+    const name = (f.properties || {}).name;
+    const rg = GEO_REGION[name];
+    if (!rg) return { fillColor: '#0c1428', fillOpacity: 0.18, color: 'rgba(120,160,220,0.12)', weight: 0.5 };
+    const sel = state.insightRegion;
+    const on = !sel || sel === rg;
+    return {
+      fillColor: REGION_COLOR[rg] || '#4d8bf0',
+      fillOpacity: sel === rg ? 0.66 : (on ? 0.42 : 0.12),
+      color: sel === rg ? '#ffffff' : 'rgba(255,255,255,0.28)',
+      weight: sel === rg ? 1.1 : 0.5,
+    };
+  }
+  // 世界图层只构建一次，染色/洞察两种模式共用（按 state 分流样式与点击行为）
+  function worldStyle(f) { return state.insight ? insightStyle(f) : choroStyle(f); }
   function ensureChoroLayer() {
     if (choroLayer || !window.WORLD_GEO || !L.geoJSON) return;
     fixWorldGeo(window.WORLD_GEO);
     choroLayer = L.geoJSON(window.WORLD_GEO, {
-      style: choroStyle,
+      style: worldStyle,
       onEachFeature: (f, lyr) => {
         const name = (f.properties || {}).name;
         lyr.bindTooltip(() => {
+          if (state.insight) {
+            const rg = GEO_REGION[name];
+            if (!rg) return '<b>' + esc(name) + '</b><br>' + (state.lang === 'en' ? 'Not in dataset' : '未收录');
+            const ins = REGION_INSIGHT[rg];
+            return '<b>' + esc(regionName(rg)) + '</b><br>' + esc(countryName(name)) +
+              (ins && ins.summary ? '<br><span style="opacity:.8">' + esc(ins.summary) + '</span>' : '') +
+              '<br><span style="opacity:.7">' + (state.lang === 'en' ? 'Click for regional energy insight' : '点击看区域能源洞察') + '</span>';
+          }
           const a = (choroAgg || {})[name];
           if (!a) return '<b>' + esc(name) + '</b><br>' + (state.lang === 'en' ? 'No projects in current filter' : '当前筛选无收录项目');
           return '<b>' + esc(countryName(a.topZh)) + '</b><br>' + a.n + (state.lang === 'en' ? ' projects' : ' 个项目') +
             ' · ≈$' + invMag(a.inv) + (a.mw ? ' · ' + capFmt(a.mw) : '');
         }, { sticky: true, className: 'mk-tip' });
-        lyr.on('click', () => { const a = (choroAgg || {})[name]; if (a) showCountry(a.topZh); });
+        lyr.on('click', () => {
+          if (state.insight) { const rg = GEO_REGION[name]; if (rg) showRegionInsight(rg); return; }
+          const a = (choroAgg || {})[name]; if (a) showCountry(a.topZh);
+        });
       },
     });
+  }
+  // 🌍 区域洞察图层渲染：按大区身份色铺整图（无需逐渲染聚合，只在选中区变化时 setStyle 刷高亮）
+  function updateInsight() {
+    if (!window.WORLD_GEO) { ensureWorldGeo(); return; }   // 懒加载中：载完会自动 render
+    ensureChoroLayer();
+    if (!choroLayer) return;
+    if (!map.hasLayer(choroLayer)) choroLayer.addTo(map);
+    choroLayer.setStyle(worldStyle);
   }
   function updateChoro(items) {
     if (!window.WORLD_GEO) { ensureWorldGeo(); return; }   // 懒加载中：载完会自动 render
@@ -426,7 +493,7 @@
     choroAgg = agg;
     choroMax = ws.length ? Math.max(0.5, ws[Math.floor(ws.length * 0.92)] * 1.15) : 1;
     if (!map.hasLayer(choroLayer)) choroLayer.addTo(map);
-    choroLayer.setStyle(choroStyle);
+    choroLayer.setStyle(worldStyle);
     const cap = document.querySelector('#choro-legend .hl-cap');
     if (cap) cap.textContent = state.lang === 'en'
       ? (state.weight === 'cap' ? 'Capacity by country' : 'Investment by country')
@@ -436,6 +503,13 @@
   function updateMap(items) {
     lineLayer.clearLayers();
     markerCluster.clearLayers();
+    // —— 🌍 区域洞察模式：整国面按大区身份色着色（点大区看洞察），隐藏标记/热力/飞线 ——
+    if (state.insight) {
+      if (map.hasLayer(markerCluster)) map.removeLayer(markerCluster);
+      if (heatLayer && map.hasLayer(heatLayer)) map.removeLayer(heatLayer);
+      updateInsight();
+      return;
+    }
     // —— 🎨 国别染色模式：整国面着色（点国家开下钻），隐藏标记/热力/飞线 ——
     if (state.choro) {
       if (map.hasLayer(markerCluster)) map.removeLayer(markerCluster);
@@ -776,6 +850,7 @@
     state.regions = new Set(DEFAULT_REGIONS); // 重置后展示全部大区
     state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.q = ''; state.recentOnly = false; state.favOnly = false;
     state.weight = 'inv'; state.sort = 'inv'; state.heatCat = null; state.choro = false;
+    state.heat = false; state.insight = false; state.insightRegion = null;
     clearPresetActive();
     const allYp = document.querySelector('.year-presets .yp[data-preset="all"]');
     if (allYp) { allYp.classList.add('on'); pressed(allYp, true); }
@@ -797,34 +872,52 @@
   });
   document.getElementById('btn-home').addEventListener('click', () => flyTo([25, 30], 3, { duration: 0.6 }));
 
-  // 🔥 投资热力图切换
+  /* 三种宏观面视图互斥：🔥热力 / 🎨国别染色 / 🌍区域洞察（同屏叠加无意义，开一个自动关其余两个）。
+   * 各 setXUI 只同步 state + 按钮 + body class，不触发 render（由调用方统一 render）。 */
   const btnHeat = document.getElementById('btn-heat');
-  btnHeat.addEventListener('click', () => {
-    state.heat = !state.heat;
-    if (state.heat && state.choro) setChoroUI(false);   // 热力与国别染色互斥（两种宏观面视图叠加无意义）
-    btnHeat.classList.toggle('on', state.heat);
-    pressed(btnHeat, state.heat);
-    document.body.classList.toggle('heat-on', state.heat);
-    render();
-  });
-
-  // 🎨 国别染色切换（与热力互斥；首次开启懒加载国界 GeoJSON）
   const btnChoro = document.getElementById('btn-choro');
+  const btnRegion = document.getElementById('btn-region');
+  function setHeatUI(on) {
+    state.heat = on;
+    if (btnHeat) { btnHeat.classList.toggle('on', on); pressed(btnHeat, on); }
+    document.body.classList.toggle('heat-on', on);
+  }
   function setChoroUI(on) {
     state.choro = on;
     if (btnChoro) { btnChoro.classList.toggle('on', on); pressed(btnChoro, on); }
     document.body.classList.toggle('choro-on', on);
   }
+  function setInsightUI(on) {
+    state.insight = on;
+    if (!on) state.insightRegion = null;
+    if (btnRegion) { btnRegion.classList.toggle('on', on); pressed(btnRegion, on); }
+    document.body.classList.toggle('insight-on', on);
+    syncRegionLegend();
+  }
+
+  // 🔥 投资热力图切换
+  btnHeat.addEventListener('click', () => {
+    const on = !state.heat;
+    if (on) { setChoroUI(false); setInsightUI(false); }
+    setHeatUI(on);
+    render();
+  });
+
+  // 🎨 国别染色切换（首次开启懒加载国界 GeoJSON）
   if (btnChoro) btnChoro.addEventListener('click', () => {
     const on = !state.choro;
-    if (on && state.heat) {
-      state.heat = false;
-      btnHeat.classList.remove('on'); pressed(btnHeat, false);
-      document.body.classList.remove('heat-on');
-    }
+    if (on) { setHeatUI(false); setInsightUI(false); ensureWorldGeo(); }
     setChoroUI(on);
-    if (on) ensureWorldGeo();
     render();
+  });
+
+  // 🌍 区域能源洞察切换（按大区染色 + 洞察卡；与热力/染色互斥；首次开启懒加载国界 GeoJSON）
+  if (btnRegion) btnRegion.addEventListener('click', () => {
+    const on = !state.insight;
+    if (on) { setHeatUI(false); setChoroUI(false); ensureWorldGeo(); }
+    setInsightUI(on);
+    render();
+    if (on) toast(state.lang === 'en' ? 'Click any region for its energy insight' : '点任一大区查看能源·电网·最新动态');
   });
 
   // ⚖️ 加权口径切换：投资额 ↔ 装机容量（影响圆点大小与热力）
@@ -913,6 +1006,7 @@
     if (btnWeight) btnWeight.textContent = weightLabel(); // ⚖️ 权重钮文案由 JS 改写、不走 data-i18n，这里随语言刷新
     buildCatLegend();   // 地图浮层文案随语言重建
     buildHeatFacets();
+    buildRegionLegend(); // 🌍 区域洞察大区图例随语言重建
     buildRegionTree();  // 左侧大区/国家树随语言整树重建（含国名中英切换）
   }
   function toggleLang() {
@@ -1137,6 +1231,20 @@
         '<div class="pm"><span>' + catShort(p.cat) + '</span><span>' + statusName(p.status) + '</span><span>' + esc(usd(p)) + (p.capMW ? ' · ' + capFmt(p.capMW) : '') + '</span></div></div>';
     }).join('');
 
+    // 所属大区·区域洞察上下文（区域能源/电网概述 + 本国专属动态 + 跳转洞察卡）
+    const rg = ps[0] && ps[0].region;
+    const rgIns = rg ? REGION_INSIGHT[rg] : null;
+    const cInfo = rgIns && (rgIns.countries || []).find(c => c.name === country);
+    const regionCtx = rg ? (
+      '<div class="cp-region">' +
+        '<div class="cp-region-h"><span class="ri-dot" style="background:' + (REGION_COLOR[rg] || '#4d8bf0') + '"></span>' +
+        '<b>' + esc(regionName(rg)) + '</b><span class="cp-region-t">· ' + (state.lang === 'en' ? 'Regional energy insight' : '区域能源洞察') + '</span>' +
+        '<button class="cp-region-go" id="cp-region-go" title="打开该大区能源洞察">' + (state.lang === 'en' ? 'Open ▸' : '查看 ▸') + '</button></div>' +
+        (rgIns && rgIns.summary ? '<div class="cp-region-sum">' + esc(rgIns.summary) + '</div>' : '') +
+        (cInfo && cInfo.dynamic ? '<div class="cp-region-dyn"><b>' + (state.lang === 'en' ? 'Country update' : '本国动态') + '</b>' + esc(cInfo.dynamic) + '</div>' : '') +
+      '</div>'
+    ) : '';
+
     countryPanel.classList.remove('wide');
     countryPanel.innerHTML =
       '<div class="cp-head"><span style="font-size:20px">🌍</span><div class="cp-name">' + esc(countryName(country)) + '</div>' +
@@ -1147,7 +1255,7 @@
       kpi(ps.length, tr('项目数')) + kpi('≈$' + fmtInv(d.totalInv), tr('总投资')) +
       kpi(d.totalMW >= 1000 ? (d.totalMW / 1000).toFixed(1) + ' GW' : Math.round(d.totalMW) + ' MW', tr('装机容量')) +
       kpi(d.recentN, tr('🆕 最新')) + '</div>' +
-      '<div class="cp-body">' +
+      '<div class="cp-body">' + regionCtx +
       '<div class="cp-sec-title">' + tr('分品类（项目数 · 投资额）') + '</div>' + catBars +
       '<div class="cp-sec-title">' + tr('项目状态') + '</div><div class="cp-status">' + statusChips + '</div>' +
       '<div class="cp-sec-title">' + tr('里程碑年份分布') + '（' + ymin + '–' + ymax + '）</div>' +
@@ -1176,8 +1284,150 @@
       const p = PROJECTS.find(x => String(x.id) === el.dataset.id);
       if (p) { hideCountry(); showDetail(p); flyTo(toLatLng(p.coord), 8, { duration: 0.7 }); }
     }));
+    const rgo = document.getElementById('cp-region-go');
+    if (rgo && rg) rgo.addEventListener('click', () => { hideCountry(); showRegionInsight(rg); });
   }
   countryBackdrop.addEventListener('click', hideCountry);
+
+  /* ---------- 🌍 区域能源洞察：弹出某大区的能源结构 / 电网 / 最新动态洞察卡 ---------- */
+  const REGION_ORDER = REGIONS.filter(r => (REGION_COUNTRIES[r] || []).length);
+  /* 「最新动态」里的国名 → 可点击下钻：仅当该国确实在数据集（COUNTRY_COUNT 命中）时才挂链，
+   * 保证「点了必中」。口语短名 → 数据集规范名的少量别名（数据集用全称、动态文案用简称的几处）。 */
+  const RI_C_ALIAS = {
+    '沙特阿拉伯': ['沙特'], '印度尼西亚': ['印尼'], '孟加拉国': ['孟加拉'],
+    '哈萨克斯坦': ['哈萨克'], '乌兹别克斯坦': ['乌兹别克'], '土库曼斯坦': ['土库曼'],
+    '吉尔吉斯斯坦': ['吉尔吉斯'], '塔吉克斯坦': ['塔吉克'], '刚果(金)': ['刚果金'], '埃塞俄比亚': ['埃塞'],
+  };
+  // 在一条动态文本里识别出现的、本区重点国家中可下钻的国名（按出现先后去重）
+  function dynCountries(text, ins) {
+    const out = [];
+    (ins.countries || []).forEach(c => {
+      if (COUNTRY_COUNT[c.name] == null || out.indexOf(c.name) >= 0) return;
+      const forms = [c.name].concat(RI_C_ALIAS[c.name] || []);
+      if (forms.some(f => text.indexOf(f) >= 0)) out.push(c.name);
+    });
+    return out;
+  }
+  // 把地图飞到某大区项目范围
+  function flyToRegion(region) {
+    const pts = PROJECTS.filter(p => p.region === region && p.coord).map(p => toLatLng(p.coord));
+    if (!pts.length) return;
+    if (pts.length === 1) { flyTo(pts[0], 5, { duration: 0.7 }); return; }
+    if (L.latLngBounds) { try { flyToBounds(L.latLngBounds(pts), { padding: [50, 50], maxZoom: 5, duration: 0.8 }); return; } catch (e) { /* 降级 */ } }
+    flyTo(pts[0], 4, { duration: 0.7 });
+  }
+  function showRegionInsight(region) {
+    if (!(REGION_COUNTRIES[region] || []).length) return;
+    state.insightRegion = region;
+    if (choroLayer && state.insight && map.hasLayer(choroLayer)) choroLayer.setStyle(worldStyle);  // 刷新整区高亮
+    syncRegionLegend();
+    const ins = REGION_INSIGHT[region] || {};
+    const d = computeRegion(region);
+    const color = REGION_COLOR[region] || '#4d8bf0';
+    const en = state.lang === 'en';
+    const idx = REGION_ORDER.indexOf(region);
+    const prev = REGION_ORDER[(idx - 1 + REGION_ORDER.length) % REGION_ORDER.length];
+    const next = REGION_ORDER[(idx + 1) % REGION_ORDER.length];
+
+    const kpi = (v, l) => '<div class="cp-kpi"><div class="v">' + v + '</div><div class="l">' + l + '</div></div>';
+    const mwTxt = d.totalMW >= 1000 ? (d.totalMW / 1000).toFixed(1) + ' GW' : Math.round(d.totalMW) + ' MW';
+    const sec = (icon, title, body) => body ? '<div class="ri-sec"><div class="ri-h"><span class="ri-ic">' + icon + '</span>' + title + '</div><div class="ri-b">' + body + '</div></div>' : '';
+    const dynList = (ins.dynamics && ins.dynamics.length)
+      ? '<ul class="ri-dyn">' + ins.dynamics.map(x => {
+          const cc = dynCountries(x, ins).map(c => '<button class="ri-dyn-cty" data-country="' + esc(c) + '" title="' + (en ? 'View ' : '查看 ') + esc(countryName(c)) + '">📍' + esc(countryName(c)) + '</button>').join('');
+          return '<li>' + esc(x) + (cc ? '<span class="ri-dyn-ccs">' + cc + '</span>' : '') + '</li>';
+        }).join('') + '</ul>' : '';
+    const countryCards = (ins.countries && ins.countries.length)
+      ? '<div class="ri-countries">' + ins.countries.map(c => {
+          const has = COUNTRY_COUNT[c.name] != null;
+          return '<div class="ri-cc' + (has ? ' link' : '') + '"' + (has ? ' data-country="' + esc(c.name) + '"' : '') +
+            (has ? ' tabindex="0" role="button"' : '') + '>' +
+            '<div class="ri-cc-nm"><span class="ri-cc-dot" style="background:' + color + '"></span>' + esc(countryName(c.name)) +
+            (has ? '<span class="ri-cc-n">' + COUNTRY_COUNT[c.name] + (en ? '' : ' 个') + '</span>' : '') + '</div>' +
+            (c.profile ? '<div class="ri-cc-r"><b>' + (en ? 'Energy' : '能源') + '</b><span>' + esc(c.profile) + '</span></div>' : '') +
+            (c.grid ? '<div class="ri-cc-r"><b>' + (en ? 'Grid' : '电网') + '</b><span>' + esc(c.grid) + '</span></div>' : '') +
+            (c.dynamic ? '<div class="ri-cc-r ri-cc-dyn"><b>' + (en ? 'Latest' : '动态') + '</b><span>' + esc(c.dynamic) + '</span></div>' : '') +
+            '</div>';
+        }).join('') + '</div>' : '';
+    const sources = (ins.sources && ins.sources.length)
+      ? '<div class="ri-src">' + (en ? 'Sources: ' : '资料来源：') + ins.sources.map(s => esc(s)).join(' · ') + '</div>' : '';
+    const empty = !ins.energy && !ins.grid && !dynList && !ins.opportunity && !countryCards
+      ? '<div class="ri-empty">' + (en ? 'Insight content is being compiled.' : '该区域洞察内容整理中。') + '</div>' : '';
+
+    countryPanel.classList.add('wide');
+    countryPanel.innerHTML =
+      '<div class="cp-head ri-head"><span class="ri-dot" style="background:' + color + '"></span>' +
+      '<div class="cp-name">' + esc(regionName(region)) + ' · ' + (en ? 'Regional Energy Insight' : '区域能源洞察') + '</div>' +
+      '<button class="ri-nav" data-rg="' + esc(prev) + '" title="上一大区" aria-label="上一大区">◂</button>' +
+      '<button class="ri-nav" data-rg="' + esc(next) + '" title="下一大区" aria-label="下一大区">▸</button>' +
+      '<button class="cp-filter" id="ri-filter" title="在地图上只看该大区项目">📍 ' + (en ? 'Filter region' : '筛选该区') + '</button>' +
+      '<button class="cp-close" id="cp-close" aria-label="关闭面板" title="关闭">×</button></div>' +
+      '<div class="cp-body">' +
+      (ins.summary ? '<div class="ri-lead">' + esc(ins.summary) + '</div>' : '') +
+      '<div class="cp-kpis">' +
+      kpi(d.ps.length, en ? 'Projects' : '项目数') + kpi('≈$' + fmtInv(d.totalInv), en ? 'Investment' : '总投资') +
+      kpi(mwTxt, en ? 'Capacity' : '装机容量') + kpi(d.countries, en ? 'Countries' : '覆盖国家') +
+      kpi(d.recentN, en ? '🆕 Latest' : '🆕 最新') + '</div>' +
+      empty +
+      sec('📊', en ? 'Energy mix & profile' : '能源结构与特点', ins.energy ? esc(ins.energy) : '') +
+      sec('🔌', en ? 'Grid status' : '电网情况', ins.grid ? esc(ins.grid) : '') +
+      sec('📰', en ? 'Latest developments (2024–26)' : '最新动态（2024–26）', dynList) +
+      sec('🎯', en ? 'Equipment-vendor opportunities' : '输配电设备商机会', ins.opportunity ? esc(ins.opportunity) : '') +
+      (countryCards ? '<div class="ri-sec"><div class="ri-h"><span class="ri-ic">🗺️</span>' + (en ? 'Key countries' : '重点国家') + '</div>' + countryCards + '</div>' : '') +
+      sources +
+      (d.hasClient ? '<div class="cp-note">* 总投资/装机口径不含「国际大客户」，避免与能源品类对同一物理项目重复计。</div>' : '') +
+      '</div>';
+    countryBackdrop.classList.add('show');
+    countryPanel.classList.add('show');
+    document.getElementById('cp-close').addEventListener('click', hideCountry);
+    focusEl('cp-close');
+    countryPanel.querySelectorAll('.ri-nav').forEach(el => el.addEventListener('click', () => showRegionInsight(el.dataset.rg)));
+    const rf = document.getElementById('ri-filter');
+    if (rf) rf.addEventListener('click', () => {
+      setInsightUI(false);
+      state.countries.clear();
+      state.regions = new Set([region]);
+      hideCountry();
+      applyUIFromState();
+      render();
+      flyToRegion(region);
+      toast((en ? 'Filtered to ' : '已筛选大区：') + regionName(region));
+    });
+    countryPanel.querySelectorAll('.ri-cc.link').forEach(el => {
+      const go = () => { const c = el.dataset.country; if (c) { hideCountry(); showCountry(c); } };
+      el.addEventListener('click', go);
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+    });
+    // 「最新动态」里的国名标签 → 该国下钻看板（其面板顶部有 📍地图筛选 可进一步筛选地图）
+    countryPanel.querySelectorAll('.ri-dyn-cty').forEach(el => el.addEventListener('click', () => {
+      const c = el.dataset.country; if (c) showCountry(c);
+    }));
+  }
+
+  /* ---------- 🌍 区域图例：地图上浮出大区色块芯片（点击选区 + 飞行）---------- */
+  const regionLegendEl = document.getElementById('region-legend');
+  function syncRegionLegend() {
+    if (!regionLegendEl) return;
+    regionLegendEl.querySelectorAll('.rl-chip').forEach(el => {
+      const on = el.dataset.region === (state.insightRegion || '');
+      el.classList.toggle('on', on); pressed(el, on);
+    });
+  }
+  function buildRegionLegend() {
+    if (!regionLegendEl) return;
+    const en = state.lang === 'en';
+    const regCount = r => REGION_PROJ_COUNT[r] || 0;
+    regionLegendEl.innerHTML = '<div class="rl-cap">' + (en ? 'Regions · click for insight' : '大区 · 点击看能源洞察') + '</div>' +
+      '<div class="rl-chips">' + REGION_ORDER.map(r =>
+        '<button class="rl-chip" data-region="' + esc(r) + '" aria-pressed="false" title="' + esc(regionName(r)) + '">' +
+        '<span class="rl-dot" style="background:' + (REGION_COLOR[r] || '#4d8bf0') + '"></span>' +
+        '<span class="rl-nm">' + esc(regionName(r)) + '</span><span class="rl-n">' + regCount(r) + '</span></button>').join('') + '</div>';
+    regionLegendEl.querySelectorAll('.rl-chip').forEach(el => el.addEventListener('click', () => {
+      const r = el.dataset.region; flyToRegion(r); showRegionInsight(r);
+    }));
+    syncRegionLegend();
+  }
+  buildRegionLegend();
 
   /* ---------- 🆚 国别对比（多国并排，复用 computeCountry 聚合）---------- */
   let comparePickerOpen = false;
@@ -1596,6 +1846,7 @@
     if (state.favOnly) p.set('fav', '1');
     if (state.heat) p.set('heat', '1');
     if (state.choro) p.set('choro', '1');
+    if (state.insight) { p.set('insight', '1'); if (state.insightRegion) p.set('rg', state.insightRegion); }
     if (state.weight === 'cap') p.set('w', 'cap');
     if (state.sort === 'cap') p.set('sort', 'cap');
     if (state.lang === 'en') p.set('lang', 'en');
@@ -1607,6 +1858,7 @@
   }
   let pendingProjectId = null;  // 深链接 #project=<id>：首屏渲染后打开该项目
   let pendingStory = null, pendingStop = 0; // 深链接 #story=<key>&stop=<n>：首屏后直接开播导览
+  let pendingInsightRegion = null; // 深链接 #insight=1&rg=<大区>：首屏后直接打开该大区洞察卡
   function applyHash() {
     const h = (location.hash || '').replace(/^#/, '');
     if (!h) return;
@@ -1628,6 +1880,10 @@
     if (p.has('fav')) state.favOnly = true; // 收藏本身在各自浏览器本地，分享链接只还原"只看关注"开关
     if (p.has('heat')) state.heat = true;
     if (p.has('choro')) { state.choro = true; state.heat = false; }
+    if (p.has('insight')) {
+      state.insight = true; state.heat = false; state.choro = false;
+      if (p.has('rg') && (REGION_COUNTRIES[p.get('rg')] || []).length) pendingInsightRegion = p.get('rg');
+    }
     if (p.get('w') === 'cap') state.weight = 'cap';
     if (p.get('sort') === 'cap') state.sort = 'cap';
     if (p.get('lang') === 'en') state.lang = 'en';
@@ -1778,9 +2034,8 @@
     document.querySelectorAll('#status-chips .pill').forEach(el => { const on = state.statuses.has(el.dataset.v); el.classList.toggle('on', on); pressed(el, on); });
     if (recentBtn) { recentBtn.classList.toggle('on', state.recentOnly); pressed(recentBtn, state.recentOnly); }
     syncFavUI();
-    if (btnHeat) { btnHeat.classList.toggle('on', state.heat); pressed(btnHeat, state.heat); document.body.classList.toggle('heat-on', state.heat); }
-    if (btnChoro) { btnChoro.classList.toggle('on', state.choro); pressed(btnChoro, state.choro); document.body.classList.toggle('choro-on', state.choro); }
-    if (state.choro) ensureWorldGeo();
+    setHeatUI(state.heat); setChoroUI(state.choro); setInsightUI(state.insight);
+    if (state.choro || state.insight) ensureWorldGeo();
     if (btnWeight) { btnWeight.classList.toggle('on', state.weight === 'cap'); pressed(btnWeight, state.weight === 'cap'); btnWeight.textContent = weightLabel(); }
     if (sortToggle) sortToggle.textContent = state.sort === 'cap' ? '按装机容量 ⇄' : '按投资额 ⇄';
     if (btnFlow) { btnFlow.classList.toggle('on', state.lines); pressed(btnFlow, state.lines); }
@@ -1892,6 +2147,8 @@
   } else if (pendingProjectId != null) {
     const pp = PROJECTS.find(x => String(x.id) === String(pendingProjectId));
     if (pp) { showDetail(pp); flyTo(toLatLng(pp.coord), 7, { duration: 0.8 }); }
+  } else if (state.insight && pendingInsightRegion != null) {
+    showRegionInsight(pendingInsightRegion);
   } else if (state.compare.length >= 2) {
     showCompare();
   }
@@ -1913,5 +2170,5 @@
   })();
 
   // 调试 / 程序化控制句柄
-  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showLeague, showDetail, PROJECTS, applyLang, buildRegionTree, showCompare, openCompare, toggleFav, FAVS, showTrends, startStory, storyStep, exitStory, showStoryPicker };
+  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showLeague, showDetail, showCountry, showRegionInsight, PROJECTS, applyLang, buildRegionTree, showCompare, openCompare, toggleFav, FAVS, showTrends, startStory, storyStep, exitStory, showStoryPicker };
 })();

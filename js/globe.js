@@ -44,6 +44,7 @@
     rotate: true,         // 自动旋转
     lang: 'zh',           // zh | en
     focus: null,          // 当前聚焦项目 id
+    insightRegion: null,  // 🌍 当前打开的区域洞察大区（null=未打开）
   };
 
   /* ---------- 中 / EN 标签 + 金额量级 ---------- */
@@ -60,6 +61,7 @@
     countryRow: ['国家 / 地区', 'Country'], status: ['状态', 'Status'], year: ['年份', 'Year'], cap: ['规模 / 容量', 'Capacity'], invest: ['投资额', 'Investment'],
     owner: ['业主 / 参与方', 'Owner'], updated: ['最近动态', 'Updated'], progress: ['📍 最新进展', '📍 Latest'],
     flyto: ['🎯 聚焦', '🎯 Focus'], close: ['✕ 关闭', '✕ Close'],
+    insight: ['🌍 区域能源洞察', '🌍 Regional Insight'],
     legend: ['柱高≈投资额', 'Bar height ≈ investment'], corridor: ['弧线 = 跨境/输送走廊', 'Arc = transmission / pipeline corridor'],
     clickHint: ['点击柱体看项目详情 · 滚轮缩放', 'Click a bar for details · scroll to zoom'],
     flagship: ['旗舰项目', 'Flagship'],
@@ -80,6 +82,76 @@
     const h = String(hex).replace('#', '');
     const n = parseInt(h.length === 3 ? h.split('').map(x => x + x).join('') : h, 16);
     return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+
+  /* ---------- 🌍 区域能源洞察（与 2D 地图同源 window.REGION_INSIGHT）---------- */
+  const REGION_INSIGHT = window.REGION_INSIGHT || {};
+  const REGION_COLOR = {
+    '东亚': '#ef5a6f', '东南亚': '#27c2a0', '南亚': '#f4a13c', '中亚': '#b98a4e', '中东': '#e7c84b',
+    '欧洲': '#4d8bf0', '北美': '#8d6cf0', '南美': '#4fb86a', '非洲': '#e066c4', '大洋洲': '#33c6e0',
+  };
+  const RI_ORDER = REGIONS.filter(r => REGION_INSIGHT[r]);   // 有洞察内容的大区（按 REGIONS 顺序）
+  // 大区质心（项目坐标平均，相机飞行用）
+  const REGION_CENTROID = {};
+  (function () {
+    const acc = {};
+    PROJECTS.forEach(p => { if (!p.coord) return; const a = acc[p.region] || (acc[p.region] = { x: 0, y: 0, n: 0 }); a.x += p.coord[0]; a.y += p.coord[1]; a.n++; });
+    Object.keys(acc).forEach(r => { const a = acc[r]; REGION_CENTROID[r] = [a.x / a.n, a.y / a.n]; });
+  })();
+  // 单大区聚合（KPI 用；投资/装机口径排除「国际大客户」，与 app.js 一致）
+  function computeRegionG(region) {
+    const ps = PROJECTS.filter(p => p.region === region);
+    const base = ps.filter(p => p.cat !== 'client'); const ib = base.length ? base : ps;
+    return { n: ps.length, inv: ib.reduce((s, p) => s + (p.inv || 0), 0), mw: ib.reduce((s, p) => s + (p.capMW || 0), 0), recent: ps.filter(isRecent).length };
+  }
+  function defaultInsightRegion() {
+    let best = RI_ORDER[0], bestN = -1;
+    RI_ORDER.forEach(r => { const n = computeRegionG(r).n; if (n > bestN) { bestN = n; best = r; } });
+    return best;
+  }
+  function flyToRegion(region) {
+    const c = REGION_CENTROID[region]; if (!c) return;
+    setRotate(false);
+    try { world.pointOfView({ lat: c[1], lng: c[0], altitude: 1.75 }, REDUCED_MOTION ? 0 : 1100); } catch (e) {}
+  }
+  function hideRegionInsight() {
+    const card = document.getElementById('region-card'); if (card) card.classList.remove('on');
+    state.insightRegion = null;
+    const ib = document.getElementById('btn-insight'); if (ib && ib.classList) ib.classList.remove('on');
+  }
+  function showRegionInsight(region, opts) {
+    if (!REGION_INSIGHT[region]) return;
+    const card = document.getElementById('region-card'); if (!card) return;
+    hideDetail();
+    state.insightRegion = region;
+    const ins = REGION_INSIGHT[region], d = computeRegionG(region);
+    const color = REGION_COLOR[region] || '#4d8bf0', en = state.lang === 'en';
+    const idx = RI_ORDER.indexOf(region);
+    const prev = RI_ORDER[(idx - 1 + RI_ORDER.length) % RI_ORDER.length];
+    const next = RI_ORDER[(idx + 1) % RI_ORDER.length];
+    const mw = d.mw >= 1000 ? (d.mw / 1000).toFixed(1) + ' GW' : Math.round(d.mw) + ' MW';
+    const sec = (ic, t, b) => b ? '<div class="rc-sec"><div class="rc-h">' + ic + ' ' + t + '</div><div class="rc-b">' + b + '</div></div>' : '';
+    const dyn = (ins.dynamics && ins.dynamics.length) ? '<ul class="rc-dyn">' + ins.dynamics.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '';
+    const ctys = (ins.countries && ins.countries.length) ? '<div class="rc-ctys">' + ins.countries.map(c => '<span class="rc-cty">' + esc(c.name) + '</span>').join('') + '</div>' : '';
+    const strip = '<div class="rc-strip">' + RI_ORDER.map(r => '<button class="rc-chip' + (r === region ? ' on' : '') + '" data-rg="' + esc(r) + '"><i style="background:' + (REGION_COLOR[r] || '#4d8bf0') + '"></i>' + esc(regionName(r)) + '</button>').join('') + '</div>';
+    card.innerHTML =
+      '<button class="d-close" id="rc-close">' + L('close') + '</button>'
+      + '<div class="rc-head"><span class="rc-dot" style="background:' + color + '"></span><div class="rc-title">' + esc(regionName(region)) + ' · ' + (en ? 'Energy Insight' : '区域能源洞察') + '</div></div>'
+      + '<div class="rc-nav"><button class="rc-navb" data-rg="' + esc(prev) + '" aria-label="上一大区">◂</button><button class="rc-navb" data-rg="' + esc(next) + '" aria-label="下一大区">▸</button><button class="rc-fly" id="rc-fly">' + (en ? '🎯 Fly here' : '🎯 飞到该区') + '</button></div>'
+      + (ins.summary ? '<div class="rc-lead">' + esc(ins.summary) + '</div>' : '')
+      + '<div class="rc-kpis"><div><b>' + d.n + '</b><span>' + (en ? 'Projects' : '项目') + '</span></div><div><b>≈$' + invMag(d.inv) + '</b><span>' + (en ? 'Investment' : '投资') + '</span></div><div><b>' + mw + '</b><span>' + (en ? 'Capacity' : '装机') + '</span></div></div>'
+      + sec('📊', en ? 'Energy mix' : '能源结构', ins.energy ? esc(ins.energy) : '')
+      + sec('🔌', en ? 'Grid status' : '电网情况', ins.grid ? esc(ins.grid) : '')
+      + sec('📰', en ? 'Latest (2024–26)' : '最新动态（2024–26）', dyn)
+      + sec('🎯', en ? 'Vendor opportunities' : '设备商机会', ins.opportunity ? esc(ins.opportunity) : '')
+      + (ctys ? '<div class="rc-sec"><div class="rc-h">🗺️ ' + (en ? 'Key countries' : '重点国家') + '</div>' + ctys + '</div>' : '')
+      + strip;
+    card.classList.add('on');
+    const cl = document.getElementById('rc-close'); if (cl) cl.onclick = hideRegionInsight;
+    const fly = document.getElementById('rc-fly'); if (fly) fly.onclick = () => flyToRegion(region);
+    card.querySelectorAll('.rc-navb, .rc-chip').forEach(el => { el.onclick = () => showRegionInsight(el.dataset.rg); });
+    const ib = document.getElementById('btn-insight'); if (ib && ib.classList) ib.classList.add('on');
+    if (!(opts && opts.noFly)) flyToRegion(region);
   }
 
   /* ---------- 筛选 ---------- */
@@ -240,6 +312,7 @@
   }
   function showDetail(p) {
     const card = document.getElementById('detail'); if (!card) return;
+    hideRegionInsight();   // 项目详情与区域洞察卡互斥（同侧浮层）
     const c = CATEGORIES[p.cat];
     const row = (lab, val) => val ? '<div class="d-row"><span>' + esc(lab) + '</span><b>' + val + '</b></div>' : '';
     const alt = altName(p);
@@ -341,6 +414,7 @@
     setText('btn-arcs', L('arcsOn')); setText('btn-rotate', L('rotateOn'));
     setText('btn-reset', L('reset'));
     const flat = document.getElementById('btn-flat'); if (flat) flat.textContent = L('flat');
+    setText('btn-insight', L('insight'));
     setText('legend-cap', L('legend')); setText('legend-corridor', L('corridor'));
     setText('g-hint', L('clickHint'));
     const lb = document.getElementById('btn-lang'); if (lb) lb.textContent = state.lang === 'en' ? '中文' : 'EN';
@@ -356,11 +430,18 @@
     on('btn-arcs', () => { state.arcs = !state.arcs; document.getElementById('btn-arcs').classList.toggle('on', state.arcs); render(); });
     // 旋转
     on('btn-rotate', () => setRotate(!state.rotate));
+    // 🌍 区域能源洞察（开/关；默认打开项目最多的大区）
+    on('btn-insight', () => {
+      const card = document.getElementById('region-card');
+      if (card && card.classList && card.classList.contains('on')) { hideRegionInsight(); return; }
+      if (!RI_ORDER.length) return;
+      showRegionInsight(state.insightRegion || defaultInsightRegion());
+    });
     // 重置
     on('btn-reset', () => {
       state.cats = new Set(CAT_KEYS); state.regions = new Set(); state.statuses = new Set();
       state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.recentOnly = false; state.weight = 'inv'; state.arcs = true;
-      hideDetail(); buildChips();
+      hideDetail(); hideRegionInsight(); buildChips();
       document.querySelectorAll('#year-presets .yp').forEach(b => b.classList.toggle('on', b.dataset.preset === 'all'));
       const bw = document.getElementById('btn-weight'); if (bw) { bw.classList.remove('on'); bw.textContent = L('weightInv'); }
       const ba = document.getElementById('btn-arcs'); if (ba) ba.classList.add('on');
@@ -369,7 +450,11 @@
       render();
     });
     // 语言
-    on('btn-lang', () => { state.lang = state.lang === 'en' ? 'zh' : 'en'; applyLangText(); buildChips(); render(); if (state.focus) { const p = PROJECTS.find(x => x.id === state.focus); if (p) showDetail(p); } });
+    on('btn-lang', () => {
+      state.lang = state.lang === 'en' ? 'zh' : 'en'; applyLangText(); buildChips(); render();
+      if (state.focus) { const p = PROJECTS.find(x => x.id === state.focus); if (p) showDetail(p); }
+      else if (state.insightRegion) showRegionInsight(state.insightRegion, { noFly: true }); // 洞察卡随语言重渲染（不重新飞行）
+    });
     // 左侧面板收起（移动端）
     on('panel-toggle', () => { const p = document.getElementById('left-panel'); if (p) p.classList.toggle('collapsed'); });
   }
@@ -416,6 +501,7 @@
   // 调试句柄（也供 scripts/test-globe.js 在无 WebGL 环境断言数据装配）
   window.__GLOBE__ = {
     world, state, PROJECTS, render, filtered, buildPoints, buildArcs, focusProject,
+    showRegionInsight, hideRegionInsight, flyToRegion, REGION_INSIGHT, RI_ORDER,
     get last() { return _last; }, MIN_YEAR, MAX_YEAR, MAXW,
   };
 })();

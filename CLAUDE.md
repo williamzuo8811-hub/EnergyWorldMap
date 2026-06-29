@@ -58,13 +58,15 @@ verify in a browser — there is no build step.
   (no missing/orphan keys, `tier`/`fit` enums + required fields valid), and warns on owners that
   fall into the `other` catch-all bucket. (`clients-meta.js` is otherwise outside `validate-data.js`.)
 - `node scripts/test-smoke.js` — after editing `js/app.js`. Loads util + data + `stories.js` +
-  `world-110m.js` + `app.js` under a minimal DOM/Leaflet stub and asserts the IIFE init, `render()`,
-  `buildSnapshotSVG()`, `stateToHash()`, favorites (`toggleFav`/`favOnly`), the choropleth render
-  path (`state.choro`), `showTrends()` and the tour engine (`startStory`/`storyStep`/`exitStory`)
+  `region-insights.js` + `world-110m.js` + `app.js` under a minimal DOM/Leaflet stub and asserts the IIFE
+  init, `render()`, `buildSnapshotSVG()`, `stateToHash()`, favorites (`toggleFav`/`favOnly`), the
+  choropleth render path (`state.choro`), the **region-insight render path** (`state.insight` +
+  `showRegionInsight`), `showTrends()` and the tour engine (`startStory`/`storyStep`/`exitStory`)
   run without throwing (catches runtime reference errors with no browser).
-- `node scripts/test-globe.js` — after editing `js/globe.js`. Loads util + data + `lib/world-110m.js`
-  under a minimal DOM + `Globe` stub and asserts the IIFE init, the extruded-column (`buildPoints`) and
-  cross-border-arc (`buildArcs`) assembly, `render()` and `focusProject()` run without throwing (no WebGL needed).
+- `node scripts/test-globe.js` — after editing `js/globe.js`. Loads util + data + `region-insights.js` +
+  `lib/world-110m.js` under a minimal DOM + `Globe` stub and asserts the IIFE init, the extruded-column
+  (`buildPoints`) and cross-border-arc (`buildArcs`) assembly, `render()`, `focusProject()` and the
+  region-insight card (`showRegionInsight`/`hideRegionInsight`) run without throwing (no WebGL needed).
 - `node scripts/test-coach.js` — after editing `js/coach.js` or `js/coach-content.js`. Loads util + data +
   `clients-meta.js` + `coach-content.js` + `coach.js` under a minimal DOM stub and asserts the IIFE init,
   `window.__COACH__` exposure, the opportunity-pool assembly (from `PROJECTS` × `CLIENT_META`), persona /
@@ -116,8 +118,8 @@ Two layers loaded as ordinary `<script>` tags in `index.html` (order is load-bea
 A second, standalone page renders the same dataset as a **three-dimensional globe** (the 2D map links to it
 via the `🌐 3D 地球` button in `index.html`'s map-tools; the globe links back via `🗺️ 平面地图`). It is the
 "visual ceiling" view and is fully independent of `app.js` — but **reuses the exact data layer**: `globe.html`
-loads the same `js/data*.js` + `js/progress.js` + `js/util.js` script order, then `lib/world-110m.js`,
-`lib/globe.gl.min.js`, and `js/globe.js`. `globe.js` rebuilds `PROJECTS` with the same dedup-by-name / progress /
+loads the same `js/data*.js` + `js/progress.js` + `js/util.js` script order, then `js/region-insights.js`,
+`lib/world-110m.js`, `lib/globe.gl.min.js`, and `js/globe.js`. `globe.js` rebuilds `PROJECTS` with the same dedup-by-name / progress /
 `classifySub` / `parseCapacity` pipeline as `app.js` (it keeps only entries with a `coord`). Three visual encodings:
 **extruded columns** (`pointsData`; bar height ∝ `√weight` normalized to the global max, color = category, white when
 focused — `weightVal` switches investment ⇄ `capMW` via the 柱高 toggle), **cross-border arcs** (`arcsData`; every
@@ -125,7 +127,11 @@ consecutive segment of a project's `route` becomes a great-circle arc with an an
 and a **hexed dark globe** (`hexPolygonsData` dotted land from the vendored Natural-Earth-110m GeoJSON, plus graticules
 and an atmosphere glow over a CSS starfield). Left-panel chips filter by category/region/status/year-preset (same
 client-exclusion rule in the investment KPI as `app.js`); clicking a column opens a detail card and flies the camera
-(`pointOfView`) to it with a pulse ring; auto-rotate via `controls()`. A debug handle is exposed at `window.__GLOBE__`.
+(`pointOfView`) to it with a pulse ring; auto-rotate via `controls()`. The left panel's `🌍 区域能源洞察` button
+opens a region-insight card (`showRegionInsight`, same `window.REGION_INSIGHT` source as the 2D map) — summary +
+KPIs + 能源/电网/最新动态/机会/重点国家, ◂▸ region nav, and `🎯 飞到该区` flies the camera to the region centroid
+(`REGION_CENTROID`, mean of the region's project coords); it shares the detail card's slot (mutually exclusive).
+A debug handle is exposed at `window.__GLOBE__`.
 The library `lib/globe.gl.min.js` is a vendored standalone UMD bundle (globe.gl + three.js, global `Globe`) and
 `lib/world-110m.js` a precomputed GeoJSON global (`window.WORLD_GEO`) — **do not edit either**; everything is offline
 (no CDN, no build), like the rest of the project.
@@ -232,6 +238,13 @@ and `js/coach.js`. `coach.js` rebuilds `PROJECTS` with `util.buildProjects` (no 
   `descEn`/`detailEn`** — same id-merge model as `progress.js`. This keeps translations separate from the
   source data and lets EN coverage grow in incremental batches (add `i18n-en2.js` etc. with the same
   `Object.assign(window.ENERGY_EN || {}, …)` append). Loads after `progress.js`, before `util.js`.
+- `js/region-insights.js` defines `window.REGION_INSIGHT = { <大区>: { summary, energy, grid, dynamics:[],
+  opportunity, countries:[{name, profile, grid, dynamic}], sources:[] } }` — editorial **region energy
+  insight** (能源结构 / 电网 / 2024–26 最新动态 / 设备商机会 / 重点国家) keyed by the 10 `REGIONS`, powering the
+  `🌍 区域洞察` layer (see Render pipeline) and the globe's region card. **Not project data** (outside
+  `validate-data.js`, like `clients-meta.js`); curated + web-research-verified Chinese prose. Loaded after
+  `clients-meta.js`, before `app.js` (and in `globe.html` after `util.js`, before `globe.js`). Consumers
+  guard `window.REGION_INSIGHT || {}` so the layer degrades to plain region coloring if absent.
 - In `app.js`, `PROJECTS` = `ENERGY.PROJECTS.concat(ENERGY_EXTRA)`, **deduplicated by `name`**
   (first occurrence wins; later duplicates are silently dropped). Progress text + EN body are attached by
   `id`, and a `sub` (subcategory) is computed per project — all via the shared `util.buildProjects`.
@@ -277,7 +290,17 @@ polylines ("flowlines" for grids/HSR/pipelines) are always shown and never clust
 composite corridor names skipped; KPI's client-exclusion rule applied) and paints whole countries via
 `L.geoJSON` with the heat gradient (√weight, 92-percentile cap; `state.weight` switches 投资⇄装机);
 country zh-name → GeoJSON feature name goes through `util.geoNameOf` (`LABELS_EN.country` + `GEO_FIX`,
-explicit `null` for micro-states absent at 110m); clicking a country opens `showCountry`. Search
+explicit `null` for micro-states absent at 110m); clicking a country opens `showCountry`.
+**Region-insight mode** (`state.insight`, the `🌍 区域洞察` button, the third member of the heat ⇄ choro ⇄
+insight mutually-exclusive trio — all share the lazy-loaded `world-110m.js` layer via the branching
+`worldStyle`) paints whole countries by their **大区 identity color** (`REGION_COLOR`, static `GEO_REGION`
+map built from `PROJECTS`, no per-render aggregation), shows an on-map region legend (`#region-legend`,
+counts from `REGION_PROJ_COUNT`), and on region/country click opens `showRegionInsight(region)` — a
+`countryPanel`-modal card (region KPIs via `computeRegion` + 📊能源/🔌电网/📰最新动态/🎯机会/🗺️重点国家, ◂▸
+nav, 📍筛选该区) sourced from `window.REGION_INSIGHT`. Each 最新动态 line auto-tags mentioned **dataset**
+countries (`dynCountries`, alias-aware, only when `COUNTRY_COUNT` hits → guaranteed clickable) → `showCountry`
+drill-down. `showCountry` itself gains a top "所属大区·区域洞察" context strip (region summary + that country's
+dynamic + `查看 ▸`). Hash carries `insight=1&rg=<大区>` (deep-link auto-opens the card). Search
 (`matchQ` → `util.matchProject`) is multi-token AND with pinyin full/initial matching via
 `window.PINYIN_MAP`; per-project search indexes are cached in-place (`_hay`/`_py`). **Favorites**
 (`⭐ 我的关注`): `FAVS` id-set persisted in `localStorage` (`ewm.favs.v1`, memory fallback), toggled

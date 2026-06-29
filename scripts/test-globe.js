@@ -71,6 +71,7 @@ try {
     'data-brazil-future', 'data-saudi-future', 'data-seasia', 'data-africa', 'data-oceania',
     'data-europe', 'data-nuclear', 'data-northam', 'data-southasia', 'data-china-future', 'data-clients2', 'data-refresh2606', 'progress']
     .forEach(f => require(path.join(__dirname, '..', 'js', f + '.js')));
+  require(path.join(__dirname, '..', 'js', 'region-insights.js')); // window.REGION_INSIGHT（🌍 区域洞察）
   require(path.join(__dirname, '..', 'lib', 'world-110m.js'));   // window.WORLD_GEO
   require(path.join(__dirname, '..', 'js', 'globe.js'));
 } catch (e) {
@@ -113,6 +114,15 @@ try {
   ok(pc.every(p => p.alt > 0), '装机 MW 口径下柱高仍为正');
   G.state.weight = 'inv';
 } catch (e) { fails.push('weight=cap 抛错：' + (e && e.message)); }
+
+// 🌍 区域能源洞察：内容加载 + showRegionInsight / flyToRegion 不抛错
+try {
+  ok(G.RI_ORDER && G.RI_ORDER.length >= 8, '🌍 区域洞察内容已加载（≥8 大区）');
+  G.showRegionInsight('中东'); G.showRegionInsight('非洲');
+  ok(G.state.insightRegion === '非洲', 'showRegionInsight 设置当前大区');
+  G.hideRegionInsight();
+  ok(G.state.insightRegion === null, 'hideRegionInsight 关闭洞察卡');
+} catch (e) { fails.push('🌍 区域洞察抛错：' + (e && e.message)); }
 
 /* ---------- 汇总 ---------- */
 console.log('═══════════════════════════════════════════════');
