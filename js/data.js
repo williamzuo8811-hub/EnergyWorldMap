@@ -114,7 +114,7 @@ window.ENERGY = (function () {
       detail: '沙特电力公司在比沙等多个基地部署的大型电池储能，单批容量达数 GWh，由比亚迪等供货，是全球最大的单体电池储能项目之一。它支撑沙特快速增长的光伏装机消纳，并为"2030 愿景"高比例可再生目标兜底。' },
 
     /* ============ 工商业 · 配网大客户 ============ */
-    { id: 46, name: 'TSMC 亚利桑那晶圆厂', en: 'TSMC Arizona Fab', country: '美国', region: '北美', cat: 'ci', coord: [-112.1, 33.7], cap: '先进制程，城市级用电', inv: 1650, invText: '约 1650 亿美元', status: '在建', year: 2024, updated: '2025-10', owner: '台积电', flagship: true, desc: '美国最大半导体投资。',
+    { id: 46, name: 'TSMC 亚利桑那晶圆厂', en: 'TSMC Arizona Fab', country: '美国', region: '北美', cat: 'ci', coord: [-112.1, 33.7], cap: '先进制程，城市级用电', inv: 1650, invText: '约 1650 亿美元', status: '在建', year: 2024, updated: '2026-04', owner: '台积电', flagship: true, desc: '美国最大半导体投资。',
       detail: '台积电在亚利桑那凤凰城建设多座先进制程晶圆厂，累计承诺投资已追加至约 1650 亿美元，是美国历史上最大的外商半导体投资。单座晶圆厂的用电、用水规模相当于一座中型城市，正推动当地电网与供水系统大规模扩容，并带动完整的半导体供应链落地。' },
     { id: 47, name: 'Intel 俄亥俄晶圆厂', en: 'Intel Ohio Fab', country: '美国', region: '北美', cat: 'ci', coord: [-82.7, 40.1], cap: '先进制程园区', inv: 280, invText: '约 280 亿美元', status: '在建', year: 2024, updated: '2025-09', owner: 'Intel', flagship: false, desc: '"硅心脏"超大晶圆园区。',
       detail: '位于俄亥俄州哥伦布附近，英特尔规划建设号称"硅心脏"的超大晶圆制造园区，初期投资约 280 亿美元。受半导体市场调整影响投产节奏有所推迟，但项目仍是美国本土先进制程制造与电网增容的重大工程。' },
@@ -140,7 +140,7 @@ window.ENERGY = (function () {
       detail: '连接匈牙利布达佩斯与塞尔维亚贝尔格莱德，全长约 350 公里的电气化提速改造铁路。其中贝尔格莱德—诺维萨德段已通车运营，是中国—中东欧合作和"一带一路"在欧洲的旗舰项目，将提升中欧陆海快线的运输效率。', route: [[20.46, 44.79], [19.0, 47.5]] },
     { id: 61, name: '钱凯港', en: 'Port of Chancay', country: '秘鲁', region: '南美', cat: 'transport', coord: [-77.27, -11.57], cap: '南美首个智慧绿色大港', inv: 35, invText: '约 35 亿美元', status: '投运', year: 2024, updated: '2026-06', owner: '中远海运 / Volcan', flagship: true, desc: '南美—亚洲海运新枢纽。',
       detail: '位于秘鲁首都利马以北，由中远海运控股建设运营，是南美西海岸首个智慧、绿色深水大港，2024 年 11 月开港。它开通了直达上海的航线，把秘鲁到中国的海运时间缩短约 10 天，重塑南美—亚洲贸易格局并带动港口岸电等绿色基建。' },
-    { id: 62, name: '利雅得萨勒曼国王国际机场', en: 'King Salman Intl Airport', country: '沙特阿拉伯', region: '中东', cat: 'transport', coord: [46.7, 24.96], cap: '远期年吞吐 1.85 亿人次', inv: 300, invText: '约 300 亿美元', status: '在建', year: 2025, updated: '2025-09', owner: '沙特 PIF', flagship: true, desc: '规划中全球最大机场之一。',
+    { id: 62, name: '利雅得萨勒曼国王国际机场', en: 'King Salman Intl Airport', country: '沙特阿拉伯', region: '中东', cat: 'transport', coord: [46.7, 24.96], cap: '远期年吞吐 1.85 亿人次', inv: 300, invText: '约 300 亿美元', status: '在建', year: 2025, updated: '2026-01', owner: '沙特 PIF', flagship: true, desc: '规划中全球最大机场之一。',
       detail: '由沙特主权基金 PIF 主导，规划六条跑道、远期年吞吐量高达 1.85 亿人次，建成后将是全球最大的机场之一。它是利雅得打造全球航空与物流枢纽、支撑"2030 愿景"经济多元化的核心基建。' },
     { id: 63, name: '隆城国际机场', en: 'Long Thanh Intl Airport', country: '越南', region: '东南亚', cat: 'transport', coord: [107.0, 10.8], cap: '一期年 2500 万→远期 1 亿人次', inv: 78, invText: '约 78 亿美元（一期）', status: '在建', year: 2026, updated: '2026-06', owner: 'ACV', flagship: true, desc: '越南最大空港。',
       detail: '位于胡志明市以东同奈省，一期工程计划 2026 年完工、年吞吐 2500 万人次，远期扩至 1 亿人次，建成后将是越南最大机场。它将分流新山一机场压力、强化越南区域航空枢纽地位，并带动周边产业与电力配套。' },
