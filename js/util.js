@@ -284,7 +284,7 @@
       '丹麦': 'Denmark', '乌克兰': 'Ukraine', '乌兹别克斯坦': 'Uzbekistan', '乌干达': 'Uganda', '乍得': 'Chad',
       '以色列': 'Israel', '伊拉克': 'Iraq', '伊朗': 'Iran', '佛得角': 'Cape Verde', '俄罗斯': 'Russia',
       '保加利亚': 'Bulgaria', '克罗地亚': 'Croatia', '冈比亚': 'Gambia', '冰岛': 'Iceland', '几内亚': 'Guinea',
-      '几内亚比绍': 'Guinea-Bissau', '刚果（布）': 'Congo-Brazzaville', '刚果（金）': 'DR Congo', '利比亚': 'Libya',
+      '几内亚比绍': 'Guinea-Bissau', '刚果（布）': 'Congo-Brazzaville', '刚果（金）': 'DR Congo', '刚果(金)': 'DR Congo', '刚果共和国': 'Congo-Brazzaville', '利比亚': 'Libya',
       '加拿大': 'Canada', '加纳': 'Ghana', '加蓬': 'Gabon', '匈牙利': 'Hungary', '南苏丹': 'South Sudan',
       '南非': 'South Africa', '博茨瓦纳': 'Botswana', '卡塔尔': 'Qatar', '卢旺达': 'Rwanda', '印度': 'India',
       '印度尼西亚': 'Indonesia', '厄瓜多尔': 'Ecuador', '厄立特里亚': 'Eritrea', '吉尔吉斯斯坦': 'Kyrgyzstan',
@@ -322,7 +322,7 @@
    * 复合国名（跨国走廊「英国—法国」）返回 null：染色按单国精确口径，与国别下钻一致。 */
   const GEO_FIX = {
     '美国': 'United States of America', '阿联酋': 'United Arab Emirates', '阿拉伯联合酋长国': 'United Arab Emirates',
-    '刚果（金）': 'Dem. Rep. Congo', '刚果（布）': 'Congo', '赤道几内亚': 'Eq. Guinea',
+    '刚果（金）': 'Dem. Rep. Congo', '刚果(金)': 'Dem. Rep. Congo', '刚果（布）': 'Congo', '刚果共和国': 'Congo', '赤道几内亚': 'Eq. Guinea',
     '波黑': 'Bosnia and Herz.', '波斯尼亚和黑塞哥维那': 'Bosnia and Herz.', '南苏丹': 'S. Sudan',
     '中国台湾': 'Taiwan', '科特迪瓦': "Côte d'Ivoire",
     '所罗门群岛': 'Solomon Is.', '多米尼加': 'Dominican Rep.',
