@@ -125,7 +125,7 @@ powershell -ExecutionPolicy Bypass -File serve.ps1 -Port 4173
 
 - **新项目**：复制一条、改字段、把 `updated` 写成当月，即自动出现并标 🆕。
 - **现有项目变化**：改 `status` / `cap` / `inv` / `desc` / `detail`，并更新 `updated`。
-- **"最近一年"阈值**：在 `data.js` 顶部 `META.recentSince`（当前 `'2025-06'`）与 `META.lastUpdated`（`'2026-06'`，顶栏显示）。
+- **"最近一年"阈值**：在 `data.js` 顶部 `META.recentSince`（当前 `'2026-01'`）与 `META.lastUpdated`（`'2026-07'`，顶栏显示）。
 
 **品类键对照表**（`cat` 字段取值）：
 
@@ -161,7 +161,7 @@ powershell -ExecutionPolicy Bypass -File serve.ps1 -Port 4173
 
 ## 🔄 数据更新
 
-内置数据已联网刷新至 **2026-06**，采用"地标打底 + 重点补充最近一年"策略：保留三峡级标志性大项目，并补齐 2025–2026 的新项目与状态变化（如墨脱水电 2025.7 开工、哈密-重庆/甘肃-浙江特高压、Simandou 铁矿 2025.12 首船、CP2/Alaska/Lake Charles LNG 的 FID、Google-Xcel 30GWh 铁空气储能、台湾海峡 43.3GW 海风、Stargate 扩至 10GW 等）。
+内置数据已联网刷新至 **2026-07**，采用"地标打底 + 重点补充最近一年"策略：保留三峡级标志性大项目，并补齐 2025–2026 的新项目与状态变化（如墨脱水电 2025.7 开工、哈密-重庆/甘肃-浙江特高压、Simandou 铁矿 2025.12 首船、CP2/Alaska/Lake Charles LNG 的 FID、Google-Xcel 30GWh 铁空气储能、台湾海峡 43.3GW 海风、Stargate 扩至 10GW 等）。
 
 经多轮地毯式联网检索（按 9 大品类 × 各大洲并行），数据集已扩充至 **3091 个项目**（截至 2026-06；详见上方分文件清单，纳入门槛：投资 > 5000 万元人民币），覆盖中国各省与全球各大洲。**9 大能源品类均已完成专项深挖**（含新增 **☢️ 核电**），并对 **巴西**（+96，`js/data-brazil.js`）、**中东**（+114，`js/data-mideast.js`）、**中亚+俄罗斯**（+118，`js/data-russia-ca.js`）、**巴西未来 5 年规划管线**（+115，`js/data-brazil-future.js`）、**沙特未来 5 年规划管线**（+107，`js/data-saudi-future.js`）、**东南亚（东盟十国）**（+156，`js/data-seasia.js`）、**非洲大陆**（+224，`js/data-africa.js`）、**欧洲**（+64，`js/data-europe.js`）、**大洋洲**（+83，`js/data-oceania.js`）、**北美（美/加/墨）近一年+未来 5 年**（+170，`js/data-northam.js`，核电复兴/Gulf LNG/AI 数据中心/半导体与电池超级工厂/关键矿产回流）与 **南亚（印/巴/孟/斯/尼/不/阿）近一年+未来 5 年**（+224，`js/data-southasia.js`，印度光储+绿氢/核电舰队/抽蓄狂潮/半导体使命/AI 数据中心/钾锂铜煤/巴孟斯尼跨境电网水电）做了全品类国别/地区深挖，并新增 **☢️ 核电** 品类（+35，`js/data-nuclear.js`，全球大型堆/SMR/四代堆/聚变）；另设 **🤝 国际大客户**（+129，`js/data-clients.js`）——专题收录 14 家中国出海龙头企业（中国电建/中国能建/国网国际/中石油工程/三峡/国家电投/紫金/洛钼/中国有色/比亚迪/宁德时代/格林美/万国DayOne/秦淮数据）近一年的海外（不含中国）重点项目，并按客户公司细分：
 
@@ -210,4 +210,4 @@ powershell -ExecutionPolicy Bypass -File serve.ps1 -Port 4173
 - 搜索拼音字表：`scripts/build-pinyin.js` 一次性生成静态 `js/pinyin-map.js`（生成时用 pinyin-pro，**运行时零依赖**）；新增数据批次后若校验提示缺字再重跑。
 - 质量门禁（CI，零依赖）：数据 Schema 校验 + 5 套冒烟/单元测试 + 三条提醒线（**数据新鲜度** / **体积预算** / **链接检查**）+ Lighthouse 趋势打分（性能/无障碍，不挡合并），见 `.github/workflows/validate.yml` 与 `scripts/`。
 - 访问统计（可选）：三个页面内置注释化的 Cloudflare Web Analytics（无 Cookie），替换 token 取消注释即启用，见 `docs/部署与中国访问.md`。
-- 数据为公开信息整理（截至 2026-06），坐标、投资额为近似/示意值，正式使用建议替换为权威数据源。
+- 数据为公开信息整理（截至 2026-07），坐标、投资额为近似/示意值，正式使用建议替换为权威数据源。
