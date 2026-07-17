@@ -97,9 +97,9 @@ window.ENERGY = (function () {
 
     /* ============ 储能 ============ */
     { id: 35, name: 'Snowy 2.0 抽水蓄能', en: 'Snowy 2.0', country: '澳大利亚', region: '大洋洲', cat: 'storage', coord: [148.4, -35.9], cap: '2.2 GW / 350 GWh', inv: 90, invText: '约 120 亿澳元', status: '在建', year: 2024, updated: '2026-06', owner: 'Snowy Hydro', flagship: true, desc: '南半球最大抽水蓄能。',
-      detail: '在新南威尔士雪山地区已有水库间开挖隧洞、加装可逆机组，装机 2.2 GW、储能约 350 GWh，是南半球最大的抽水蓄能工程。建成后可为澳大利亚高比例可再生电网提供长时调节与兜底，相当于一座超大型"水电池"。' },
+      detail: '在新南威尔士雪山地区已有水库间开挖隧洞、加装可逆机组，装机 2.2 GW、储能约 350 GWh，是南半球最大的抽水蓄能工程。建成后可为澳大利亚高比例可再生电网提供长时调节与兜底，相当于一座超大型"水电池"。EPC/总承包：土建EPC：Future Generation 联合体(Webuild牵头/Clough/美国Lane)；机电 Voith Hydro。' },
     { id: 36, name: 'Waratah 超级电池', en: 'Waratah Super Battery', country: '澳大利亚', region: '大洋洲', cat: 'storage', coord: [151.2, -33.0], cap: '850 MW / 1680 MWh', inv: 8, invText: '约 18 亿澳元', status: '投运', year: 2025, updated: '2026-06', owner: 'Akaysha Energy', flagship: false, desc: '南半球最大电池储能之一。',
-      detail: '位于新南威尔士原电厂场地，规模 850 MW/1680 MWh，是南半球最大的电池储能项目之一。它充当电网的"减震器/缓冲器"，在线路故障时快速吞吐功率以保护输电通道，使既有线路能输送更多可再生电力。' },
+      detail: '位于新南威尔士原电厂场地，规模 850 MW/1680 MWh，是南半球最大的电池储能项目之一。它充当电网的"减震器/缓冲器"，在线路故障时快速吞吐功率以保护输电通道，使既有线路能输送更多可再生电力。EPC/总承包：EPC(BoP总包)：Consolidated Power Projects(CPP)；电池 Powin，PCS eks(日立能源)，变压器 Wilson Transformer。' },
     { id: 38, name: 'Google–Xcel 铁空气长时储能', en: 'Google-Xcel Form Energy BESS', country: '美国', region: '北美', cat: 'storage', coord: [-93.3, 45.0], cap: '300 MW / 30 GWh', inv: 10, invText: '约 10 亿美元', status: '在建', year: 2026, updated: '2026-02', owner: 'Google / Xcel / Form Energy', flagship: true, desc: '迄今按吉瓦时计全球最大电池项目。',
       detail: '2026 年 2 月由 Xcel Energy 与 Google 公布、采用 Form Energy 铁空气电池技术，规模 300 MW/30 GWh，是迄今按吉瓦时计全球最大的电池储能项目。铁空气电池可实现约 100 小时的长时储能，主要为明尼苏达的数据中心与电网提供多日级别的可靠供电。' },
     { id: 39, name: '马斯达尔 24/7 光储项目', en: 'Masdar 24/7 Solar+Storage', country: '阿联酋', region: '中东', cat: 'storage', coord: [54.4, 24.4], cap: '5.2 GW PV + 19 GWh 电池', inv: 60, invText: '约 60 亿美元', status: '在建', year: 2025, updated: '2025-12', owner: 'Masdar / EWEC', flagship: true, desc: '全球首个吉瓦级全天候光储。',
@@ -145,7 +145,7 @@ window.ENERGY = (function () {
     { id: 63, name: '隆城国际机场', en: 'Long Thanh Intl Airport', country: '越南', region: '东南亚', cat: 'transport', coord: [107.0, 10.8], cap: '一期年 2500 万→远期 1 亿人次', inv: 78, invText: '约 78 亿美元（一期）', status: '在建', year: 2026, updated: '2026-06', owner: 'ACV', flagship: true, desc: '越南最大空港。',
       detail: '位于胡志明市以东同奈省，一期工程计划 2026 年完工、年吞吐 2500 万人次，远期扩至 1 亿人次，建成后将是越南最大机场。它将分流新山一机场压力、强化越南区域航空枢纽地位，并带动周边产业与电力配套。' },
     { id: 64, name: '西悉尼国际机场', en: 'Western Sydney Airport', country: '澳大利亚', region: '大洋洲', cat: 'transport', coord: [150.7, -33.88], cap: '首期年 1000 万人次', inv: 75, invText: '约 110 亿澳元', status: '在建', year: 2026, updated: '2026-01', owner: 'WSA Co', flagship: false, desc: '悉尼第二机场。',
-      detail: '位于悉尼西郊，计划 2026 年下半年投运，首期年吞吐约 1000 万人次，是悉尼第二个国际机场。机场配套新建专用地铁线与道路、电力网络，缓解金斯福德·史密斯机场的运力瓶颈并带动悉尼西部发展。' },
+      detail: '位于悉尼西郊，计划 2026 年下半年投运，首期年吞吐约 1000 万人次，是悉尼第二个国际机场。机场配套新建专用地铁线与道路、电力网络，缓解金斯福德·史密斯机场的运力瓶颈并带动悉尼西部发展。EPC/总承包：航站楼总包：Multiplex；场道与大宗土方：CPB+Acciona联合体。' },
     { id: 65, name: '波兰中央机场（CPK）', en: 'Central Airport (CPK)', country: '波兰', region: '欧洲', cat: 'transport', coord: [20.5, 52.0], cap: '机场+高铁枢纽', inv: 330, invText: '约 300 亿欧元', status: '在建', year: 2026, updated: '2026-02', owner: 'CPK', flagship: true, desc: '欧洲最大在建空铁枢纽。',
       detail: '位于华沙与罗兹之间，规划两条平行跑道、并整合高速铁路枢纽与公路网，投资约 300 亿欧元、2026 年开工，服务约 2100 万人口腹地。它将成为中东欧最大的航空与高铁综合枢纽，并提供高铁"以铁代航"的连接。' },
     { id: 66, name: '加州高速铁路', en: 'California High-Speed Rail', country: '美国', region: '北美', cat: 'transport', coord: [-119.0, 35.4], cap: '一期 Bakersfield–Merced', inv: 1000, invText: '超 1000 亿美元', status: '在建', year: 2025, updated: '2025-12', owner: 'CAHSR', flagship: false, desc: '美国首条真正意义高铁。',
@@ -179,7 +179,7 @@ window.ENERGY = (function () {
     { id: 81, name: 'Escondida 铜矿', en: 'Escondida Copper Mine', country: '智利', region: '南美', cat: 'mining', coord: [-69.07, -24.27], cap: '全球最大铜矿', inv: 130, invText: '近年扩产约 130 亿美元', status: '投运', year: 2024, updated: '2025-08', owner: 'BHP / 力拓', flagship: true, desc: '全球产量第一的铜矿。',
       detail: '位于智利阿塔卡马沙漠，由必和必拓运营、力拓等参股，是全球产量第一的铜矿。近年持续投入约 130 亿美元用于扩产、海水淡化与选矿升级，并已实现 100% 可再生能源供电，对全球能源转型所需的铜供应至关重要。' },
     { id: 86, name: '皮尔巴拉铁矿群', en: 'Pilbara Iron Ore', country: '澳大利亚', region: '大洋洲', cat: 'mining', coord: [118.6, -22.6], cap: '年出口逾 10 亿吨', inv: 100, invText: '累计数百亿美元', status: '投运', year: 2024, updated: '2025-06', owner: '力拓 / 必和必拓 / FMG', flagship: false, desc: '全球铁矿石供应中枢。',
-      detail: '西澳皮尔巴拉地区是全球铁矿石供应的中枢，力拓、必和必拓、FMG 等在此运营多座超大型矿山，年出口逾 10 亿吨、主要销往中国。区域内大规模应用自动驾驶矿卡、无人重载列车与远程操控中心，是矿业自动化的标杆。' },
+      detail: '西澳皮尔巴拉地区是全球铁矿石供应的中枢，力拓、必和必拓、FMG 等在此运营多座超大型矿山，年出口逾 10 亿吨、主要销往中国。区域内大规模应用自动驾驶矿卡、无人重载列车与远程操控中心，是矿业自动化的标杆。EPC/总承包：运营期资产群，无单一EPC(力拓/必和必拓/FMG各自框架承包)。' },
     { id: 87, name: '锂三角盐湖项目', en: 'Lithium Triangle Brines', country: '阿根廷', region: '南美', cat: 'mining', coord: [-66.6, -23.5], cap: '碳酸锂盐湖提锂', inv: 40, invText: '约 40 亿美元', status: '在建', year: 2024, updated: '2025-10', owner: '紫金 / 赣锋 等', flagship: false, desc: '全球新增锂供应高地。',
       detail: '阿根廷、智利、玻利维亚交界的"锂三角"拥有全球过半的锂资源，盐湖卤水提锂成本相对低廉。紫金、赣锋等中国企业与多家国际矿商在阿根廷密集投建盐湖提锂项目，使该区域成为全球新增锂供应的主要高地。' },
   ];
