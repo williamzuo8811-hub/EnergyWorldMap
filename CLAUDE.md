@@ -337,7 +337,8 @@ country pick never yields the empty `region ∩ country` intersection), and `tog
 `stateToHash`/`applyHash` (only non-default fields encoded) — the 🔗 share button copies the link and
 `applyHash`+`applyUIFromState` restore it on load; `applyUIFromState` is the single place that syncs
 every toggle's visual from `state` (also used by reset). The hash also carries `lang`, `lines`, the heat
-facet (`hcat`), the choropleth flag (`choro`), the favorites-only flag (`fav`), the comparison set (`cmp`),
+facet (`hcat`), the choropleth flag (`choro`), the favorites-only flag (`fav`), the EPC-window flag
+(`epcw`, the left-panel `🔧 EPC未招标` toggle → `state.epcOnly`, keeps only `epcStatus==='未招标'`), the comparison set (`cmp`),
 the selected countries (`cty`), a running tour (`story`+`stop`), and a one-shot `project=<id>` **deep link** (the detail card's
 🔗 button copies it; on load the project's detail opens and the map flies to it). ⤓ export dumps
 `filtered()` to a BOM-prefixed CSV; 📸 snapshot (`buildSnapshotSVG`) renders the current view's KPIs / top
@@ -379,7 +380,13 @@ its 投资/装机 totals apply the same client-exclusion rule. The per-country a
 small-multiple columns (`state.compare`), each with its own KPIs / category bars / TOP-3, plus a
 searchable country picker and an `⊕ 加入对比` shortcut on the single-country panel. The **🏢 company
 league** (`showLeague`) groups by `normalizeOwner` (in `js/util.js`), which strips legal-entity suffixes
-so "中国电建" and "中国电建集团" aggregate as one owner. The **🎯 client BD board** (`showClientBoard`, the
+so "中国电建" and "中国电建集团" aggregate as one owner. The **🔧 EPC league** (`showEpcLeague`, the `🔧 EPC榜`
+map-tools button) aggregates by EPC/contractor parsed from the structured `epc` field (`EPC_COS` ordered
+regex table → canonical names; suppliers like battery/turbine vendors deliberately excluded); rows expand
+to the contractor's project list (click → fly + detail card). `epc`/`epcStatus`（已授标/未招标/未公开/不适用,
+see `data.js` header）currently cover all Australian projects; the detail card renders them as a dedicated
+strip (`.d-epc`, pre-award highlighted orange), and `p.epc` is part of the search haystack (`projectHay`).
+The **🎯 client BD board** (`showClientBoard`, the
 `🎯 客户` map-tools button) renders the 54 `client` companies grouped by BD tier (第一/二/三梯队) × product
 fit, each row showing type / 重点关联产品 / 海外场景 / project & country counts; clicking a company filters the
 map to just that company (`state.cats={client}`, `subOff` = all client subs except the picked one) and flies to

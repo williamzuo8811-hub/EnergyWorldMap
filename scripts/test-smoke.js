@@ -173,6 +173,12 @@ try { APP.showClientBoard(); ok(true, 'showClientBoard()（🎯 客户 BD 看板
 catch (e) { fails.push('showClientBoard() 抛错：' + (e && e.message)); }
 try { APP.showLeague(); ok(true, 'showLeague()（🏢 企业榜）不抛错'); }
 catch (e) { fails.push('showLeague() 抛错：' + (e && e.message)); }
+try {
+  APP.showEpcLeague();
+  const covered = APP.PROJECTS.filter(p => p.epc).length;
+  if (!covered) throw new Error('无任何项目携带 epc 字段');
+  ok(true, 'showEpcLeague()（🔧 EPC榜）不抛错（epc 覆盖 ' + covered + ' 个项目）');
+} catch (e) { fails.push('showEpcLeague() 抛错：' + (e && e.message)); }
 try { APP.showTrends(); ok(true, 'showTrends()（📈 趋势统计）不抛错'); }
 catch (e) { fails.push('showTrends() 抛错：' + (e && e.message)); }
 

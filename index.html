@@ -70,6 +70,9 @@
 
         <button class="recent-toggle" id="recent-toggle" aria-pressed="false" data-i18n="🆕 Latest updates only">🆕 仅看最新动态</button>
 
+        <!-- 🔧 EPC 窗口期：只看 epcStatus='未招标' 的项目（设备 BD 切入窗口；目前澳大利亚全量覆盖） -->
+        <button class="recent-toggle" id="epc-toggle" aria-pressed="false" title="只看 EPC 尚未招标/授标的项目——设备商切入的窗口期（目前覆盖澳大利亚全部项目）" data-i18n="🔧 EPC open (pre-award)">🔧 EPC未招标 · 窗口期</button>
+
         <!-- ⭐ 我的关注：收藏存在本浏览器（localStorage）；⤓/⤒ 备份恢复 JSON 可跨设备迁移 -->
         <div class="fav-row">
           <button class="fav-toggle" id="fav-toggle" aria-pressed="false" title="只看我收藏的项目（详情卡点 ☆ 收藏）"><span data-i18n="⭐ My favorites">⭐ 我的关注</span><span class="fc" id="fav-count">0</span></button>
@@ -147,6 +150,7 @@
             </div>
             <div class="tool-group" role="group" aria-label="数据看板">
               <button class="btn-league" id="btn-league" title="企业 / 业主全球排行榜" aria-label="打开企业排行榜" data-i18n="🏢 Companies">🏢 企业榜</button>
+              <button class="btn-epc" id="btn-epc" title="EPC / 总承包商排行榜（当前覆盖澳大利亚全量项目；点承包商看其在手项目）" aria-label="打开 EPC 承包商排行榜" data-i18n="🔧 EPC League">🔧 EPC榜</button>
               <button class="btn-board" id="btn-board" title="国际大客户 BD 看板（按梯队 / 产品契合 / 海外场景）" aria-label="打开国际大客户 BD 看板" data-i18n="🎯 Clients">🎯 客户</button>
               <button class="btn-compare" id="btn-compare" title="多国能源组合并排对比" aria-label="打开国别对比" data-i18n="🆚 Compare">🆚 对比</button>
               <button class="btn-trends" id="btn-trends" title="按当前筛选看时间维度：年度投资/项目数 + 大区×品类矩阵" aria-label="打开趋势统计" data-i18n="📈 Trends">📈 趋势</button>

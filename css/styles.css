@@ -745,6 +745,18 @@ body.insight-on .region-legend { display: flex; }
   margin-right: 8px; font-size: 11px; letter-spacing: 0.3px; white-space: nowrap;
 }
 
+/* 详情卡 · EPC/总承包条（复用进展条版式）；未招标 = BD 窗口期，橙色提醒 */
+.detail .d-epc {
+  background: linear-gradient(90deg, rgba(179, 136, 255, 0.14), rgba(33, 199, 255, 0.06));
+  border-left-color: #b388ff;
+}
+.detail .d-epc .dp-tag { color: #c9a7ff; }
+.detail .d-epc .dp-tag.epc-open { color: var(--warn); }
+.detail .d-epc:has(.epc-open) {
+  background: linear-gradient(90deg, rgba(255, 176, 46, 0.16), rgba(255, 95, 168, 0.06));
+  border-left-color: var(--warn);
+}
+
 /* ============================================================
  * 交互增强：年份区间双手柄 / 预设 / 分享导出 / 品类图例 / 提示条
  * ============================================================ */
@@ -847,6 +859,11 @@ body.insight-on .region-legend { display: flex; }
 /* 🏢 企业 / 业主排行榜（复用 country-panel 弹层外壳）*/
 .lg-list { display: flex; flex-direction: column; gap: 6px; }
 .lg-row { display: flex; align-items: center; gap: 10px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 9px; background: var(--panel); cursor: pointer; transition: all .15s; }
+/* 🔧 EPC榜：承包商行下展开在手项目清单 */
+.lg-sub { margin: 2px 0 4px 34px; display: flex; flex-direction: column; gap: 3px; }
+.lg-sub .ls-item { font-size: 12px; color: var(--txt-dim); padding: 4px 8px; border-left: 2px solid var(--border); cursor: pointer; border-radius: 0 6px 6px 0; }
+.lg-sub .ls-item:hover { color: var(--txt); background: rgba(255,255,255,.04); border-left-color: var(--accent); }
+.lg-sub .ls-inv { opacity: .65; margin-left: 4px; font-size: 11px; }
 .lg-row:hover { border-color: var(--border-strong); background: rgba(255,255,255,.04); }
 .lg-rank { width: 22px; text-align: center; font-weight: 800; color: var(--txt-faint); font-size: 13px; flex: none; }
 .lg-main { flex: 1; min-width: 0; }

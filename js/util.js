@@ -359,7 +359,7 @@
   function searchTokens(q) { return String(q || '').toLowerCase().split(/\s+/).filter(Boolean); }
   function projectHay(p) {
     return p._hay || (p._hay = ((p.name || '') + ' ' + (p.en || '') + ' ' + (p.country || '') + ' ' +
-      (p.owner || '') + ' ' + (p.desc || '')).toLowerCase());
+      (p.owner || '') + ' ' + (p.desc || '') + ' ' + (p.epc || '')).toLowerCase());
   }
   function projectPinyin(p, pyMap) {
     if (p._py) return p._py;
