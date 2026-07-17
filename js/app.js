@@ -158,6 +158,7 @@
     clientFilter: null,         // 选中某国际大客户(业主)时，按业主跨品类筛其全部项目（覆盖品类/子类）
 
     minYear: MIN_YEAR, maxYear: MAX_YEAR, q: '', recentOnly: false, favOnly: false, heat: false, choro: false,
+    epcOnly: false,             // 🔧 只看 EPC 未招标的项目（epcStatus==='未招标'，BD 窗口期清单）
     insight: false,             // 🌍 区域能源洞察：按大区染色 + 区域能源/电网/最新动态洞察卡
     insightRegion: null,        // 当前选中的大区（洞察卡内容 + 地图高亮）
     weight: 'inv', sort: 'inv', // weight: 圆点/热力按 inv 投资 或 cap 装机容量；sort: TOP 排序
@@ -219,6 +220,9 @@
     '变电': 'Substation', '客运': 'Passengers', '吞吐': 'Containers', '晶圆': 'Wafers', '整车': 'Vehicles',
     '企业 / 业主排行榜': 'Company / Owner League Table', '项目数': 'Projects', '按项目数排名（投资额为该业主累计）': 'Ranked by project count (investment = owner total)',
     '点公司名筛选其全部项目': 'Click a company to filter its projects', '🏢 企业榜': '🏢 Companies',
+    'EPC / 总承包': 'EPC / Contractor', 'EPC / 总承包商排行榜': 'EPC Contractor League',
+    '按在手项目数排名（当前覆盖澳大利亚全量项目）': 'Ranked by projects in hand (Australia fully covered)',
+    '点承包商展开其在手项目': 'Click a contractor to list its projects', '未招标': 'Pre-award', '已授标': 'Awarded', '未公开': 'Undisclosed', '不适用': 'N/A',
   };
   const tr = s => state.lang === 'en' ? (I18N[s] || s) : s;
   const nm = p => state.lang === 'en' ? (p.en || p.name) : (p.name || p.en || '');
@@ -262,6 +266,7 @@
       && (state.statuses.size === 0 || state.statuses.has(p.status))
       && (!state.recentOnly || isRecent(p))
       && (!state.favOnly || FAVS.has(p.id))
+      && (!state.epcOnly || p.epcStatus === '未招标')
       && p.year >= state.minYear && p.year <= state.maxYear && matchQ(p, state.q);
   }
   // 国际大客户「按业主全口径」：复用 SUB_DEFS.client 的 fn 命中 owner，跨所有品类识别客户（带缓存）
@@ -763,6 +768,16 @@
     render();
   });
 
+  // 🔧 只看 EPC 未招标（窗口期）：epcStatus 字段目前覆盖澳大利亚全量项目
+  const epcBtn = document.getElementById('epc-toggle');
+  if (epcBtn) epcBtn.addEventListener('click', () => {
+    state.epcOnly = !state.epcOnly;
+    epcBtn.classList.toggle('on', state.epcOnly);
+    pressed(epcBtn, state.epcOnly);
+    if (state.epcOnly) toast(state.lang === 'en' ? '🔧 Showing pre-award (EPC open) projects — AU coverage' : '🔧 只看 EPC 未招标项目（当前澳大利亚全量覆盖）');
+    render();
+  });
+
   // 年份区间：双手柄滑块 [minYear, maxYear] + 快捷预设
   const yearLabel = document.getElementById('year-label');
   const yearMin = document.getElementById('year-min');
@@ -848,7 +863,7 @@
     state.clientFilter = null;
     state.cats = new Set(CAT_KEYS); state.subOff.clear(); state.countries.clear(); state.statuses.clear();
     state.regions = new Set(DEFAULT_REGIONS); // 重置后展示全部大区
-    state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.q = ''; state.recentOnly = false; state.favOnly = false;
+    state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.q = ''; state.recentOnly = false; state.favOnly = false; state.epcOnly = false;
     state.weight = 'inv'; state.sort = 'inv'; state.heatCat = null; state.choro = false;
     state.heat = false; state.insight = false; state.insightRegion = null;
     clearPresetActive();
@@ -953,6 +968,10 @@
   // 🏢 企业 / 业主排行榜
   const btnLeague = document.getElementById('btn-league');
   if (btnLeague) btnLeague.addEventListener('click', showLeague);
+
+  // 🔧 EPC / 总承包商排行榜
+  const btnEpc = document.getElementById('btn-epc');
+  if (btnEpc) btnEpc.addEventListener('click', showEpcLeague);
 
   // 🎯 国际大客户 BD 看板
   const btnBoard = document.getElementById('btn-board');
@@ -1159,7 +1178,11 @@
       cell(tr('投资额'), usd(p) + (/美元|\$/.test(p.invText || '') || !p.invText ? '' : ' <span class="d-usd">（原币种：' + esc(p.invText) + '）</span>')) +
       cell(tr('业主 / 参与方'), esc(p.owner || '—')) +
       cell(tr('最近动态'), esc(p.updated || '—')) +
-      '</div>' + '<div class="d-desc">' + descBody(p) + '</div>';
+      '</div>' +
+      // 🔧 EPC/总承包（结构化字段，目前澳大利亚全量覆盖）；未招标 = BD 窗口期，橙色高亮
+      (p.epc ? '<div class="d-progress d-epc"><span class="dp-tag' + (p.epcStatus === '未招标' ? ' epc-open' : '') + '">🔧 ' + tr('EPC / 总承包') +
+        (p.epcStatus ? ' · ' + tr(p.epcStatus) : '') + '</span>' + esc(p.epc) + '</div>' : '') +
+      '<div class="d-desc">' + descBody(p) + '</div>';
     detailEl.classList.add('show');
     document.getElementById('d-close').addEventListener('click', hideDetail);
     const ds = document.getElementById('d-share');
@@ -1542,6 +1565,98 @@
     }));
   }
 
+  /* ---------- 🔧 EPC / 总承包商排行榜（epc 字段文本 → 承包商识别聚合；当前澳大利亚全量覆盖）----------
+   * 识别表按"更具体在前"排序；只认承包/集成角色词，供应商（电池/风机/燃机）不计入。
+   * 同一项目的联合体成员各记一次（榜单口径 = 在手项目参与数，投资额为参与项目累计）。 */
+  const EPC_COS = [
+    [/Consolidated Power Projects|CPP(?![A-Za-z])/, 'CPP (Consolidated Power)'],
+    [/UGL/, 'UGL (CIMIC)'], [/CPB/, 'CPB Contractors'],
+    [/Vestas/, 'Vestas'], [/GE Vernova|GE Renewable|GE\+/, 'GE Vernova'],
+    [/Fluence/, 'Fluence'], [/Tesla Energy/, 'Tesla Energy'],
+    [/Wärtsilä|瓦锡兰/, '瓦锡兰 Wärtsilä'], [/NHOA/, 'NHOA Energy'], [/Enerven/, 'Enerven'],
+    [/Elecnor|SecureEnergy/, 'Elecnor'], [/GenusPlus/, 'GenusPlus'], [/ACEREZ|Acciona/, 'Acciona'],
+    [/Downer/, 'Downer'], [/Yurika/, 'Yurika'], [/Zenviron/, 'Zenviron'], [/SCEE/, 'SCEE Group'],
+    [/All Energy Contracting/, 'All Energy Contracting'], [/ACLE/, 'ACLE Services'], [/Enzen/, 'Enzen'],
+    [/三星物产|Samsung C&T/, '三星物产 Samsung C&T'], [/山西电建|SEPC/, '中国能建山西电建'],
+    [/阳光电源/, '阳光电源 Sungrow'], [/Sunterra/, 'Sunterra'], [/Gransolar|GRS(?![A-Za-z])/, 'Gransolar (GRS)'],
+    [/GR Engineering|GRES/, 'GR Engineering'], [/Lycopodium/, 'Lycopodium'], [/Fluor/, 'Fluor'],
+    [/Hatch/, 'Hatch'], [/Wood Group/, 'Wood Group'], [/Civmec/, 'Civmec'],
+    [/Monadelphous/, 'Monadelphous'], [/Mondium/, 'Mondium'], [/Primero/, 'Primero (NRW)'],
+    [/MACA/, 'MACA'], [/SIMPEC/, 'SIMPEC'], [/Sedgman/, 'Sedgman'], [/Decmil/, 'Decmil'],
+    [/McConnell Dowell/, 'McConnell Dowell'], [/John Holland/, 'John Holland'],
+    [/Webuild|韦建德/, 'Webuild'], [/Clough/, 'Clough (Webuild)'], [/Saipem/, 'Saipem'],
+    [/Bechtel/, 'Bechtel'], [/McDermott/, 'McDermott'], [/Seatrium|胜科海事/, 'Seatrium'],
+    [/BW Offshore/, 'BW Offshore'], [/Allseas/, 'Allseas'], [/Valmec/, 'Valmec'], [/Wasco/, 'Wasco'],
+    [/Spiecapag/, 'Spiecapag'], [/AGIG/, 'AGIG'], [/Prysmian/, 'Prysmian'], [/Hitachi Energy/, 'Hitachi Energy'],
+    [/DT Infrastructure/, 'DT Infrastructure (Gamuda)'], [/Laing O'Rourke/, "Laing O'Rourke"],
+    [/Ghella/, 'Ghella'], [/Bouygues/, 'Bouygues'], [/GS E&C/, 'GS E&C'], [/中建海外/, '中国建筑(海外)'],
+    [/Multiplex/, 'Multiplex'], [/Lendlease/, 'Lendlease'], [/Martinus/, 'Martinus'], [/BMD/, 'BMD'],
+    [/FKG/, 'FKG Group'], [/MPC Kinetic/, 'MPC Kinetic'], [/NACAP/, 'NACAP'], [/CATCON/, 'CATCON'],
+    [/EPEC/, 'EPEC'], [/Energy Vault/, 'Energy Vault'], [/Doosan|斗山/, 'Doosan GridTech'],
+    [/VKJV/, 'VKJV'], [/MSP Engineering/, 'MSP Engineering'], [/Prudentia/, 'Prudentia Engineering'],
+    [/McCosker/, 'McCosker'], [/Cardinal/, 'Cardinal Contractors'], [/Byrnecut/, 'Byrnecut'], [/CSI/, 'CSI (MinRes)'],
+  ];
+  function epcCosOf(p) {
+    if (!p.epc) return [];
+    if (p._epcCos) return p._epcCos;
+    const out = [];
+    EPC_COS.forEach(([re, name]) => { if (re.test(p.epc) && out.indexOf(name) < 0) out.push(name); });
+    return (p._epcCos = out);
+  }
+  function showEpcLeague() {
+    const en = state.lang === 'en';
+    const ag = {};
+    let covered = 0, openN = 0;
+    PROJECTS.forEach(p => {
+      if (!p.epc) return;
+      covered++;
+      if (p.epcStatus === '未招标') openN++;
+      epcCosOf(p).forEach(name => {
+        if (!ag[name]) ag[name] = { n: 0, inv: 0, cats: {}, ps: [] };
+        ag[name].n++; ag[name].inv += (p.inv || 0);
+        ag[name].cats[p.cat] = (ag[name].cats[p.cat] || 0) + 1;
+        ag[name].ps.push(p);
+      });
+    });
+    const rows = Object.entries(ag).sort((a, b) => b[1].n - a[1].n || b[1].inv - a[1].inv).slice(0, 30);
+    const maxN = Math.max(1, ...rows.map(r => r[1].n));
+    const body = rows.map((r, i) => {
+      const name = r[0], d = r[1];
+      const domCats = Object.keys(d.cats).sort((a, b) => d.cats[b] - d.cats[a]).slice(0, 5)
+        .map(k => '<span class="lg-dot" title="' + catShort(k) + '" style="background:' + (CATEGORIES[k] || {}).color + '"></span>').join('');
+      const sub = d.ps.slice().sort((a, b) => (b.inv || 0) - (a.inv || 0)).map(p =>
+        '<div class="ls-item" data-pid="' + p.id + '" tabindex="0" role="button">' +
+        '<span class="tag-status st-' + p.status + '">' + statusName(p.status) + '</span> ' +
+        esc(nm(p)) + ' <span class="ls-inv">≈$' + fmtInv(p.inv || 0) + '</span></div>').join('');
+      return '<div class="lg-wrap"><div class="lg-row" data-co="' + esc(name) + '" tabindex="0" role="button" aria-expanded="false">' +
+        '<div class="lg-rank">' + (i + 1) + '</div>' +
+        '<div class="lg-main"><div class="lg-name">' + esc(name) + ' ' + domCats + '</div>' +
+        '<div class="lg-track"><div class="lg-fill" style="width:' + (d.n / maxN * 100) + '%"></div></div></div>' +
+        '<div class="lg-meta"><b>' + d.n + '</b><span>' + tr('项目数') + '</span></div>' +
+        '<div class="lg-meta"><b>≈$' + fmtInv(d.inv) + '</b><span>' + (en ? 'involved' : '参与盘子') + '</span></div></div>' +
+        '<div class="lg-sub" hidden>' + sub + '</div></div>';
+    }).join('');
+    countryPanel.classList.remove('wide');
+    countryPanel.innerHTML =
+      '<div class="cp-head"><span style="font-size:20px">🔧</span><div class="cp-name">' + tr('EPC / 总承包商排行榜') + '</div>' +
+      '<button class="cp-close" id="cp-close" aria-label="关闭面板" title="关闭">×</button></div>' +
+      '<div class="cp-body"><div class="cp-note" style="margin:0 0 8px">' + tr('按在手项目数排名（当前覆盖澳大利亚全量项目）') + ' · ' + tr('点承包商展开其在手项目') +
+      '<br>' + (en ? 'Coverage: ' : '覆盖: ') + covered + (en ? ' projects · ' : ' 个项目 · ') +
+      '<b style="color:var(--warn)">' + openN + '</b>' + (en ? ' pre-award (use the 🔧 filter in the left panel)' : ' 个 EPC 未招标（可用左栏 🔧 窗口期开关筛出）') + '</div>' +
+      '<div class="lg-list">' + body + '</div></div>';
+    countryBackdrop.classList.add('show'); countryPanel.classList.add('show');
+    document.getElementById('cp-close').addEventListener('click', hideCountry);
+    focusEl('cp-close');
+    countryPanel.querySelectorAll('.lg-row').forEach(el => el.addEventListener('click', () => {
+      const sub = el.parentElement.querySelector('.lg-sub');
+      if (sub) { sub.hidden = !sub.hidden; el.setAttribute('aria-expanded', sub.hidden ? 'false' : 'true'); }
+    }));
+    countryPanel.querySelectorAll('.ls-item').forEach(el => el.addEventListener('click', () => {
+      const p = PROJECTS.find(x => x.id === +el.dataset.pid);
+      if (p && p.coord) { hideCountry(); showDetail(p); flyTo(toLatLng(p.coord), 8, { duration: 0.7 }); }
+    }));
+  }
+
   /* ---------- 🎯 国际大客户 BD 看板（按梯队/产品契合；点公司即筛其全部海外项目）---------- */
   function showClientBoard() {
     const META = window.CLIENT_META || {};
@@ -1844,6 +1959,7 @@
     if (state.q) p.set('q', state.q);
     if (state.recentOnly) p.set('recent', '1');
     if (state.favOnly) p.set('fav', '1');
+    if (state.epcOnly) p.set('epcw', '1');
     if (state.heat) p.set('heat', '1');
     if (state.choro) p.set('choro', '1');
     if (state.insight) { p.set('insight', '1'); if (state.insightRegion) p.set('rg', state.insightRegion); }
@@ -1878,6 +1994,7 @@
     if (p.has('q')) state.q = p.get('q');
     if (p.has('recent')) state.recentOnly = true;
     if (p.has('fav')) state.favOnly = true; // 收藏本身在各自浏览器本地，分享链接只还原"只看关注"开关
+    if (p.has('epcw')) state.epcOnly = true;
     if (p.has('heat')) state.heat = true;
     if (p.has('choro')) { state.choro = true; state.heat = false; }
     if (p.has('insight')) {
@@ -1938,6 +2055,7 @@
     if (state.statuses.size) parts.push((en ? 'Status: ' : '状态: ') + [...state.statuses].map(statusName).join('/'));
     if (state.minYear > MIN_YEAR || state.maxYear < MAX_YEAR) parts.push(state.minYear + '–' + state.maxYear);
     if (state.recentOnly) parts.push(en ? 'Latest' : '最新');
+    if (state.epcOnly) parts.push(en ? 'EPC open' : 'EPC未招标');
     if (state.q) parts.push('“' + state.q + '”');
     const filterDesc = parts.length ? parts.join('   ·   ') : (en ? 'All projects' : '全部项目');
     const clip = (s, n) => { s = String(s == null ? '' : s); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
@@ -2033,6 +2151,7 @@
     syncCountryUI();
     document.querySelectorAll('#status-chips .pill').forEach(el => { const on = state.statuses.has(el.dataset.v); el.classList.toggle('on', on); pressed(el, on); });
     if (recentBtn) { recentBtn.classList.toggle('on', state.recentOnly); pressed(recentBtn, state.recentOnly); }
+    if (epcBtn) { epcBtn.classList.toggle('on', state.epcOnly); pressed(epcBtn, state.epcOnly); }
     syncFavUI();
     setHeatUI(state.heat); setChoroUI(state.choro); setInsightUI(state.insight);
     if (state.choro || state.insight) ensureWorldGeo();
@@ -2170,5 +2289,5 @@
   })();
 
   // 调试 / 程序化控制句柄
-  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showLeague, showDetail, showCountry, showRegionInsight, PROJECTS, applyLang, buildRegionTree, showCompare, openCompare, toggleFav, FAVS, showTrends, startStory, storyStep, exitStory, showStoryPicker };
+  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showLeague, showEpcLeague, showDetail, showCountry, showRegionInsight, PROJECTS, applyLang, buildRegionTree, showCompare, openCompare, toggleFav, FAVS, showTrends, startStory, storyStep, exitStory, showStoryPicker };
 })();
