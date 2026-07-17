@@ -182,7 +182,7 @@ window.ENERGY = (function () {
     { id: 81, name: 'Escondida 铜矿', en: 'Escondida Copper Mine', country: '智利', region: '南美', cat: 'mining', coord: [-69.07, -24.27], cap: '全球最大铜矿', inv: 130, invText: '近年扩产约 130 亿美元', status: '投运', year: 2024, updated: '2025-08', owner: 'BHP / 力拓', flagship: true, desc: '全球产量第一的铜矿。',
       detail: '位于智利阿塔卡马沙漠，由必和必拓运营、力拓等参股，是全球产量第一的铜矿。近年持续投入约 130 亿美元用于扩产、海水淡化与选矿升级，并已实现 100% 可再生能源供电，对全球能源转型所需的铜供应至关重要。' },
     { id: 86, name: '皮尔巴拉铁矿群', en: 'Pilbara Iron Ore', country: '澳大利亚', region: '大洋洲', cat: 'mining', coord: [118.6, -22.6], cap: '年出口逾 10 亿吨', inv: 100, invText: '累计数百亿美元', status: '投运', year: 2024, updated: '2025-06', owner: '力拓 / 必和必拓 / FMG', flagship: false, desc: '全球铁矿石供应中枢。',
-      detail: '西澳皮尔巴拉地区是全球铁矿石供应的中枢，力拓、必和必拓、FMG 等在此运营多座超大型矿山，年出口逾 10 亿吨、主要销往中国。区域内大规模应用自动驾驶矿卡、无人重载列车与远程操控中心，是矿业自动化的标杆。', epc: '运营期资产群，无单一EPC(力拓/必和必拓/FMG各自框架承包)', epcStatus: '不适用' },
+      detail: '西澳皮尔巴拉地区是全球铁矿石供应的中枢，力拓、必和必拓、FMG 等在此运营多座超大型矿山，年出口逾 10 亿吨、主要销往中国。区域内大规模应用自动驾驶矿卡、无人重载列车与远程操控中心，是矿业自动化的标杆。⚡ 供电：皮尔巴拉无国家电网覆盖：力拓/必和必拓/FMG各自运营离网220kV矿区电网（燃气电站+快速扩张的光风储），NWIS网覆盖沿海工业负荷——矿区微网、E-house、移动变电站的核心市场。', epc: '运营期资产群，无单一EPC(力拓/必和必拓/FMG各自框架承包)', epcStatus: '不适用' },
     { id: 87, name: '锂三角盐湖项目', en: 'Lithium Triangle Brines', country: '阿根廷', region: '南美', cat: 'mining', coord: [-66.6, -23.5], cap: '碳酸锂盐湖提锂', inv: 40, invText: '约 40 亿美元', status: '在建', year: 2024, updated: '2025-10', owner: '紫金 / 赣锋 等', flagship: false, desc: '全球新增锂供应高地。',
       detail: '阿根廷、智利、玻利维亚交界的"锂三角"拥有全球过半的锂资源，盐湖卤水提锂成本相对低廉。紫金、赣锋等中国企业与多家国际矿商在阿根廷密集投建盐湖提锂项目，使该区域成为全球新增锂供应的主要高地。' },
   ];
