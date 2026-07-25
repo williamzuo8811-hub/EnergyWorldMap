@@ -2022,9 +2022,9 @@
   /* ---------- 导出当前筛选结果为 CSV（含 BOM，Excel 中文不乱码）---------- */
   document.getElementById('btn-export').addEventListener('click', () => {
     const items = filtered();
-    const head = ['编号', '名称', '英文名', '国家', '大区', '品类', '子分类', '状态', '里程碑年', '更新', '容量', '投资亿美元', '投资文本', '业主', '旗舰', '经度', '纬度', '简介'];
+    const head = ['编号', '名称', '英文名', '国家', '大区', '品类', '子分类', '状态', '里程碑年', '更新', '容量', '投资亿美元', '投资文本', '业主', 'EPC状态', 'EPC总承包', '旗舰', '经度', '纬度', '简介'];
     const q = v => { v = (v == null ? '' : String(v)); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
-    const rows = items.map(p => [p.id, p.name, p.en, p.country, p.region, (CATEGORIES[p.cat] || {}).name || p.cat, subLabel(p), p.status, p.year, p.updated, p.cap, p.inv, p.invText, p.owner, p.flagship ? '是' : '', p.coord && p.coord[0], p.coord && p.coord[1], p.desc].map(q).join(','));
+    const rows = items.map(p => [p.id, p.name, p.en, p.country, p.region, (CATEGORIES[p.cat] || {}).name || p.cat, subLabel(p), p.status, p.year, p.updated, p.cap, p.inv, p.invText, p.owner, p.epcStatus, p.epc, p.flagship ? '是' : '', p.coord && p.coord[0], p.coord && p.coord[1], p.desc].map(q).join(','));
     const csv = '﻿' + head.join(',') + '\n' + rows.join('\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
