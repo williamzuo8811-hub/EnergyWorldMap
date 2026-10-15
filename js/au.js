@@ -4,7 +4,7 @@
  * 与平面地图 / 3D 地球 / 陪练共用同一份数据层（js/data*.js + util.js），
  * 只取 country 为「澳大利亚」的项目，叠加四类澳洲专属图层：
  *   · 输电骨架（window.AU_GRID：枢纽站 + 走廊；示意走廊，非测绘线路）
- *   · 州 / 领地面 + 电网公司档案（lib/au-states.js 边界 + js/data-au-states.js 档案）
+ *   · 州 / 领地面 + 电网公司档案（lib/au-states.js 边界 + js/au-states.js 档案）
  *   · 燃煤退役倒计时（window.AU_COAL，含已关停机组做时间轴背景）
  *   · 项目标记（EPC 状态筛选：未招标 = BD 窗口期）
  * 项目的所属州由坐标对州面做射线法判定（离岸项目取最近州）。
@@ -166,8 +166,8 @@
 
   /* ---------- 燃煤倒计时 ---------- */
   function countdown(p) {
-    if (p.status === 'closed') return { txt: L_('closed') + (p.closedYear ? ' ' + p.closedYear : ''), cls: 'closed', months: -1 };
-    if (!p.closeYear) return { txt: L_('tbd'), cls: 'tbd', months: 9999 };
+    if (p.status === 'closed') return { txt: L_('closed') + (p.closedYear ? ' ' + p.closedYear : ''), cls: 'closed', months: 1e6 - (p.closedYear || 0) };  // 已关停排在最后（越近关停越靠前）
+    if (!p.closeYear) return { txt: L_('tbd'), cls: 'tbd', months: 1e5 };   // 无官方日期：排在在运机组之后、已关停之前
     const m = (p.closeYear - NOW.getFullYear()) * 12 + ((p.closeMonth || 12) - 1 - NOW.getMonth());
     if (m <= 0) return { txt: L_('due'), cls: 'due', months: 0 };
     const y = Math.floor(m / 12), mm = m % 12;
@@ -176,7 +176,7 @@
   }
   const coalColor = p => { const c = countdown(p).cls; return c === 'hot' ? '#ff5c7a' : c === 'warm' ? '#ffb02e' : c === 'cool' ? '#ffd93b' : '#6b7a95'; };
   const coalOperating = COAL.filter(p => p.status !== 'closed');
-  const coalSorted = COAL.slice().sort((a, b) => countdown(a).months - countdown(b).months || (b.mw || 0) - (a.mw || 0));
+  const coalSorted = COAL.slice().sort((a, b) => countdown(a).months - countdown(b).months || (b.mw || 0) - (a.mw || 0));   // 倒计时升序：在运(近→远) → 待定 → 已关停
 
   /* ---------- 地图 ---------- */
   const map = L.map('map', { center: [-27, 134], zoom: 4, minZoom: 3, maxZoom: 17, zoomControl: false, attributionControl: true });

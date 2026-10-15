@@ -4,7 +4,7 @@
  * 用法：  node scripts/test-au.js
  *
  * 用最小 DOM + Leaflet stub 在 Node 里加载 util + 数据链 + lib/au-states.js +
- * js/data-au-*.js + js/au.js，断言：IIFE 初始化不抛错、暴露 window.__AU__、
+ * js/au-*.js + js/au.js，断言：IIFE 初始化不抛错、暴露 window.__AU__、
  * 项目能按坐标归到州、render() / 四种卡片 / stateToHash() / 语言切换不抛错；
  * 并校验澳洲专属数据：走廊节点 id 可解析、坐标落在澳洲范围、燃煤机组字段齐全、
  * 州档案覆盖 7 个州 / 领地。
@@ -71,9 +71,9 @@ try {
     'data-refresh2606c', 'data-clients3', 'data-mining2607', 'data-mining2608', 'data-australia2608', 'data-clients-mining', 'data-refresh2607', 'data-refresh2608', 'progress', 'pinyin-map']
     .forEach(f => require(J('js/' + f + '.js')));
   require(J('lib/au-states.js'));
-  require(J('js/data-au-states.js'));
-  require(J('js/data-au-grid.js'));
-  require(J('js/data-au-coal.js'));
+  require(J('js/au-states.js'));
+  require(J('js/au-grid.js'));
+  require(J('js/au-coal.js'));
   require(J('js/au.js'));
 } catch (e) {
   console.error('✘ au.js 初始化抛出异常：\n', e && e.stack || e);
@@ -131,7 +131,7 @@ ok(COAL.length >= 12, '燃煤机组 ≥12 座（实际 ' + COAL.length + '）');
 COAL.forEach(p => {
   ok(inAU(p.coord), '燃煤坐标不在澳洲范围：' + p.en);
   ok(['NSW', 'VIC', 'QLD', 'SA', 'WA', 'TAS', 'NT'].indexOf(p.state) >= 0, '燃煤州代码非法：' + p.en);
-  if (p.status !== 'closed') { ok(typeof p.closeYear === 'number' && p.closeYear >= 2026, '在运燃煤缺关停年：' + p.en); ok(typeof p.mw === 'number' && p.mw > 0, '在运燃煤缺 MW：' + p.en); }
+  if (p.status !== 'closed') { ok((typeof p.closeYear === 'number' && p.closeYear >= 2026) || /无官方|未定|未公布/.test(p.closeText || ''), '在运燃煤缺关停年（且 closeText 未说明无官方日期）：' + p.en); ok(typeof p.mw === 'number' && p.mw > 0, '在运燃煤缺 MW：' + p.en); }
   ok(Array.isArray(p.sources) && p.sources.length > 0, '燃煤缺来源：' + p.en);
 });
 const SHEETS = global.window.AU_STATES || {};

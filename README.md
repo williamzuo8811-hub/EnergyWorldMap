@@ -89,7 +89,7 @@ powershell -ExecutionPolicy Bypass -File serve.ps1 -Port 4173
 │   ├── util.js         # 纯函数工具层（子分类/容量解析/坐标纠偏/搜索匹配/国名映射，多页共享）
 │   ├── globe.js        # 🌐 3D 地球版逻辑
 │   ├── au.js           # 🇦🇺 澳洲电网与能源动态地图逻辑（输电骨架 / 州档案 / 燃煤退役倒计时 / EPC 窗口期）
-│   ├── data-au-grid.js / data-au-coal.js / data-au-states.js   # 澳洲专属层：输电骨架 · 燃煤机组 · 州电网公司档案
+│   ├── au-grid.js / au-coal.js / au-states.js   # 澳洲专属层：输电骨架 · 燃煤机组 · 州电网公司档案
 │   └── app.js          # 交互逻辑（地图、底图切换、筛选、统计、详情、染色、导览、收藏、趋势）
 ├── globe.html / coach.html / au.html  # 3D 地球版 / 销售陪练 / 澳洲电网地图（与 index.html 共享数据层）
 ├── lib/                # 本地化第三方库（Leaflet 及插件 / globe.gl / world-110m GeoJSON / au-states 澳洲州界）
