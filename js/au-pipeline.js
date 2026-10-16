@@ -5,4 +5,10 @@
 //   connNode: 接入变电站；rez: 所在 REZ；projId: 主项目库里同一项目的 id（有则详情卡可互跳）
 // 由 scripts/import-aemo.js 从 AEMO Excel 生成（坐标 / 中文名 / 备注从上一版记忆），也可手工维护；非项目数据（不受 validate-data.js 约束），
 // 由 scripts/test-au.js 校验字段与坐标范围。
-window.AU_PIPELINE = { asOf: '2026-10', source: '', items: [] };
+window.AU_PIPELINE = {
+  asOf: "2026-10",
+  source: "AEMO Generation Information 口径 · 2026-10 多代理调研（WattClarity / RenewEconomy / 开发商项目页）+ 承诺/预期项反驳式核验",
+  items: [
+
+  ],
+};
