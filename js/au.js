@@ -7,6 +7,7 @@
  *   · 州 / 领地面 + 电网公司档案（lib/au-states.js 边界 + js/au-states.js 档案）
  *   · 燃煤退役倒计时（window.AU_COAL，含已关停机组做时间轴背景）
  *   · 项目标记（EPC 状态筛选：未招标 = BD 窗口期）
+ *   · 🧭 AEMO 管线（window.AU_PIPELINE：承诺 / 预期 / 拟建，菱形标记，独立聚合）与 🌞 REZ 区划面（window.AU_REZ，示意边界）
  * 项目的所属州由坐标对州面做射线法判定（离岸项目取最近州）。
  * 纯前端零构建；调试句柄 window.__AU__；兼容 scripts/test-au.js 的最小 DOM/Leaflet 桩。
  * ============================================================ */
@@ -24,6 +25,9 @@
   const COAL_ASOF = (window.AU_COAL && window.AU_COAL.asOf) || '';
   const SHEETS = window.AU_STATES || {};
   const GEO = (window.AU_STATES_GEO && window.AU_STATES_GEO.features) || [];
+  const PIPE = (window.AU_PIPELINE && window.AU_PIPELINE.items) || [];
+  const PIPE_ASOF = (window.AU_PIPELINE && window.AU_PIPELINE.asOf) || '';
+  const ZONES = ((window.AU_REZ && window.AU_REZ.zones) || []).filter(z => Array.isArray(z.polygon) && z.polygon.length >= 3);
   const REDUCED_MOTION = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const NOW = new Date();
 
@@ -87,6 +91,53 @@
   const ALL = buildProjects ? buildProjects(window.ENERGY, window.ENERGY_EXTRA, window.ENERGY_PROGRESS, { requireCoord: true }) : [];
   const PROJECTS = ALL.filter(p => /澳大利亚/.test(p.country || ''));
   PROJECTS.forEach(p => { p.auState = stateOf(p.coord); });
+
+  /* ---------- 🧭 AEMO 管线 + 🌞 REZ 装配 ---------- */
+  const FUELS = [
+    { key: 'solar', zh: '光伏', en: 'Solar', icon: '☀️', color: '#ffd93b' },
+    { key: 'wind', zh: '陆上风电', en: 'Wind', icon: '🌬️', color: '#6fe3a5' },
+    { key: 'offshore_wind', zh: '海上风电', en: 'Offshore wind', icon: '🌊', color: '#3fd0b0' },
+    { key: 'battery', zh: '电池储能', en: 'Battery', icon: '🔋', color: '#21c7ff' },
+    { key: 'pumped_hydro', zh: '抽水蓄能', en: 'Pumped hydro', icon: '💧', color: '#5b8def' },
+    { key: 'hydro', zh: '水电', en: 'Hydro', icon: '🏞️', color: '#8aa4c2' },
+    { key: 'gas', zh: '燃气', en: 'Gas', icon: '🔥', color: '#ff8c5a' },
+    { key: 'hydrogen', zh: '氢能', en: 'Hydrogen', icon: '🧪', color: '#c9a7ff' },
+    { key: 'coal', zh: '燃煤', en: 'Coal', icon: '🏭', color: '#ff5c7a' },
+    { key: 'other', zh: '其他', en: 'Other', icon: '⚙️', color: '#b0bac9' },
+  ];
+  const FUEL = {}; FUELS.forEach(f => { FUEL[f.key] = f; });
+  const fuelOf = k => FUEL[k] || FUEL.other;
+  const PL_STATUS = ['committed', 'anticipated', 'proposed'];
+  const PL_ZH = { committed: '承诺（在建）', anticipated: '预期', proposed: '拟建' };
+  const PL_EN = { committed: 'Committed', anticipated: 'Anticipated', proposed: 'Proposed' };
+  const plStatusName = k => state.lang === 'en' ? (PL_EN[k] || k) : (PL_ZH[k] || k);
+  const PL_COLOR = { committed: '#2ee6a6', anticipated: '#ffb02e', proposed: '#8aa4c2' };
+  const ZONE_COLOR = { declared: '#2ee6a6', planned: '#ffb02e', candidate: '#8aa4c2' };
+  const ZONE_ZH = { declared: '已划定', planned: '规划中', candidate: 'ISP 候选' };
+  const ZONE_EN = { declared: 'Declared', planned: 'Planned', candidate: 'ISP candidate' };
+  const zoneStatusName = k => state.lang === 'en' ? (ZONE_EN[k] || k) : (ZONE_ZH[k] || k);
+  const ZONE_PRI = { declared: 0, planned: 1, candidate: 2 };
+  const ZONES_SORTED = ZONES.slice().sort((a, b) => (ZONE_PRI[a.status] - ZONE_PRI[b.status]) || (a.state || '').localeCompare(b.state || ''));
+  const ZONE = {}; ZONES.forEach(z => { ZONE[z.key] = z; });
+  // 坐标 → 所在 REZ（已划定 > 规划 > ISP 候选）
+  function zoneOf(coord) { if (!coord) return null; for (const z of ZONES_SORTED) if (inRing(coord, z.polygon)) return z.key; return null; }
+  const normEn = s => String(s || '').toLowerCase().replace(/\(.*?\)/g, ' ').replace(/\b(the|project|stage|phase|bess|battery energy storage system|battery|wind farm|solar farm|power station|energy storage|farm|hybrid|ltd|pty)\b/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
+  const PROJ_BY_EN = {}; PROJECTS.forEach(p => { const k = normEn(p.en); if (k && !PROJ_BY_EN[k]) PROJ_BY_EN[k] = p; });
+  PIPE.forEach((it, i) => {
+    if (!it.id) it.id = 'pl-' + i;
+    it.codYear = it.cod ? parseInt(String(it.cod).slice(0, 4), 10) : null;
+    if (!it.state) it.state = stateOf(it.coord);
+    it.zone = zoneOf(it.coord);
+    if (!it.projId) { const p = PROJ_BY_EN[normEn(it.en)]; if (p) it.projId = p.id; }
+  });
+  const PIPE_BY_ID = {}; PIPE.forEach(it => { PIPE_BY_ID[it.id] = it; });
+  const PROJ_BY_ID = {}; PROJECTS.forEach(p => { PROJ_BY_ID[p.id] = p; });
+  PROJECTS.forEach(p => { p.zone = zoneOf(p.coord); });
+  // 每个 REZ 内的管线 / 项目汇总（静态，一次算好）
+  const ZONE_STAT = {};
+  ZONES.forEach(z => { ZONE_STAT[z.key] = { committed: 0, anticipated: 0, proposed: 0, n: 0, projects: 0 }; });
+  PIPE.forEach(it => { const st = it.zone && ZONE_STAT[it.zone]; if (st) { st[it.status] = (st[it.status] || 0) + (it.mw || 0); st.n++; } });
+  PROJECTS.forEach(p => { const st = p.zone && ZONE_STAT[p.zone]; if (st) st.projects++; });
   const EPC_STATES = ['未招标', '已授标', '未公开', '不适用'];
   const epcOf = p => p.epcStatus || '无数据';
   const years = PROJECTS.map(p => p.year).filter(y => typeof y === 'number');
@@ -116,7 +167,8 @@
   const state = {
     states: new Set(), cats: new Set(CAT_KEYS), statuses: new Set(), epc: new Set(), epcOnly: false,
     minYear: MIN_YEAR, maxYear: MAX_YEAR, recentOnly: false, q: '',
-    layers: { grid: true, planned: true, nodes: true, coal: true, projects: true, fill: true },
+    layers: { grid: true, planned: true, nodes: true, coal: true, projects: true, fill: true, pipe: true, rez: true },
+    plStatus: new Set(['committed', 'anticipated']), plFuelOff: new Set(),   // 🧭 管线：默认只显示承诺 + 预期（拟建按需打开）
     kvOff: new Set(), lang: 'zh',
     card: null,   // {kind:'project'|'coal'|'state'|'line', id}
   };
@@ -143,6 +195,12 @@
     black: ['烟煤', 'black coal'], brown: ['褐煤', 'brown coal'],
     pCountry: ['所属州', 'State'], pStatus: ['状态', 'Status'], pCap: ['规模 / 容量', 'Capacity'], pInv: ['投资额', 'Investment'], pOwner: ['业主 / 参与方', 'Owner'], pUpd: ['最近动态', 'Updated'], pEpc: ['🔧 EPC / 总承包', '🔧 EPC'], pProg: ['📍 最新进展', '📍 Latest'],
     filters: ['🔍 筛选', '🔍 Filters'], dash: ['📊 看板', '📊 Dashboard'],
+    lgPipe: ['🧭 AEMO 管线', '🧭 AEMO pipeline'], lgRez: ['🌞 REZ 区划', '🌞 REZ zones'],
+    pipeKpi: ['🧭 承诺+预期管线', '🧭 Committed + anticipated'], pipeT: ['🧭 AEMO 管线', '🧭 AEMO pipeline'], pipeHint: ['承诺 / 预期 / 拟建', 'committed / anticipated / proposed'],
+    pipeR: ['🧭 AEMO 管线 · 当前筛选', '🧭 Pipeline · current filter'], zones: ['🌞 可再生能源区 REZ', '🌞 Renewable Energy Zones'],
+    pMw: ['装机', 'Capacity'], pMwh: ['储能', 'Storage'], pCod: ['预期投运 COD', 'Expected COD'], pFuel: ['类型', 'Type'], pConn: ['接入点', 'Connection'], pRez: ['所在 REZ', 'REZ'], pAemo: ['AEMO 状态', 'AEMO status'], pApprox: ['⚠ 示意位置（接入站 / 州质心），待补精确坐标', '⚠ Approximate location (connection node / state centroid)'],
+    zBody: ['规划 / 交付主体', 'Body'], zTarget: ['目标 / 承载容量', 'Target / hosting'], zTimeline: ['🗓️ 时间线', '🗓️ Timeline'], zTx: ['⚡ 配套输电', '⚡ Transmission'], zAccess: ['🎟️ 接入机制', '🎟️ Access scheme'], zPipe: ['🧭 区内管线', '🧭 Pipeline in zone'], zProj: ['📍 区内项目', '📍 Projects in zone'], zApprox: ['边界为示意范围（按公开区划图 / 地名描述勾画）', 'Boundary is approximate (traced from published maps / locality lists)'],
+    inZone: ['区内', 'in zone'], total: ['合计', 'total'], proj: ['项目', 'projects'],
   };
   const L_ = k => (T[k] || [k, k])[state.lang === 'en' ? 1 : 0];
   const en = () => state.lang === 'en';
@@ -200,6 +258,7 @@
 
   // 图层容器（叠放次序：州面 < 走廊 < 节点 < 煤电 < 项目）
   const fillLayer = L.layerGroup().addTo(map);
+  const rezLayer = L.layerGroup().addTo(map);     // 🌞 REZ 面：在走廊之下、州面之上
   const lineLayer = L.layerGroup().addTo(map);
   const nodeLayer = L.layerGroup().addTo(map);
   const coalLayer = L.layerGroup().addTo(map);
@@ -215,6 +274,18 @@
     },
   });
   cluster.addTo(map);
+  // 🧭 管线标记：独立聚合组（菱形），与项目圆点分开聚合
+  const plCluster = L.markerClusterGroup({
+    maxClusterRadius: 34, showCoverageOnHover: false, spiderfyOnMaxZoom: true, disableClusteringAtZoom: 9,
+    iconCreateFunction: function (c) {
+      const ms = c.getAllChildMarkers ? c.getAllChildMarkers() : [];
+      let mw = 0; const cnt = {}; ms.forEach(m => { mw += m._mw || 0; cnt[m._fuel] = (cnt[m._fuel] || 0) + (m._mw || 0); });
+      const top = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0];
+      const col = fuelOf(top).color, n = c.getChildCount ? c.getChildCount() : ms.length, d = n < 10 ? 28 : n < 50 ? 34 : 40;
+      return L.divIcon({ className: 'mk-cluster', iconSize: [d, d], html: '<div class="mkc pl" style="--c:' + col + ';width:' + d + 'px;height:' + d + 'px" title="' + Math.round(mw) + ' MW"><b>' + n + '</b></div>' });
+    },
+  });
+  plCluster.addTo(map);
   map.on('click', () => hideCard());
 
   /* ---------- 州面 ---------- */
@@ -284,6 +355,77 @@
     });
   }
 
+  /* ---------- 🌞 REZ 面 ---------- */
+  const zoneVisible = z => state.layers.rez && (state.states.size === 0 || state.states.has(normState(z.state)));
+  const zoneLabel = z => (z.ispId ? z.ispId + ' · ' : '') + (en() ? (z.en || z.name) : z.name).replace(/\s*[（(].*?[)）]\s*/g, '').slice(0, 18);
+  function renderRez() {
+    rezLayer.clearLayers();
+    const zoom = map.getZoom ? map.getZoom() : 4;
+    ZONES_SORTED.slice().reverse().forEach(z => {   // 候选区先画、已划定后画（在上层）
+      if (!zoneVisible(z)) return;
+      const col = ZONE_COLOR[z.status] || '#8aa4c2';
+      const pg = L.polygon(z.polygon.map(toLatLng), { color: col, weight: z.status === 'declared' ? 1.8 : 1.2, opacity: 0.85, dashArray: z.status === 'planned' ? '6 5' : z.status === 'candidate' ? '2 5' : null, fillColor: col, fillOpacity: z.status === 'declared' ? 0.16 : z.status === 'planned' ? 0.10 : 0.05, className: 'au-rez' });
+      const st = ZONE_STAT[z.key] || {};
+      pg.bindTooltip('<b>' + esc(en() ? (z.en || z.name) : z.name) + '</b><br>' + esc(zoneStatusName(z.status)) + ' · ' + esc(z.body || '') + (z.targetGw ? ' · ' + z.targetGw + ' GW' : '') + '<br><span style="color:#93a4c4">' + L_('zPipe') + ' ' + gw((st.committed || 0) + (st.anticipated || 0)) + ' + ' + gw(st.proposed || 0) + ' ' + plStatusName('proposed') + '</span>', { sticky: true, className: 'au-tip' });
+      pg.on('click', e => { if (L.DomEvent && L.DomEvent.stopPropagation) L.DomEvent.stopPropagation(e); showZone(z.key, { noFly: true }); });
+      pg.addTo(rezLayer);
+      if (zoom >= 5 && z.center) L.marker(toLatLng(z.center), { icon: L.divIcon({ className: 'rez-lab', iconSize: [0, 0], html: '<span style="--c:' + col + '">' + esc(zoneLabel(z)) + '</span>' }), interactive: false }).addTo(rezLayer);
+    });
+  }
+  map.on('zoomend', () => { if (state.layers.rez) renderRez(); });
+
+  /* ---------- 🧭 管线筛选 / 标记 ---------- */
+  const plHay = it => (it._hay || (it._hay = [it.en, it.name, it.owner, it.locality, it.connNode, it.rez, it.tech].join(' ').toLowerCase()));
+  function passPipe(it) {
+    return state.plStatus.has(it.status)
+      && !state.plFuelOff.has(it.fuel)
+      && (state.states.size === 0 || state.states.has(it.state))
+      && (!it.codYear || (it.codYear >= state.minYear && it.codYear <= state.maxYear))
+      && (!state.q || plHay(it).indexOf(state.q.toLowerCase()) >= 0);
+  }
+  const filteredPipe = () => state.layers.pipe ? PIPE.filter(passPipe) : [];
+  const plSize = mw => Math.max(8, Math.min(22, 6 + Math.sqrt(Math.max(mw || 0, 1)) * 0.5));
+  const mwFmt = it => (it.mw ? fmtNum(it.mw) + ' MW' : '') + (it.mwh ? ' / ' + fmtNum(it.mwh) + ' MWh' : '');
+  function renderPipe(items) {
+    plCluster.clearLayers();
+    if (!state.layers.pipe) return;
+    const ms = [];
+    items.forEach(it => {
+      const f = fuelOf(it.fuel), d = Math.round(plSize(it.mw));
+      const m = L.marker(toLatLng(it.coord), { icon: L.divIcon({ className: 'pl-mk', iconSize: [d, d], iconAnchor: [d / 2, d / 2], html: '<i class="' + it.status + (it.approx ? ' approx' : '') + '" style="--c:' + f.color + '"></i>' }), riseOnHover: true });
+      m._mw = it.mw || 0; m._fuel = it.fuel;
+      m.bindTooltip('<b>' + esc(en() ? it.en : it.name) + '</b><br><span style="color:' + f.color + '">' + f.icon + ' ' + esc(en() ? f.en : f.zh) + '</span> · ' + esc(mwFmt(it)) + '<br><span style="color:' + PL_COLOR[it.status] + '">' + esc(plStatusName(it.status)) + '</span>' + (it.cod ? ' · COD ' + esc(it.cod) : '') + (it.owner ? ' · ' + esc(it.owner) : '') + (it.connNode ? '<br><span style="color:#93a4c4">⚡ ' + esc(it.connNode) + '</span>' : ''), { direction: 'top', offset: [0, -d / 2 - 2], className: 'au-tip', sticky: true });
+      m.on('click', () => showPipe(it.id, { noFly: true }));
+      ms.push(m);
+    });
+    if (plCluster.addLayers) plCluster.addLayers(ms);
+  }
+  function renderPipeStats(items) {
+    const bands = $('pipe-bands'), fuelEl = $('pipe-fuel'), list = $('pipe-list'), sum = $('pipe-sum');
+    const mwBy = st => items.filter(i => i.status === st).reduce((s, i) => s + (i.mw || 0), 0);
+    if (bands) bands.innerHTML = PL_STATUS.map((st, i) => '<div class="b' + (i + 1) + '"><b>' + gw(mwBy(st)) + '</b><span>' + esc(plStatusName(st)) + '</span></div>').join('') + '<div class="b4"><b>' + fmtNum(items.length) + '</b><span>' + L_('proj') + '</span></div>';
+    if (bands && bands.classList) bands.classList.add('pipe');
+    if (sum) sum.textContent = (PIPE_ASOF ? 'AEMO ' + PIPE_ASOF + ' · ' : '') + fmtNum(PIPE.length) + (en() ? ' records' : ' 条');
+    if (fuelEl) {
+      const by = {}; items.forEach(i => { by[i.fuel] = (by[i.fuel] || 0) + (i.mw || 0); });
+      const keys = Object.keys(by).sort((a, b) => by[b] - by[a]).slice(0, 7); const max = Math.max.apply(null, keys.map(k => by[k]).concat([1]));
+      fuelEl.innerHTML = keys.map(k => { const f = fuelOf(k); return '<div class="bar-row" data-fuel="' + k + '"><div class="nm">' + f.icon + ' ' + esc(en() ? f.en : f.zh) + '</div><div class="track"><i style="--c:' + f.color + ';--w:' + Math.round(by[k] / max * 100) + '%"></i></div><div class="val">' + gw(by[k]) + '</div></div>'; }).join('') || '<div class="empty">' + L_('noData') + '</div>';
+      fuelEl.querySelectorAll('.bar-row').forEach(r => r.addEventListener('click', () => { const k = r.dataset.fuel; state.plFuelOff = new Set(FUELS.map(f => f.key).filter(x => x !== k)); syncUI(); render(); }));
+    }
+    if (list) {
+      const top = items.slice().sort((a, b) => (PL_STATUS.indexOf(a.status) - PL_STATUS.indexOf(b.status)) || (b.mw || 0) - (a.mw || 0)).slice(0, 10);
+      list.innerHTML = top.map(it => { const f = fuelOf(it.fuel); return '<div class="row" data-plid="' + esc(it.id) + '" role="button" tabindex="0"><div class="nm"><span style="color:' + f.color + '">' + f.icon + '</span> ' + esc(en() ? it.en : it.name) + '</div><div class="cd ' + (it.status === 'committed' ? 'cool' : it.status === 'anticipated' ? 'warm' : 'tbd') + '">' + esc(plStatusName(it.status)) + (it.cod ? ' ' + esc(it.cod) : '') + '</div><div class="meta">' + esc(stShort(it.state)) + ' · ' + esc(mwFmt(it)) + (it.owner ? ' · ' + esc(it.owner) : '') + (it.rez ? ' · ' + esc(it.rez) : '') + '</div></div>'; }).join('') || '<div class="empty">' + (en() ? 'No pipeline items under the current filter' : '当前筛选下没有管线项目') + '</div>';
+      list.querySelectorAll('.row').forEach(r => { r.addEventListener('click', () => showPipe(r.dataset.plid)); r.addEventListener('keydown', e => { if (e.key === 'Enter') showPipe(r.dataset.plid); }); });
+    }
+  }
+  function renderZoneList() {
+    const el = $('zone-list'), sum = $('zone-sum'); if (!el) return;
+    const zs = ZONES_SORTED.filter(z => state.states.size === 0 || state.states.has(normState(z.state)));
+    if (sum) sum.textContent = fmtNum(zs.filter(z => z.status === 'declared').length) + ' ' + zoneStatusName('declared') + ' · ' + fmtNum(zs.length) + (en() ? ' total' : ' 个');
+    el.innerHTML = zs.map(z => { const st = ZONE_STAT[z.key] || {}; const near = (st.committed || 0) + (st.anticipated || 0); return '<div class="row" data-zone="' + esc(z.key) + '" role="button" tabindex="0"><div class="nm"><span style="color:' + ZONE_COLOR[z.status] + '">■</span> ' + (z.ispId ? '<small style="color:#7b8ca6">' + esc(z.ispId) + '</small> ' : '') + esc(en() ? (z.en || z.name) : z.name) + '</div><div class="cd ' + z.status + '">' + esc(zoneStatusName(z.status)) + '</div><div class="meta">' + esc(stShort(normState(z.state))) + ' · ' + esc(z.body || '') + (z.targetGw ? ' · ' + z.targetGw + ' GW' : '') + ' · ' + L_('zPipe') + ' ' + gw(near) + (st.proposed ? ' (+' + gw(st.proposed) + ' ' + plStatusName('proposed') + ')' : '') + '</div></div>'; }).join('') || '<div class="empty">' + L_('noData') + '</div>';
+    el.querySelectorAll('.row').forEach(r => { r.addEventListener('click', () => showZone(r.dataset.zone)); r.addEventListener('keydown', e => { if (e.key === 'Enter') showZone(r.dataset.zone); }); });
+  }
+
   /* ---------- 项目筛选 / 标记 ---------- */
   function pass(p) {
     return state.cats.has(p.cat)
@@ -316,7 +458,7 @@
 
   /* ---------- 统计 / 看板 ---------- */
   const countBy = { state: {}, open: {} };
-  function kpis(items) {
+  function kpis(items, pitems) {
     const base = items.filter(p => p.cat !== 'client'); const ib = base.length ? base : items;
     const inv = ib.reduce((s, p) => s + (p.inv || 0), 0);
     const open = items.filter(p => p.epcStatus === '未招标');
@@ -324,6 +466,7 @@
     const coalMW = coalOperating.filter(p => (state.states.size === 0 || state.states.has(p.state)) && p.closeYear && p.closeYear <= 2035).reduce((s, p) => s + (p.mw || 0), 0);
     const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
     set('kpi-proj', fmtNum(items.length)); set('kpi-inv', '$' + invMag(inv)); set('kpi-open', fmtNum(open.length)); set('kpi-open-inv', '$' + invMag(openInv)); set('kpi-coal', gw(coalMW));
+    const nearMW = (pitems || []).filter(i => i.status !== 'proposed').reduce((s, i) => s + (i.mw || 0), 0); set('kpi-pipe', gw(nearMW));
     return { inv, open, openInv, coalMW };
   }
   function renderStateList() {
@@ -397,6 +540,9 @@
       + '<div class="lg-row"><i class="dash" style="--c:#cfd8ea"></i>' + L_('building') + ' / ' + L_('planned') + '</div>'
       + '<div class="lg-row"><i class="coal" style="--c:#ff5c7a"></i>🏭 ' + (en() ? 'coal · badge = closure year' : '燃煤电厂 · 角标 = 关停年') + '</div>'
       + '<div class="lg-row"><i class="dot" style="--c:#ffb02e"></i>' + (en() ? 'pulsing = EPC pre-tender' : '脉冲圈 = EPC 未招标') + '</div>'
+      + '<div class="lg-row"><i class="dia" style="--c:#21c7ff"></i>' + L_('lgPipe') + ' · ' + esc(plStatusName('committed')) + '</div>'
+      + '<div class="lg-row"><i class="dia hollow" style="--c:#21c7ff"></i>' + esc(plStatusName('proposed')) + '</div>'
+      + '<div class="lg-row"><i class="zone" style="--c:#2ee6a6"></i>REZ ' + esc(zoneStatusName('declared')) + ' <i class="zone" style="--c:#ffb02e;margin-left:6px"></i>' + esc(zoneStatusName('planned')) + '</div>'
       + '<div class="lg-note">' + L_('legendNote') + '</div>';
   }
   function updateCounts(items) {
@@ -405,12 +551,15 @@
     document.querySelectorAll('#cat-list .cat-chip').forEach(c => { const n = c.querySelector('.ct'); if (n) n.textContent = byCat[c.dataset.key] || 0; });
     document.querySelectorAll('#status-chips .chip').forEach(c => { const n = c.querySelector('.ct'); if (n) n.textContent = bySt[c.dataset.status] || 0; });
     document.querySelectorAll('#epc-chips .chip').forEach(c => { const n = c.querySelector('.ct'); if (n) n.textContent = byEpc[c.dataset.epc] || 0; });
+    const byPl = {}; PIPE.forEach(it => { if (!state.plFuelOff.has(it.fuel) && (state.states.size === 0 || state.states.has(it.state))) byPl[it.status] = (byPl[it.status] || 0) + 1; });
+    document.querySelectorAll('#pl-status-chips .chip').forEach(c => { const n = c.querySelector('.ct'); if (n) n.textContent = byPl[c.dataset.pls] || 0; });
   }
 
   function render() {
     const items = filtered();
-    restyleGeo(); renderGrid(); renderCoal(); renderProjects(items);
-    kpis(items); renderCoalList(); renderOpps(items); renderCatBars(items); renderLineList(); updateCounts(items);
+    const pitems = filteredPipe();
+    restyleGeo(); renderRez(); renderGrid(); renderCoal(); renderProjects(items); renderPipe(pitems);
+    kpis(items, pitems); renderCoalList(); renderOpps(items); renderCatBars(items); renderLineList(); renderPipeStats(pitems); renderZoneList(); updateCounts(items);
     writeHash();
   }
 
@@ -423,12 +572,14 @@
     state.card = { kind, id };
     const cl = $('c-close'); if (cl) cl.addEventListener('click', hideCard);
     const sh = $('c-share'); if (sh) sh.addEventListener('click', () => copyLink());
-    cardEl.querySelectorAll('[data-fly]').forEach(b => b.addEventListener('click', () => { const v = b.dataset.fly.split(':'); if (v[0] === 'st') flyToState(v[1]); else if (v[0] === 'll') flyTo([+v[2], +v[1]], +v[3] || 8); else if (v[0] === 'line') flyToLine(v[1]); }));
+    cardEl.querySelectorAll('[data-fly]').forEach(b => b.addEventListener('click', () => { const v = b.dataset.fly.split(':'); if (v[0] === 'st') flyToState(v[1]); else if (v[0] === 'll') flyTo([+v[2], +v[1]], +v[3] || 8); else if (v[0] === 'line') flyToLine(v[1]); else if (v[0] === 'zone') flyToZone(v[1]); }));
     cardEl.querySelectorAll('[data-st-filter]').forEach(b => b.addEventListener('click', () => { state.states = new Set([b.dataset.stFilter]); syncUI(); render(); flyToState(b.dataset.stFilter); }));
     cardEl.querySelectorAll('[data-st-open]').forEach(b => b.addEventListener('click', () => showState(b.dataset.stOpen)));
     cardEl.querySelectorAll('[data-pid]').forEach(b => b.addEventListener('click', () => showDetail(+b.dataset.pid)));
     cardEl.querySelectorAll('[data-coal]').forEach(b => b.addEventListener('click', () => showCoal(+b.dataset.coal)));
     cardEl.querySelectorAll('[data-line]').forEach(b => b.addEventListener('click', () => showLine(b.dataset.line)));
+    cardEl.querySelectorAll('[data-plid]').forEach(b => b.addEventListener('click', () => showPipe(b.dataset.plid)));
+    cardEl.querySelectorAll('[data-zone]').forEach(b => b.addEventListener('click', () => showZone(b.dataset.zone)));
     writeHash();
   }
   const cell = (k, v) => '<div class="d-cell"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
@@ -478,6 +629,44 @@
     openCard(html, 'line', l.id);
     if (!(opts && opts.noFly)) flyToLine(l.id);
   }
+  function showPipe(id, opts) {
+    const it = PIPE_BY_ID[id]; if (!it) return;
+    const f = fuelOf(it.fuel), z = it.zone ? ZONE[it.zone] : null, pj = it.projId ? PROJ_BY_ID[it.projId] : null;
+    const html = head(f.color, f.icon + ' ' + esc(en() ? f.en : f.zh) + ' · ' + esc(stShort(it.state)), esc(en() ? it.en : it.name), esc(en() ? it.name : it.en), '<span class="tag ' + it.status + '">' + esc(plStatusName(it.status)) + '</span>')
+      + '<div class="d-grid">' + cell(L_('pMw'), esc(mwFmt(it) || '—')) + cell(L_('pCod'), esc(it.cod || '—')) + cell(L_('pOwner'), esc(it.owner || '—')) + cell(L_('pAemo'), esc(plStatusName(it.status)) + (it.region ? ' · ' + esc(it.region) : ''))
+      + cell(L_('pConn'), esc(it.connNode || '—')) + cell(L_('pRez'), z ? '<span class="d-link" data-zone="' + esc(z.key) + '">' + esc(en() ? (z.en || z.name) : z.name) + ' ▸</span>' : esc(it.rez || '—')) + '</div>'
+      + (it.approx ? '<div class="d-strip" style="border-color:rgba(255,176,46,0.45);background:rgba(255,176,46,0.08)">' + L_('pApprox') + '</div>' : '')
+      + (it.tech ? '<div class="d-strip"><span class="dp-tag">' + L_('pFuel') + '</span>' + esc(it.tech) + (it.locality ? ' · ' + esc(it.locality) : '') + '</div>' : '')
+      + sec(L_('kNotes'), paras(it.notes)) + sec(L_('kSources'), srcList(it.sources))
+      + '<div class="d-actions"><button data-fly="ll:' + it.coord[0] + ':' + it.coord[1] + ':9">' + L_('fly') + '</button>' + (pj ? '<button data-pid="' + pj.id + '">📍 ' + (en() ? 'Project card' : '项目详情') + '</button>' : '') + '<button data-st-open="' + it.state + '">' + (en() ? '📄 State sheet' : '📄 州档案') + '</button></div>';
+    openCard(html, 'pipe', it.id);
+    if (!(opts && opts.noFly)) flyTo(toLatLng(it.coord), 8);
+  }
+  function showZone(key, opts) {
+    const z = ZONE[key]; if (!z) return;
+    const col = ZONE_COLOR[z.status] || '#8aa4c2', st = ZONE_STAT[z.key] || {};
+    const inPipe = PIPE.filter(it => it.zone === z.key).sort((a, b) => (PL_STATUS.indexOf(a.status) - PL_STATUS.indexOf(b.status)) || (b.mw || 0) - (a.mw || 0));
+    const inProj = PROJECTS.filter(p => p.zone === z.key).sort((a, b) => (b.inv || 0) - (a.inv || 0)).slice(0, 8);
+    const html = head(col, '🌞 ' + esc(zoneStatusName(z.status)) + (z.ispId ? ' · ' + esc(z.ispId) : '') + ' · ' + esc(stShort(normState(z.state))), esc(en() ? (z.en || z.name) : z.name), esc(en() ? z.name : (z.en || '')))
+      + '<div class="kv-pills"><div><b style="color:#bfe9d8">' + gw(st.committed || 0) + '</b><span>' + esc(plStatusName('committed')) + '</span></div><div><b style="color:#ffd48a">' + gw(st.anticipated || 0) + '</b><span>' + esc(plStatusName('anticipated')) + '</span></div><div><b>' + gw(st.proposed || 0) + '</b><span>' + esc(plStatusName('proposed')) + '</span></div><div><b>' + fmtNum(st.projects || 0) + '</b><span>' + L_('zProj') + '</span></div></div>'
+      + '<div class="d-grid">' + cell(L_('zBody'), esc(z.body || '—')) + cell(L_('zTarget'), z.targetGw ? z.targetGw + ' GW' : '—') + '</div>'
+      + sec(L_('zTimeline'), paras(z.timeline)) + sec(L_('zTx'), paras(z.transmission)) + sec(L_('zAccess'), paras(z.access)) + sec(L_('kNotes'), paras(z.notes))
+      + (inPipe.length ? sec(L_('zPipe'), inPipe.slice(0, 12).map(it => { const f = fuelOf(it.fuel); return '<div class="co-row"><span><b class="d-link" data-plid="' + esc(it.id) + '">' + f.icon + ' ' + esc(en() ? it.en : it.name) + '</b><small>' + esc(mwFmt(it)) + (it.cod ? ' · COD ' + esc(it.cod) : '') + (it.owner ? ' · ' + esc(it.owner) : '') + '</small></span><span class="tag ' + it.status + '">' + esc(plStatusName(it.status)) + '</span></div>'; }).join('') + (inPipe.length > 12 ? '<p style="color:#7b8ca6">… +' + (inPipe.length - 12) + '</p>' : '')) : '')
+      + (inProj.length ? sec(L_('zProj'), inProj.map(p => '<div class="co-row"><span><b class="d-link" data-pid="' + p.id + '">' + esc(nm(p)) + '</b><small>' + esc(catShort(p.cat)) + ' · ' + esc(statusName(p.status)) + ' ' + p.year + (p.epcStatus === '未招标' ? ' · 🔧 ' + esc(epcName('未招标')) : '') + '</small></span><span class="amt" style="color:#2ee6a6;font-weight:700;white-space:nowrap">' + usd(p) + '</span></div>').join('')) : '')
+      + sec(L_('kSources'), srcList(z.sources)) + '<div class="d-sec"><p style="color:#7b8ca6;font-size:11px">' + L_('zApprox') + '</p></div>'
+      + '<div class="d-actions"><button data-fly="zone:' + esc(z.key) + '">' + L_('fly') + '</button><button data-st-open="' + normState(z.state) + '">' + (en() ? '📄 State sheet' : '📄 州档案') + '</button></div>';
+    openCard(html, 'zone', z.key);
+    if (!(opts && opts.noFly)) flyToZone(z.key);
+  }
+  function flyToZone(key) { const z = ZONE[key]; if (!z) return; const lats = z.polygon.map(c => c[1]), lngs = z.polygon.map(c => c[0]); flyToBounds([[Math.min.apply(null, lats), Math.min.apply(null, lngs)], [Math.max.apply(null, lats), Math.max.apply(null, lngs)]], { padding: [50, 50], maxZoom: 8 }); }
+  // 州卡片附加段：该州管线分档 + REZ 列表
+  function stateExtra(a) {
+    const ps = PIPE.filter(it => it.state === a); if (!ps.length && !ZONES.some(z => normState(z.state) === a)) return '';
+    const mwBy = st => ps.filter(i => i.status === st).reduce((s, i) => s + (i.mw || 0), 0);
+    const zs = ZONES_SORTED.filter(z => normState(z.state) === a);
+    return sec(L_('pipeT'), '<p>' + PL_STATUS.map(st => '<span class="tag ' + st + '">' + esc(plStatusName(st)) + ' ' + gw(mwBy(st)) + '</span>').join(' ') + '</p>')
+      + (zs.length ? sec(L_('zones'), '<p>' + zs.map(z => '<span class="tag ' + z.status + ' d-link" data-zone="' + esc(z.key) + '">' + (z.ispId ? esc(z.ispId) + ' ' : '') + esc(en() ? (z.en || z.name) : z.name) + '</span>').join(' ') + '</p>') : '');
+  }
   function stateStats(a) {
     const ps = PROJECTS.filter(p => p.auState === a);
     const base = ps.filter(p => p.cat !== 'client'); const ib = base.length ? base : ps;
@@ -503,7 +692,7 @@
         + sec(L_('kPortals'), srcList(sh.tenderPortals)) + sec(L_('kSources'), srcList(sh.sources))
         : '<div class="d-sec"><p>' + L_('sheetMissing') + '</p></div>' + sec(L_('kCoalExit'), coalRows))
       + (top.length ? sec(L_('opps'), top.map(p => '<div class="co-row"><span><b class="d-link" data-pid="' + p.id + '">' + esc(nm(p)) + '</b><small>' + esc(catShort(p.cat)) + ' · ' + esc(statusName(p.status)) + ' ' + p.year + (p.owner ? ' · ' + esc(p.owner) : '') + '</small></span><span class="amt" style="color:#2ee6a6;font-weight:700;white-space:nowrap">' + usd(p) + '</span></div>').join('')) : '');
-    openCard(html, 'state', a);
+    openCard(html + stateExtra(a), 'state', a);
     if (!(opts && opts.noFly)) flyToState(a);
   }
   function flyToState(a) { const b = ST_BOUNDS[normState(a)]; if (b) flyToBounds(b, { padding: [30, 30] }); }
@@ -531,6 +720,17 @@
     el.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => { const s = b.dataset.epc; if (state.epc.has(s)) state.epc.delete(s); else state.epc.add(s); syncUI(); render(); }));
     const ob = $('btn-epc-open'); if (ob) ob.addEventListener('click', () => { state.epcOnly = !state.epcOnly; syncUI(); render(); });
   }
+  function buildPipeChips() {
+    const se = $('pl-status-chips'), fe = $('pl-fuel-chips');
+    if (se) {
+      se.innerHTML = PL_STATUS.map(st => '<button class="chip pls-' + st + (state.plStatus.has(st) ? ' on' : '') + '" data-pls="' + st + '" aria-pressed="' + (state.plStatus.has(st) ? 'true' : 'false') + '"><span class="fi" style="--c:' + PL_COLOR[st] + '"></span>' + esc(plStatusName(st)) + '<span class="ct">0</span></button>').join('');
+      se.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => { const k = b.dataset.pls; if (state.plStatus.has(k)) state.plStatus.delete(k); else state.plStatus.add(k); syncUI(); render(); }));
+    }
+    if (fe) {
+      fe.innerHTML = FUELS.filter(f => f.key !== 'coal').map(f => '<button class="chip' + (state.plFuelOff.has(f.key) ? '' : ' on') + '" data-plf="' + f.key + '" aria-pressed="' + (state.plFuelOff.has(f.key) ? 'false' : 'true') + '"><span class="fi" style="--c:' + f.color + '"></span>' + f.icon + ' ' + esc(en() ? f.en : f.zh) + '</button>').join('');
+      fe.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => { const k = b.dataset.plf; if (state.plFuelOff.has(k)) state.plFuelOff.delete(k); else state.plFuelOff.add(k); syncUI(); render(); }));
+    }
+  }
   function buildKv() {
     const el = $('kv-chips'); if (!el) return;
     el.innerHTML = KV_BANDS.concat([DC]).map(b => '<button class="chip on" data-kv="' + b.key + '" aria-pressed="true"><i style="--c:' + b.color + '"></i>' + b.label + '</button>').join('');
@@ -556,7 +756,8 @@
   function resetState() {
     state.states = new Set(); state.cats = new Set(CAT_KEYS); state.statuses = new Set(); state.epc = new Set(); state.epcOnly = false;
     state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.recentOnly = false; state.q = ''; state.kvOff = new Set();
-    state.layers = { grid: true, planned: true, nodes: true, coal: true, projects: true, fill: true };
+    state.layers = { grid: true, planned: true, nodes: true, coal: true, projects: true, fill: true, pipe: true, rez: true };
+    state.plStatus = new Set(['committed', 'anticipated']); state.plFuelOff = new Set();
     const q = $('q'); if (q) q.value = '';
   }
   // 唯一的「state → 控件视觉」同步点（重置 / 应用 hash / 切语言后都走这里）
@@ -568,6 +769,8 @@
     const ob = $('btn-epc-open'); if (ob) { ob.classList.toggle('on', state.epcOnly); pressed(ob, state.epcOnly); }
     document.querySelectorAll('#kv-chips .chip').forEach(c => { const on = !state.kvOff.has(c.dataset.kv); c.classList.toggle('on', on); c.classList.toggle('off', !on); pressed(c, on); });
     document.querySelectorAll('#layer-chips .chip').forEach(c => { const on = !!state.layers[c.dataset.layer]; c.classList.toggle('on', on); pressed(c, on); });
+    document.querySelectorAll('#pl-status-chips .chip').forEach(c => { const on = state.plStatus.has(c.dataset.pls); c.classList.toggle('on', on); pressed(c, on); });
+    document.querySelectorAll('#pl-fuel-chips .chip').forEach(c => { const on = !state.plFuelOff.has(c.dataset.plf); c.classList.toggle('on', on); pressed(c, on); });
     const preset = state.recentOnly ? 'recent' : (state.minYear > MIN_YEAR ? 'future' : 'all');
     document.querySelectorAll('#year-presets .chip').forEach(c => { const on = c.dataset.preset === preset; c.classList.toggle('on', on); pressed(c, on); });
   }
@@ -576,14 +779,15 @@
     set('t-title', L_('title')); set('t-sub', L_('sub')); set('lab-proj', L_('proj')); set('lab-inv', L_('inv')); set('lab-open', L_('open')); set('lab-open-inv', L_('openInv')); set('lab-coal', L_('coalKpi'));
     set('states-hint', L_('statesHint')); set('t-layers', L_('layers')); set('epc-hint', L_('epcHint')); set('btn-epc-open', L_('epcOpen')); set('t-cats', L_('cats')); set('t-status', L_('status')); set('t-year', L_('year'));
     set('btn-reset', L_('reset')); set('btn-world', L_('world')); set('t-mix', L_('mix')); set('t-lines', L_('lines')); set('fab-filters', L_('filters')); set('fab-dash', L_('dash'));
+    set('lab-pipe', L_('pipeKpi')); set('pipe-hint', L_('pipeHint'));
     const tt = (id, k, keep) => { const el = $(id); if (!el) return; const c = el.querySelector('.count'); el.textContent = L_(k) + ' '; if (keep && c) el.appendChild(c); };
-    tt('t-states', 'states', true); tt('t-epc', 'epc', true); tt('t-coal', 'coal', true); tt('t-opps', 'opps', true);
+    tt('t-states', 'states', true); tt('t-epc', 'epc', true); tt('t-coal', 'coal', true); tt('t-opps', 'opps', true); tt('t-pipe', 'pipeT', true); tt('t-pipe-r', 'pipeR', true); tt('t-zones', 'zones', true);
     const q = $('q'); if (q) q.placeholder = L_('search');
     const lg = $('btn-lang'); if (lg) lg.textContent = en() ? '中' : 'EN';
-    document.querySelectorAll('#layer-chips .chip').forEach(c => { c.textContent = L_({ grid: 'lgGrid', planned: 'lgPlanned', nodes: 'lgNodes', coal: 'lgCoal', projects: 'lgProj', fill: 'lgFill' }[c.dataset.layer]); });
+    document.querySelectorAll('#layer-chips .chip').forEach(c => { c.textContent = L_({ grid: 'lgGrid', planned: 'lgPlanned', nodes: 'lgNodes', coal: 'lgCoal', projects: 'lgProj', fill: 'lgFill', pipe: 'lgPipe', rez: 'lgRez' }[c.dataset.layer]); });
     document.querySelectorAll('#year-presets .chip').forEach(c => { c.textContent = L_({ all: 'all', recent: 'recent', future: 'future' }[c.dataset.preset]); });
-    buildCats(); buildStatus(); buildEpc(); renderStateList(); renderLegend(); syncUI(); render();
-    if (state.card) { const c = state.card; if (c.kind === 'project') showDetail(c.id, { noFly: true }); else if (c.kind === 'coal') showCoal(c.id, { noFly: true }); else if (c.kind === 'state') showState(c.id, { noFly: true }); else if (c.kind === 'line') showLine(c.id, { noFly: true }); }
+    buildCats(); buildStatus(); buildEpc(); buildPipeChips(); renderStateList(); renderLegend(); syncUI(); render();
+    if (state.card) { const c = state.card; if (c.kind === 'project') showDetail(c.id, { noFly: true }); else if (c.kind === 'coal') showCoal(c.id, { noFly: true }); else if (c.kind === 'state') showState(c.id, { noFly: true }); else if (c.kind === 'line') showLine(c.id, { noFly: true }); else if (c.kind === 'pipe') showPipe(c.id, { noFly: true }); else if (c.kind === 'zone') showZone(c.id, { noFly: true }); }
   }
 
   /* ---------- 分享链接 / hash ---------- */
@@ -599,6 +803,9 @@
     if (state.q) p.set('q', state.q);
     const loff = Object.keys(state.layers).filter(k => !state.layers[k]); if (loff.length) p.set('loff', loff.join('~'));
     if (state.kvOff.size) p.set('kvoff', [...state.kvOff].join('~'));
+    const plsDef = state.plStatus.size === 2 && state.plStatus.has('committed') && state.plStatus.has('anticipated');
+    if (!plsDef) p.set('pls', [...state.plStatus].join('~') || '-');
+    if (state.plFuelOff.size) p.set('plf', [...state.plFuelOff].join('~'));
     if (state.lang === 'en') p.set('lang', 'en');
     if (state.card) p.set(state.card.kind, String(state.card.id));
     return p.toString();
@@ -618,8 +825,10 @@
     if (p.has('q')) { state.q = p.get('q'); const q = $('q'); if (q) q.value = state.q; }
     if (p.has('loff')) p.get('loff').split('~').forEach(k => { if (k in state.layers) state.layers[k] = false; });
     if (p.has('kvoff')) state.kvOff = new Set(p.get('kvoff').split('~').filter(Boolean));
+    if (p.has('pls')) state.plStatus = new Set(p.get('pls').split('~').filter(k => PL_STATUS.indexOf(k) >= 0));
+    if (p.has('plf')) state.plFuelOff = new Set(p.get('plf').split('~').filter(Boolean));
     if (p.get('lang') === 'en') state.lang = 'en';
-    const card = ['project', 'coal', 'state', 'line'].find(k => p.has(k));
+    const card = ['project', 'coal', 'state', 'line', 'pipe', 'zone'].find(k => p.has(k));
     return card ? { kind: card, id: card === 'project' || card === 'coal' ? +p.get(card) : p.get(card) } : null;
   }
   function copyLink() {
@@ -635,7 +844,7 @@
   }
 
   /* ---------- 初始化 ---------- */
-  buildGeo(); buildCats(); buildStatus(); buildEpc(); buildKv(); bindStatic(); renderStateList(); renderLegend();
+  buildGeo(); buildCats(); buildStatus(); buildEpc(); buildKv(); buildPipeChips(); bindStatic(); renderStateList(); renderLegend();
   _hashLock = true;
   const pendingCard = applyHash();
   _hashLock = false;
@@ -643,8 +852,8 @@
   if (state.states.size === 1) flyToState([...state.states][0]);
   if (pendingCard) {
     const c = pendingCard;
-    if (c.kind === 'project') showDetail(c.id); else if (c.kind === 'coal') showCoal(c.id); else if (c.kind === 'state') showState(c.id); else if (c.kind === 'line') showLine(c.id);
+    if (c.kind === 'project') showDetail(c.id); else if (c.kind === 'coal') showCoal(c.id); else if (c.kind === 'state') showState(c.id); else if (c.kind === 'line') showLine(c.id); else if (c.kind === 'pipe') showPipe(c.id); else if (c.kind === 'zone') showZone(c.id);
   }
 
-  window.__AU__ = { state, PROJECTS, LINES, NODE, COAL, STATES, render, filtered, stateOf, countdown, showDetail, showCoal, showState, showLine, stateToHash, applyHash, applyLang, resetState, syncUI, kpis, stateStats };
+  window.__AU__ = { state, PROJECTS, LINES, NODE, COAL, STATES, PIPE, ZONES, ZONE_STAT, render, filtered, filteredPipe, stateOf, zoneOf, countdown, showDetail, showCoal, showState, showLine, showPipe, showZone, stateToHash, applyHash, applyLang, resetState, syncUI, kpis, stateStats };
 })();

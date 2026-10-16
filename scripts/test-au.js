@@ -53,7 +53,7 @@ function leafObj() {
   return obj;
 }
 const L = { map: () => leafObj(), tileLayer: () => leafObj(), layerGroup: () => leafObj(), markerClusterGroup: () => leafObj(), divIcon: () => leafObj(), marker: () => leafObj(),
-  polyline: () => leafObj(), geoJSON: () => leafObj(), circleMarker: () => leafObj(), control: { zoom: () => leafObj() }, DomEvent: { stopPropagation() {} } };
+  polyline: () => leafObj(), polygon: () => leafObj(), geoJSON: () => leafObj(), circleMarker: () => leafObj(), control: { zoom: () => leafObj() }, DomEvent: { stopPropagation() {} } };
 
 /* ---------- 注入全局，加载数据链 + au.js ---------- */
 global.window = {};
@@ -74,6 +74,8 @@ try {
   require(J('js/au-states.js'));
   require(J('js/au-grid.js'));
   require(J('js/au-coal.js'));
+  require(J('js/au-pipeline.js'));
+  require(J('js/au-rez.js'));
   require(J('js/au.js'));
 } catch (e) {
   console.error('✘ au.js 初始化抛出异常：\n', e && e.stack || e);
@@ -140,6 +142,33 @@ const SHEETS = global.window.AU_STATES || {};
   ok(s && s.tnsp && s.tnsp.name && Array.isArray(s.dnsps) && s.dnsps.length > 0 && s.vendor && Array.isArray(s.sources) && s.sources.length >= 3, '州档案不完整：' + a);
 });
 
+/* ---------- 断言：🧭 管线 + 🌞 REZ ---------- */
+const PIPE = (global.window.AU_PIPELINE && global.window.AU_PIPELINE.items) || [];
+const ZONES = (global.window.AU_REZ && global.window.AU_REZ.zones) || [];
+const pids = new Set();
+PIPE.forEach(it => {
+  ok(it.id && !pids.has(it.id), '管线 id 缺失或重复：' + it.en); pids.add(it.id);
+  ok(['committed', 'anticipated', 'proposed', 'existing'].indexOf(it.status) >= 0, '管线状态非法：' + it.en + ' ' + it.status);
+  ok(['solar', 'wind', 'offshore_wind', 'battery', 'pumped_hydro', 'hydro', 'gas', 'hydrogen', 'coal', 'other'].indexOf(it.fuel) >= 0, '管线燃料非法：' + it.en + ' ' + it.fuel);
+  ok(typeof it.mw === 'number' && it.mw > 0, '管线缺 MW：' + it.en);
+  ok(inAU(it.coord), '管线坐标不在澳洲范围：' + it.en + ' ' + JSON.stringify(it.coord));
+  ok(['NSW', 'VIC', 'QLD', 'SA', 'WA', 'TAS', 'NT'].indexOf(it.state) >= 0, '管线州代码非法：' + it.en);
+  ok(!it.cod || /^\d{4}(-\d{2})?$/.test(String(it.cod)), '管线 COD 格式应为 YYYY 或 YYYY-MM：' + it.en + ' ' + it.cod);
+});
+const zkeys = new Set();
+ZONES.forEach(z => {
+  ok(z.key && !zkeys.has(z.key), 'REZ key 缺失或重复：' + z.en); zkeys.add(z.key);
+  ok(['declared', 'planned', 'candidate'].indexOf(z.status) >= 0, 'REZ 状态非法：' + z.en);
+  ok(Array.isArray(z.polygon) && z.polygon.length >= 3 && z.polygon.every(inAU), 'REZ 边界不足 3 点或越界：' + z.en);
+  ok(inAU(z.center), 'REZ 中心点越界：' + z.en);
+});
+try { AU.render(); ok(AU.filteredPipe().every(it => it.status !== 'proposed'), '默认管线筛选不含拟建'); } catch (e) { fails.push('filteredPipe() 抛错：' + (e && e.message)); }
+try { AU.state.plStatus = new Set(['committed', 'anticipated', 'proposed']); const f = AU.filteredPipe(); ok(f.length === PIPE.length, '三档全开 = 全部管线（' + f.length + '/' + PIPE.length + '）'); AU.state.plStatus = new Set(['committed', 'anticipated']); } catch (e) { fails.push('plStatus 筛选抛错：' + (e && e.message)); }
+try { if (PIPE.length) AU.showPipe(PIPE[0].id); ok(true, 'showPipe() 不抛错'); } catch (e) { fails.push('showPipe() 抛错：' + (e && e.message)); }
+try { ZONES.forEach(z => AU.showZone(z.key)); ok(true, 'showZone() 不抛错'); } catch (e) { fails.push('showZone() 抛错：' + (e && e.message)); }
+try { ZONES.forEach(z => ok(AU.zoneOf(z.center) != null, 'zoneOf(中心点) 应命中某区：' + z.en)); } catch (e) { fails.push('zoneOf() 抛错：' + (e && e.message)); }
+try { AU.render(); ok(true, 'render() 含管线/REZ 不抛错'); } catch (e) { fails.push('render() 抛错：' + (e && e.message)); }
+
 /* ---------- 汇报 ---------- */
 if (fails.length) { console.error('✘ test-au 失败：\n - ' + fails.join('\n - ')); process.exit(1); }
-console.log('✔ test-au 通过：' + AU.PROJECTS.length + ' 个澳洲项目 · ' + (GRID.nodes || []).length + ' 节点 / ' + (GRID.lines || []).length + ' 走廊 · ' + COAL.length + ' 燃煤机组 · ' + Object.keys(SHEETS).length + ' 州档案');
+console.log('✔ test-au 通过：' + AU.PROJECTS.length + ' 个澳洲项目 · ' + (GRID.nodes || []).length + ' 节点 / ' + (GRID.lines || []).length + ' 走廊 · ' + COAL.length + ' 燃煤机组 · ' + Object.keys(SHEETS).length + ' 州档案 · ' + PIPE.length + ' 管线 · ' + ZONES.length + ' REZ');

@@ -28,6 +28,8 @@ jobs:
         run: node scripts/test-globe.js
       - name: au.js（澳洲电网与能源动态地图）冒烟测试 + 澳洲专属数据完整性
         run: node scripts/test-au.js
+      - name: AEMO 发电信息导入器单元测试（内存 xlsx）
+        run: node scripts/test-import-aemo.js
       - name: 国际大客户 BD 元数据校验
         run: node scripts/test-clients-meta.js
       - name: 国际销售话术陪练 coach.js 初始化冒烟测试

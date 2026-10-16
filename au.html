@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="lib/leaflet.css">
   <link rel="stylesheet" href="lib/MarkerCluster.css">
   <link rel="stylesheet" href="lib/MarkerCluster.Default.css">
-  <link rel="stylesheet" href="css/au.css?v=1">
+  <link rel="stylesheet" href="css/au.css?v=2">
 </head>
 <body>
   <!-- 首屏加载态：底图瓦片到位（或超时）后淡出 -->
@@ -36,7 +36,7 @@
         <div class="logo">🇦🇺</div>
         <div class="brand-text">
           <h1 id="t-title">澳洲电网与能源动态地图</h1>
-          <div class="sub" id="t-sub">输电骨架 · 州与电网公司 · 燃煤退役倒计时 · EPC 未招标窗口期</div>
+          <div class="sub" id="t-sub">输电骨架 · 州与电网公司 · 燃煤退役倒计时 · EPC 窗口期 · AEMO 管线 · REZ</div>
         </div>
       </div>
       <div class="kpis" id="kpis">
@@ -45,6 +45,7 @@
         <div class="kpi"><div class="num warn" id="kpi-open">0</div><div class="lab" id="lab-open">🔧 EPC 未招标</div></div>
         <div class="kpi"><div class="num warn" id="kpi-open-inv">0</div><div class="lab" id="lab-open-inv">未招标投资</div></div>
         <div class="kpi"><div class="num hot" id="kpi-coal">0</div><div class="lab" id="lab-coal">⏳ 2035 前退役煤电</div></div>
+        <div class="kpi"><div class="num pipe" id="kpi-pipe">0</div><div class="lab" id="lab-pipe">🧭 承诺+预期管线</div></div>
       </div>
       <div class="top-actions">
         <button class="tbtn" id="btn-lang" aria-label="中文 / English" title="中文 / English">EN</button>
@@ -69,6 +70,8 @@
             <button class="chip on" data-layer="coal" aria-pressed="true">🏭 燃煤电厂</button>
             <button class="chip on" data-layer="projects" aria-pressed="true">📍 能源项目</button>
             <button class="chip on" data-layer="fill" aria-pressed="true">🗺️ 州界着色</button>
+            <button class="chip on" data-layer="pipe" aria-pressed="true">🧭 AEMO 管线</button>
+            <button class="chip on" data-layer="rez" aria-pressed="true">🌞 REZ 区划</button>
           </div>
           <div class="kv-row" id="kv-chips" role="group" aria-label="电压等级"></div>
         </div>
@@ -76,6 +79,11 @@
           <div class="block-title" id="t-epc">EPC / 总承包状态 <span class="count" id="epc-hint">未招标 = BD 窗口期</span></div>
           <div class="chip-row" id="epc-chips"></div>
           <button class="tgl epc-open-btn" id="btn-epc-open" aria-pressed="false">🔧 只看 EPC 未招标</button>
+        </div>
+        <div class="block">
+          <div class="block-title" id="t-pipe">🧭 AEMO 管线 <span class="count" id="pipe-hint">承诺 / 预期 / 拟建</span></div>
+          <div class="chip-row" id="pl-status-chips"></div>
+          <div class="chip-row" id="pl-fuel-chips" style="margin-top:6px"></div>
         </div>
         <div class="block">
           <div class="block-title" id="t-cats">能源品类</div>
@@ -120,6 +128,16 @@
         <div class="block">
           <div class="block-title" id="t-opps">🔧 EPC 未招标机会榜 <span class="count" id="opps-sum"></span></div>
           <div class="opp-list" id="opp-list"></div>
+        </div>
+        <div class="block">
+          <div class="block-title" id="t-pipe-r">🧭 AEMO 管线 · 当前筛选 <span class="count" id="pipe-sum"></span></div>
+          <div class="coal-bands" id="pipe-bands"></div>
+          <div class="bars" id="pipe-fuel"></div>
+          <div class="opp-list" id="pipe-list" style="margin-top:8px"></div>
+        </div>
+        <div class="block">
+          <div class="block-title" id="t-zones">🌞 可再生能源区 REZ <span class="count" id="zone-sum"></span></div>
+          <div class="line-list" id="zone-list"></div>
         </div>
         <div class="block">
           <div class="block-title" id="t-mix">📊 当前筛选 · 品类投资</div>
@@ -172,7 +190,9 @@
   <script defer src="js/au-states.js"></script>
   <script defer src="js/au-grid.js"></script>
   <script defer src="js/au-coal.js"></script>
-  <script defer src="js/au.js?v=1"></script>
+  <script defer src="js/au-pipeline.js"></script>
+  <script defer src="js/au-rez.js"></script>
+  <script defer src="js/au.js?v=2"></script>
   <!-- PWA：注册 Service Worker（离线 + 重访秒开）。失败静默。 -->
   <script>
     if ('serviceWorker' in navigator) {

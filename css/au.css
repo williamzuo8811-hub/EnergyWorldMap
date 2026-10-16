@@ -40,7 +40,7 @@ button { font-family: inherit; }
 .kpi { text-align: right; }
 .kpi .num { font-size: 19px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
 .kpi .lab { font-size: 10.5px; color: var(--txt-dim); margin-top: 4px; white-space: nowrap; }
-.kpi .num.accent { color: var(--accent); } .kpi .num.good { color: var(--good); } .kpi .num.warn { color: var(--warn); } .kpi .num.hot { color: var(--hot); }
+.kpi .num.accent { color: var(--accent); } .kpi .num.good { color: var(--good); } .kpi .num.warn { color: var(--warn); } .kpi .num.hot { color: var(--hot); } .kpi .num.pipe { color: #c9a7ff; }
 .top-actions { display: flex; gap: 8px; align-items: center; }
 .tbtn { padding: 7px 11px; font-size: 12px; font-weight: 600; color: var(--txt-dim); text-decoration: none; background: var(--panel);
   border: 1px solid var(--border); border-radius: 10px; cursor: pointer; white-space: nowrap; transition: all .15s; }
@@ -253,3 +253,28 @@ button { font-family: inherit; }
   .map-legend { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .au-building, .mk .dot.is-open::after { animation: none; } .card, .panel { transition: none; } }
+
+/* ---------- 🧭 AEMO 管线标记（菱形；承诺实心 / 预期虚线边 / 拟建空心）---------- */
+.pl-mk { background: transparent; border: none; }
+.pl-mk i { display: block; width: 100%; height: 100%; transform: rotate(45deg); background: var(--c); border: 1.5px solid rgba(255,255,255,0.85); box-shadow: 0 0 8px var(--c), 0 0 3px rgba(0,0,0,0.7); cursor: pointer; border-radius: 2px; }
+.pl-mk i.anticipated { border-style: dashed; opacity: .92; }
+.pl-mk i.proposed { background: rgba(10,18,36,0.75); box-shadow: 0 0 6px var(--c); border-color: var(--c); }
+.pl-mk i.approx { outline: 1px dotted rgba(255,255,255,0.5); outline-offset: 2px; }
+.mkc.pl { border-radius: 6px; transform: rotate(45deg); }
+.mkc.pl b { transform: rotate(-45deg); }
+.mkc.pl:hover { transform: rotate(45deg) scale(1.08); }
+.chip .fi { display: inline-block; width: 8px; height: 8px; transform: rotate(45deg); background: var(--c); margin-right: 5px; vertical-align: middle; border-radius: 1px; }
+.chip.pls-committed.on { background: rgba(46,230,166,0.14); border-color: rgba(46,230,166,0.55); }
+.chip.pls-anticipated.on { background: rgba(255,176,46,0.14); border-color: rgba(255,176,46,0.55); }
+.chip.pls-proposed.on { background: rgba(138,164,194,0.16); border-color: rgba(138,164,194,0.55); }
+.coal-bands.pipe .b1 b { color: var(--good); } .coal-bands.pipe .b2 b { color: var(--warn); } .coal-bands.pipe .b3 b { color: #8aa4c2; } .coal-bands.pipe .b4 b { color: #c9a7ff; }
+/* 🌞 REZ 区划 */
+.rez-lab { background: transparent; border: none; pointer-events: none; }
+.rez-lab span { display: inline-block; padding: 2px 7px; border-radius: 7px; font-size: 10.5px; font-weight: 800; letter-spacing: .3px; color: #0a1020; background: var(--c); box-shadow: 0 1px 6px rgba(0,0,0,0.5); white-space: nowrap; transform: translate(-50%, -50%); }
+.leaflet-interactive.au-rez { cursor: pointer; }
+.row .cd.declared { color: #bfe9d8; background: rgba(46,230,166,0.12); } .row .cd.planned { color: #ffd48a; background: rgba(255,176,46,0.14); } .row .cd.candidate { color: var(--txt-dim); background: rgba(138,164,194,0.14); }
+.card .tag.declared { color: #bfe9d8; border-color: rgba(46,230,166,0.4); background: rgba(46,230,166,0.10); } .card .tag.planned { color: #ffd48a; border-color: rgba(255,176,46,0.5); background: rgba(255,176,46,0.12); } .card .tag.candidate { color: var(--txt-dim); }
+.card .tag.committed { color: #bfe9d8; border-color: rgba(46,230,166,0.4); background: rgba(46,230,166,0.10); } .card .tag.anticipated { color: #ffd48a; border-color: rgba(255,176,46,0.5); background: rgba(255,176,46,0.12); } .card .tag.proposed { color: var(--txt-dim); }
+.map-legend .lg-row i.dia { width: 9px; height: 9px; border: 1.5px solid #fff; transform: rotate(45deg); background: var(--c); border-radius: 1px; }
+.map-legend .lg-row i.dia.hollow { background: transparent; border-color: var(--c); }
+.map-legend .lg-row i.zone { width: 16px; height: 10px; border: 1.5px solid var(--c); background: color-mix(in srgb, var(--c) 22%, transparent); border-radius: 2px; }

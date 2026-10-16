@@ -67,6 +67,9 @@ verify in a browser — there is no build step.
   `lib/world-110m.js` under a minimal DOM + `Globe` stub and asserts the IIFE init, the extruded-column
   (`buildPoints`) and cross-border-arc (`buildArcs`) assembly, `render()`, `focusProject()` and the
   region-insight card (`showRegionInsight`/`hideRegionInsight`) run without throwing (no WebGL needed).
+- `node scripts/test-import-aemo.js` — after editing `scripts/import-aemo.js`. Builds a minimal xlsx in memory (ZIP writer +
+  CRC32) and asserts header detection, status filtering, multi-unit merging, fuel / COD normalisation, coordinate memory,
+  node fallback and CSV parsing.
 - `node scripts/test-au.js` — after editing `js/au.js` or any `js/au-*.js` / `lib/au-states.js`. Loads util + the
   data chain + the AU layers + `au.js` under a minimal DOM/Leaflet stub and asserts the IIFE init, `window.__AU__`, ≥98%
   of Australian projects resolve to a state (`stateOf`), `render()` / the four cards / `stateToHash()` / `applyLang()` run
@@ -167,13 +170,35 @@ loads the usual `js/data*.js` + `progress.js` + `pinyin-map.js` + `util.js` chai
   tender portals, sources) rendered by `showState` together with live state KPIs (`stateStats`). Like
   `region-insights.js` these three AU files are **not project data** — they are deliberately named `au-*.js` (not
   `data-*.js`) so `validate-data.js`'s `js/data*.js` glob neither loads them nor demands them in `index.html`; `scripts/test-au.js`
-  checks their integrity instead (node ids resolve, coords inside Australia, operating plants have `closeYear`, 7 sheets).
+  checks their integrity instead (node ids resolve, coords inside Australia, operating plants have `closeYear`, 7 sheets,
+  pipeline status / fuel / COD enums + coords, REZ polygons ≥ 3 vertices inside Australia).
+- **`js/au-pipeline.js`** (`window.AU_PIPELINE = {asOf, source, items}`): the **🧭 AEMO generation / storage pipeline**
+  in AEMO Generation Information terms — `status committed|anticipated|proposed`, `fuel` (solar / wind / offshore_wind /
+  battery / pumped_hydro / hydro / gas / hydrogen / coal / other), `mw/mwh`, `cod` (`YYYY` or `YYYY-MM`), `coord`
+  (`approx:true` = parked on the connection node / state centroid), `connNode`, `rez`, `projId` (link to the main dataset
+  by normalised English name, computed at load if absent). Rendered as **diamond markers** in their own cluster group
+  (solid = committed, dashed = anticipated, hollow = proposed; colour = fuel), filtered by the 🧭 status / fuel chips
+  (`state.plStatus`, default committed + anticipated; `state.plFuelOff`), the state filter, the year presets (via `codYear`)
+  and the search box; right panel shows GW bands / fuel bars / top list; card = `showPipe`. **Refresh path**:
+  `node scripts/import-aemo.js <AEMO Generation Information.xlsx|.csv> [--wem]` — a zero-dep xlsx reader (ZIP +
+  sharedStrings + sheet XML) that finds the header row, maps columns by regex, keeps committed / anticipated / proposed
+  rows, merges multi-unit rows per site, normalises fuel / COD, **remembers coordinates, Chinese names and notes from the
+  previous `au-pipeline.js`** (new sites fall back to the matching `AU_GRID` node or the state centroid with `approx:true`
+  and are listed as 需补坐标) and prints the quarter-on-quarter diff (added / status moved / capacity changed / gone);
+  `scripts/test-import-aemo.js` builds a mini xlsx in memory and asserts the whole path.
+- **`js/au-rez.js`** (`window.AU_REZ = {zones}`): **🌞 Renewable Energy Zones** — `status declared|planned|candidate`
+  (formally declared with an access scheme / in a state plan / AEMO ISP candidate only), `ispId`, `body`, `targetGw`,
+  `timeline/transmission/access/notes` and an **approximate `polygon`** (4–12 vertices traced from published zone maps —
+  the card says 示意范围). Drawn under the corridors (`rezLayer`, fill opacity by status, labels at zoom ≥ 5); `zoneOf(coord)`
+  (ray-cast, declared > planned > candidate) tags every pipeline item and project with its zone at load, feeding
+  `ZONE_STAT` (MW by status + project count per zone), the right-panel REZ list, the zone card (`showZone`: KPIs,
+  timeline, transmission, access, pipeline + projects inside) and the state card's zone chips.
 - **EPC window**: the left panel has EPC-status chips (`state.epc`, incl. 无数据) and a `🔧 只看 EPC 未招标` toggle
   (`state.epcOnly`, same `epcStatus === '未招标'` rule as `app.js`); pre-tender markers pulse orange and the right-panel
   **EPC 未招标机会榜** ranks them by `inv`. Investment KPIs apply the `cat==='client'` exclusion rule.
 - State rows filter (`state.states`, fly-to-bounds from the polygons) and open the sheet; hash carries
-  `st/coff/stt/epc/epcw/yr/recent/q/loff/kvoff/lang` plus one open card (`project=<id>` / `coal=<idx>` / `state=<abbr>` /
-  `line=<id>`); `applyUIFromState`-style sync lives in `syncUI`; EN toggle relabels UI (data prose stays Chinese).
+  `st/coff/stt/epc/epcw/yr/recent/q/loff/kvoff/pls/plf/lang` plus one open card (`project=<id>` / `coal=<idx>` / `state=<abbr>` /
+  `line=<id>` / `pipe=<id>` / `zone=<key>`); `applyUIFromState`-style sync lives in `syncUI`; EN toggle relabels UI (data prose stays Chinese).
 
 ### Sales-pitch sparring (`coach.html` + `js/coach.js` + `js/coach-content.js`)
 
