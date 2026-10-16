@@ -198,7 +198,7 @@
     lgPipe: ['🧭 AEMO 管线', '🧭 AEMO pipeline'], lgRez: ['🌞 REZ 区划', '🌞 REZ zones'],
     pipeKpi: ['🧭 承诺+预期管线', '🧭 Committed + anticipated'], pipeT: ['🧭 AEMO 管线', '🧭 AEMO pipeline'], pipeHint: ['承诺 / 预期 / 拟建', 'committed / anticipated / proposed'],
     pipeR: ['🧭 AEMO 管线 · 当前筛选', '🧭 Pipeline · current filter'], zones: ['🌞 可再生能源区 REZ', '🌞 Renewable Energy Zones'],
-    pMw: ['装机', 'Capacity'], pMwh: ['储能', 'Storage'], pCod: ['预期投运 COD', 'Expected COD'], pFuel: ['类型', 'Type'], pConn: ['接入点', 'Connection'], pRez: ['所在 REZ', 'REZ'], pAemo: ['AEMO 状态', 'AEMO status'], pApprox: ['⚠ 示意位置（接入站 / 州质心），待补精确坐标', '⚠ Approximate location (connection node / state centroid)'],
+    pMw: ['装机', 'Capacity'], pMwh: ['储能', 'Storage'], pCod: ['预期投运 COD', 'Expected COD'], pFuel: ['类型', 'Type'], pConn: ['接入点', 'Connection'], pRez: ['所在 REZ', 'REZ'], pAemo: ['AEMO 状态', 'AEMO status'], pApprox: ['⚠ 示意位置（按所在地 / 邮编 / 接入站 / 州质心放置），待补精确坐标', '⚠ Approximate location (locality / postcode / connection node / state centroid)'], pMix: ['构成', 'Mix'], pSiteMw: ['接入上限', 'site cap'], pTnsp: ['TNSP', 'TNSP'],
     zBody: ['规划 / 交付主体', 'Body'], zTarget: ['目标 / 承载容量', 'Target / hosting'], zTimeline: ['🗓️ 时间线', '🗓️ Timeline'], zTx: ['⚡ 配套输电', '⚡ Transmission'], zAccess: ['🎟️ 接入机制', '🎟️ Access scheme'], zPipe: ['🧭 区内管线', '🧭 Pipeline in zone'], zProj: ['📍 区内项目', '📍 Projects in zone'], zApprox: ['边界为示意范围（按公开区划图 / 地名描述勾画）', 'Boundary is approximate (traced from published maps / locality lists)'],
     inZone: ['区内', 'in zone'], total: ['合计', 'total'], proj: ['项目', 'projects'],
   };
@@ -375,12 +375,13 @@
   map.on('zoomend', () => { if (state.layers.rez) renderRez(); });
 
   /* ---------- 🧭 管线筛选 / 标记 ---------- */
-  const plHay = it => (it._hay || (it._hay = [it.en, it.name, it.owner, it.locality, it.connNode, it.rez, it.tech].join(' ').toLowerCase()));
+  const plHay = it => (it._hay || (it._hay = [it.en, it.name, it.owner, it.locality, it.connNode, it.tnsp, it.kci, it.rez, it.tech].join(' ').toLowerCase()));
   function passPipe(it) {
     return state.plStatus.has(it.status)
       && !state.plFuelOff.has(it.fuel)
       && (state.states.size === 0 || state.states.has(it.state))
-      && (!it.codYear || (it.codYear >= state.minYear && it.codYear <= state.maxYear))
+      // 年份滑块两端为开区间：手柄在最左 / 最右时视为「及更早 / 及以后」，COD 在项目库年份范围之外的管线不会被「全部」误滤掉
+      && (!it.codYear || ((it.codYear >= state.minYear || state.minYear <= MIN_YEAR) && (it.codYear <= state.maxYear || state.maxYear >= MAX_YEAR)))
       && (!state.q || plHay(it).indexOf(state.q.toLowerCase()) >= 0);
   }
   const filteredPipe = () => state.layers.pipe ? PIPE.filter(passPipe) : [];
@@ -633,10 +634,11 @@
     const it = PIPE_BY_ID[id]; if (!it) return;
     const f = fuelOf(it.fuel), z = it.zone ? ZONE[it.zone] : null, pj = it.projId ? PROJ_BY_ID[it.projId] : null;
     const html = head(f.color, f.icon + ' ' + esc(en() ? f.en : f.zh) + ' · ' + esc(stShort(it.state)), esc(en() ? it.en : it.name), esc(en() ? it.name : it.en), '<span class="tag ' + it.status + '">' + esc(plStatusName(it.status)) + '</span>')
-      + '<div class="d-grid">' + cell(L_('pMw'), esc(mwFmt(it) || '—')) + cell(L_('pCod'), esc(it.cod || '—')) + cell(L_('pOwner'), esc(it.owner || '—')) + cell(L_('pAemo'), esc(plStatusName(it.status)) + (it.region ? ' · ' + esc(it.region) : ''))
-      + cell(L_('pConn'), esc(it.connNode || '—')) + cell(L_('pRez'), z ? '<span class="d-link" data-zone="' + esc(z.key) + '">' + esc(en() ? (z.en || z.name) : z.name) + ' ▸</span>' : esc(it.rez || '—')) + '</div>'
+      + '<div class="d-grid">' + cell(L_('pMw'), esc(mwFmt(it) || '—') + (it.siteMw ? ' · ' + L_('pSiteMw') + ' ' + fmtNum(it.siteMw) + ' MW' : '')) + cell(L_('pCod'), esc(it.cod || '—')) + cell(L_('pOwner'), esc(it.owner || '—')) + cell(L_('pAemo'), esc(plStatusName(it.status)) + (it.region ? ' · ' + esc(it.region) : '') + (it.kci ? ' · KCI ' + esc(it.kci) : ''))
+      + cell(L_('pConn'), esc([it.connNode, it.tnsp].filter(Boolean).join(' · ') || '—')) + cell(L_('pRez'), z ? '<span class="d-link" data-zone="' + esc(z.key) + '">' + esc(en() ? (z.en || z.name) : z.name) + ' ▸</span>' : esc(it.rez || '—')) + '</div>'
       + (it.approx ? '<div class="d-strip" style="border-color:rgba(255,176,46,0.45);background:rgba(255,176,46,0.08)">' + L_('pApprox') + '</div>' : '')
       + (it.tech ? '<div class="d-strip"><span class="dp-tag">' + L_('pFuel') + '</span>' + esc(it.tech) + (it.locality ? ' · ' + esc(it.locality) : '') + '</div>' : '')
+      + (it.mix ? '<div class="d-strip"><span class="dp-tag">' + L_('pMix') + '</span>' + Object.keys(it.mix).map(f => { const ff = fuelOf(f); return ff.icon + ' ' + esc(en() ? ff.en : ff.zh) + ' ' + fmtNum(it.mix[f]) + ' MW'; }).join(' + ') + '</div>' : '')
       + sec(L_('kNotes'), paras(it.notes)) + sec(L_('kSources'), srcList(it.sources))
       + '<div class="d-actions"><button data-fly="ll:' + it.coord[0] + ':' + it.coord[1] + ':9">' + L_('fly') + '</button>' + (pj ? '<button data-pid="' + pj.id + '">📍 ' + (en() ? 'Project card' : '项目详情') + '</button>' : '') + '<button data-st-open="' + it.state + '">' + (en() ? '📄 State sheet' : '📄 州档案') + '</button></div>';
     openCard(html, 'pipe', it.id);

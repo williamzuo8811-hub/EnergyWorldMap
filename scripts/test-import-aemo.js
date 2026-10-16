@@ -111,5 +111,104 @@ ok(I.normFuel('Wind', 'Offshore Wind') === 'offshore_wind' && I.normFuel('Hydro'
 ok(I.normCod('15/03/2027') === '2027-03' && I.normCod('2028') === '2028' && I.normCod(2029) === '2029' && I.normCod('') === null, 'normCod');
 ok(I.normKey('Golden Plains Wind Farm Stage 2') === 'golden plains 2' && I.normKey('Orana BESS') === 'orana', 'normKey');
 
+
+/* ---------- 2026 版 "Generator Information" 表头（Commitment Status / Site Owner / Agg Nameplate (MW AC|DC) / Technology Detail / Max Site Capacity / KCI ID）---------- */
+function sheetFromRows(rowsArr) {
+  const cell = (ci, ri, v) => { const ref = String.fromCharCode(65 + ci) + ri; if (v == null || v === '') return ''; return typeof v === 'number' ? '<c r="' + ref + '"><v>' + v + '</v></c>' : '<c r="' + ref + '" t="inlineStr"><is><t>' + String(v).replace(/&/g, '&amp;') + '</t></is></c>'; };
+  return '<?xml version="1.0"?><worksheet xmlns="x"><sheetData>' + rowsArr.map((r, i) => '<row r="' + (i + 1) + '">' + r.map((v, ci) => cell(ci, i + 1, v)).join('') + '</row>').join('') + '</sheetData></worksheet>';
+}
+function workbook1(sheetName, rowsArr) {
+  return zip([['[Content_Types].xml', '<?xml version="1.0"?><Types/>'], ['xl/workbook.xml', '<?xml version="1.0"?><workbook xmlns="x" xmlns:r="r"><sheets><sheet name="' + sheetName + '" sheetId="1" r:id="rId1"/></sheets></workbook>'], ['xl/_rels/workbook.xml.rels', '<?xml version="1.0"?><Relationships xmlns="x"><Relationship Id="rId1" Type="t" Target="worksheets/sheet1.xml"/></Relationships>'], ['xl/worksheets/sheet1.xml', sheetFromRows(rowsArr)]]);
+}
+const H2 = ['AEMO Survey ID', 'Site Name', 'AEMO KCI ID', 'Site Owner', 'Custodian', 'Region', 'Max Site Capacity (AC)', 'Gen Info Unit ID', 'Unit Name', 'Technology Type', 'Technology Detail', 'Gas Turbine Fuel Type', 'DUID', 'Dispatch Type', 'Unit Count', 'Unit Capacity (MW DC)', 'Unit Capacity (MW AC)', 'Agg Nameplate Capacity (MW DC)', 'Agg Nameplate Capacity (MW AC)', 'Agg Nameplate Storage Capacity (MWh)', 'Commitment Status', 'Full Commercial Use Date', 'Expected Closure Year'];
+const R2 = [
+  ['Generator Information'], [], [],
+  H2,
+  // 光储混合场站：两行（Solar PV + Battery），DC ≠ AC，Max Site Capacity 97 < 铭牌合计
+  [1, 'Ardandra Solar Farm And BESS', 'Q00011', 'Ardandra SF Pty Ltd as trustee for Ardandra SF Trust (ABN 12 345 678 901)', '', 'QLD1', 97, 101, 'Ardandra:Solar', 'Solar PV', 'Single Axis Tracking', '', '', 'Semi-scheduled', 1, 129.3, 97, 129.3, 97, '', 'Publicly Announced', 47256, ''],
+  [1, 'Ardandra Solar Farm And BESS', 'Q00011', 'Ardandra SF Pty Ltd as trustee for Ardandra SF Trust (ABN 12 345 678 901)', '', 'QLD1', 97, 102, 'Ardandra:BESS', 'Battery Storage', 'Lithium-ion', '', '', 'Scheduled', 1, 74.9, 74.9, 74.9, 74.9, 150, 'Publicly Announced', 47300, ''],
+  // 海上风电（Technology Detail 决定 offshore）
+  [2, 'Bass Offshore Wind', '', 'Nexsphere Pty Ltd', '', 'TAS1', 500, 201, 'Bass:WTG', 'Wind', 'Offshore - fixed', '', '', 'Semi-scheduled', 50, 500, 500, 500, 500, '', 'Anticipated', '', ''],
+  // Committed* 燃气（Gas Turbine Fuel Type 列）+ KCI N00001
+  [3, 'Kurri Kurri GT', 'N00001', 'Snowy Hydro Limited', '', 'NSW1', 660, 301, 'KK:GT1', 'Gas Turbine', 'OCGT', 'Natural Gas', 'KURRI1', 'Scheduled', 2, '', 330, '', 660, '', 'Committed*', '', ''],
+  // 无 Agg 列值 → Unit Capacity (MW AC) × Unit Count 回退；按场站名定位（Ettamogah）
+  [4, 'Ettamogah Solar Farm', '', 'Some Developer', '', 'NSW1', '', 401, 'Etta:PV', 'Solar PV', 'Fixed', '', '', 'Semi-scheduled', 2, '', 50, '', '', '', 'Publicly Announced', '2028', ''],
+  // In Service / Announced Withdrawal → 剔除
+  [5, 'Old Plant', '', 'X', '', 'VIC1', 100, 501, 'Old:1', 'Coal', 'Black Coal', '', 'OLD1', 'Scheduled', 1, '', 100, '', 100, '', 'In Service', '', 2030],
+  [6, 'Dead Project', '', 'X', '', 'VIC1', 100, 601, 'Dead:1', 'Solar PV', 'Fixed', '', '', '', 1, '', 100, '', 100, '', 'Announced Withdrawal', '', ''],
+  // 主项目库同名（Snowy 2.0）→ projId + 精确坐标
+  [7, 'Snowy 2.0', '', 'Snowy Hydro Limited', '', 'NSW1', 2040, 701, 'S2:PH', 'Hydro', 'Pumped Hydro', '', '', 'Scheduled', 6, '', 340, '', 2040, 350000, 'Committed', 47000, ''],
+];
+let items2 = [];
+try {
+  const wb2 = I.parseWorkbook(workbook1('Generator Information', R2));
+  const r2 = wb2.readSheet(wb2.sheets[0].path);
+  ok(I.findHeader(r2) === 3, '2026 版表头在第 4 行（index 3），实际 ' + I.findHeader(r2));
+  const idx2 = I.mapColumns(r2[3]);
+  ok(idx2.mw === 18 && idx2.mwDc === 17 && idx2.status === 20 && idx2.owner === 3 && idx2.siteMw === 6 && idx2.kci === 2 && idx2.techDetail === 10 && idx2.mwh === 19 && idx2.cod === 21, '2026 版列映射：mw=AC 列(18) 而非 DC(17)、Commitment Status、Site Owner、Max Site Capacity、KCI ID；实际 ' + JSON.stringify(idx2));
+  items2 = I.convertRows(r2, {});
+  ok(true, 'convertRows(2026 版) 不抛错');
+} catch (e) { fails.push('2026 版解析抛错：' + (e && e.message)); }
+const by2 = {}; items2.forEach(it => { by2[it.en] = it; });
+ok(items2.length === 5, '2026 版保留 5 条（剔除 In Service / Announced Withdrawal），实际 ' + items2.length + '：' + items2.map(i => i.en).join(', '));
+const ard = by2['Ardandra Solar Farm And BESS'];
+ok(ard && ard.mw === 171.9 && ard.mwh === 150 && ard.siteMw === 97 && ard.status === 'proposed', '光储场站：mw=交流铭牌合计 171.9（非 DC）、mwh 150、siteMw=Max Site Capacity 97、Publicly Announced→proposed；实际 ' + JSON.stringify(ard && { mw: ard.mw, mwh: ard.mwh, siteMw: ard.siteMw, status: ard.status }));
+ok(ard && ard.fuel === 'solar' && ard.mix && ard.mix.solar === 97 && ard.mix.battery === 74.9, '主燃料 = MW 最大者（solar）+ mix 构成；实际 ' + JSON.stringify(ard && { fuel: ard.fuel, mix: ard.mix }));
+ok(ard && ard.kci === 'Q00011' && ard.owner === 'Ardandra SF Pty Ltd' && ard.tech === 'Solar PV · Single Axis Tracking + Battery Storage · Lithium-ion' && ard.state === 'QLD', 'KCI ID / 业主去受托尾巴 / tech 串 / 州；实际 ' + JSON.stringify(ard && { kci: ard.kci, owner: ard.owner, tech: ard.tech, state: ard.state }));
+ok(ard && ard.cod === I.normCod(47256), 'COD 取两行里最早的序列日期');
+ok(by2['Bass Offshore Wind'] && by2['Bass Offshore Wind'].fuel === 'offshore_wind' && by2['Bass Offshore Wind'].status === 'anticipated' && by2['Bass Offshore Wind'].state === 'TAS', 'Technology Detail "Offshore - fixed" → offshore_wind');
+ok(by2['Kurri Kurri GT'] && by2['Kurri Kurri GT'].fuel === 'gas' && by2['Kurri Kurri GT'].status === 'committed' && by2['Kurri Kurri GT'].mw === 660 && by2['Kurri Kurri GT'].kci === 'N00001', 'Committed* + Gas Turbine Fuel Type → gas / committed');
+ok(by2['Ettamogah Solar Farm'] && by2['Ettamogah Solar Farm'].mw === 100, '无 Agg 列 → Unit Capacity (MW AC) × Unit Count = 100；实际 ' + (by2['Ettamogah Solar Farm'] || {}).mw);
+ok(by2['Snowy 2.0'] && by2['Snowy 2.0'].fuel === 'pumped_hydro' && by2['Snowy 2.0'].mwh === 350000, 'Hydro · Pumped Hydro → pumped_hydro');
+
+/* ---------- 地名定位 geocode ---------- */
+const gaz = I.parseGazetteer('# comment\nlocality,state,postcode,lng,lat\nARMIDALE,NSW,2350,151.6655,-30.5116\nETTAMOGAH,NSW,2640,147.0265,-36.0162\nAUSTRALIA PLAINS,SA,5374,139.1,-34.1\nBOWER,SA,5374,139.3,-34.1\nTORRENS ISLAND,SA,5960,138.53,-34.8\nKERI KERI,NSW,2711,143.98,-34.77\nWOLLAR,NSW,2850,149.95,-32.35\n');
+const G = (t, s) => { const r = I.geocode(t, s, gaz, [{ en: 'Wollar', coord: [149.9, -32.3] }]); return r && (r.label + '@' + r.coord.join(',') + '#' + r.how); };
+ok(G('5km east of Armidale, NSW', 'NSW') === 'Armidale@151.6655,-30.5116#locality', '"5km east of Armidale, NSW" → Armidale；实际 ' + G('5km east of Armidale, NSW', 'NSW'));
+ok(G('Hub Road, Ettamogah NSW 2640', 'NSW') === 'Ettamogah@147.0265,-36.0162#locality', '街道地址 → Ettamogah；实际 ' + G('Hub Road, Ettamogah NSW 2640', 'NSW'));
+ok(G('Lot 315 Bower Road, Lot 309 Emmaus Road, Australia Plains, SA', 'SA') === 'Australia Plains@139.1,-34.1#locality', '最长地名短语优先（Australia Plains > Bower）；实际 ' + G('Lot 315 Bower Road, Lot 309 Emmaus Road, Australia Plains, SA', 'SA'));
+ok(G('North East of Torrens Island B Station Switchyard', 'SA') === 'Torrens Island@138.53,-34.8#locality', '"North East of Torrens Island …" → Torrens Island；实际 ' + G('North East of Torrens Island B Station Switchyard', 'SA'));
+ok(G('12km East of Keri Keri town', 'NSW') === 'Keri Keri@143.98,-34.77#locality', '"12km East of Keri Keri town" → Keri Keri；实际 ' + G('12km East of Keri Keri town', 'NSW'));
+ok(G('Approx 2.5 km away from the Wollar 500/330 kV Substation', 'NSW') === 'Wollar@149.95,-32.35#locality', '变电站描述 → Wollar 地名；实际 ' + G('Approx 2.5 km away from the Wollar 500/330 kV Substation', 'NSW'));
+ok(G('Windfarm located offshore in Bass Strait, landing point TBC', 'TAS') == null, '海上描述无地名 → null');
+ok((G('Somewhere unknown NSW 2350', 'NSW') || '').indexOf('#postcode') > 0, '无地名时按邮编质心回退；实际 ' + G('Somewhere unknown NSW 2350', 'NSW'));
+ok(G('Armidale', 'VIC') == null, '地名限定在所属州（Armidale 不在 VIC）');
+ok(G('East of Wollar substation', 'VIC') === 'Wollar@149.9,-32.3#node', '州内无地名时按接入站名回退');
+
+/* ---------- 场站名 → 地名 / 中文名 ---------- */
+ok(I.stripTypeWords('Argoon Wind Farm (RES Group) - KCI') === 'Argoon' && I.stripTypeWords('Abermain BESS') === 'Abermain' && I.stripTypeWords('Baldon Wind Farm Stage 2 - BESS') === 'Baldon', 'stripTypeWords：' + [I.stripTypeWords('Argoon Wind Farm (RES Group) - KCI'), I.stripTypeWords('Abermain BESS'), I.stripTypeWords('Baldon Wind Farm Stage 2 - BESS')].join(' | '));
+ok(I.zhName('Abermain BESS', 'battery') === 'Abermain 储能电站' && I.zhName('Argoon Wind Farm (RES Group) - KCI', 'wind') === 'Argoon 风电场' && I.zhName('Ardandra Solar Farm And BESS', 'solar', { solar: 97, battery: 74.9 }) === 'Ardandra 光储项目' && I.zhName('Baldon Wind Farm Stage 2', 'wind') === 'Baldon 风电场二期' && I.zhName('Bass Offshore Wind', 'offshore_wind') === 'Bass 海上风电', 'zhName：' + [I.zhName('Abermain BESS', 'battery'), I.zhName('Argoon Wind Farm (RES Group) - KCI', 'wind'), I.zhName('Ardandra Solar Farm And BESS', 'solar', { solar: 97, battery: 74.9 }), I.zhName('Baldon Wind Farm Stage 2', 'wind'), I.zhName('Bass Offshore Wind', 'offshore_wind')].join(' | '));
+ok(I.cleanOwner('Equis Energy (Australia) Projects (Ngumi 4) Pty Ltd as trustee for the Equis Energy Ngumi 4 Holding Trust (ABN 14 157 167 633)') === 'Equis Energy (Australia) Projects (Ngumi 4) Pty Ltd' && I.cleanOwner('  ACENergy Pty Ltd ') === 'ACENergy Pty Ltd', 'cleanOwner 去受托 / ABN 尾巴');
+
+/* ---------- KCI 汇编表 + enrich（KCI 位置 → 坐标；按名定位；aemo 别名；非本表州保留）---------- */
+const KR = [
+  ['Key Connection Information (KCI)'], ['Connection Enquiry / Application'],
+  ['TNSP Name', 'KCI datafile compilation date time stamp', 'TNSP Connection Enquiry / Application ID', 'Site Name', 'Site Location Description', 'Region to be supplied', 'AEMO KCI ID'],
+  ['TransGrid', 201912201146, 'TGCE201218', 'Kurri Kurri Gas Project', 'Loxford', 'NSW1', 'N00001'],
+  ['TransGrid', 202109161600, 'TGCE21091616009', 'Kurri Kurri GT', '5km east of Armidale, NSW', 'NSW1', 'N00001'],
+  ['Powerlink', 202301010000, 'PLQ1', 'Ardandra Solar Farm And BESS', 'n/a', 'QLD1', 'Q00011'],
+];
+let kciMap = {};
+try { kciMap = I.parseKci(I.parseWorkbook(workbook1('Q2 2026 KCI', KR))); ok(true, 'parseKci 不抛错'); } catch (e) { fails.push('parseKci 抛错：' + (e && e.message)); }
+ok(kciMap.N00001 && kciMap.N00001.locs[0] === '5km east of Armidale, NSW' && kciMap.N00001.locs.length === 2 && kciMap.N00001.tnsp === 'TransGrid' && kciMap.N00001.sites.length === 2, 'KCI：最新时间戳的位置描述排最前、TNSP、两个场站名；实际 ' + JSON.stringify(kciMap.N00001));
+ok(kciMap.Q00011 && kciMap.Q00011.locs.length === 0, 'KCI：n/a 位置描述被丢弃');
+const prev2 = [
+  { id: 'pl-tas-001', en: 'Bass Strait Offshore Wind (old name)', aemo: 'Bass Offshore Wind', name: '巴斯海上风电', status: 'proposed', mw: 500, coord: [146.5, -39.8], notes: '旧版备注' },
+  { id: 'pl-wa-001', en: 'Muchea BESS', name: 'Muchea 储能电站', state: 'WA', region: 'SWIS', fuel: 'battery', mw: 164, status: 'committed', coord: [115.95, -31.6] },
+];
+const main2 = I.loadMainProjects(path.join(__dirname, '..', 'js'));
+ok(main2.length >= 100 && main2.every(p => Array.isArray(p.coord) && p.en), '主项目库：≥100 个带坐标的澳洲项目（实际 ' + main2.length + '）');
+const { needCoord: nc2, removed: rm2, kept: kp2, geo: geo2 } = I.enrich(items2, prev2, [{ en: 'Wollar', coord: [149.9, -32.3] }], { gaz, kci: kciMap, main: main2 });
+const kk = by2['Kurri Kurri GT'], et = by2['Ettamogah Solar Farm'], bs = by2['Bass Offshore Wind'], sn = by2['Snowy 2.0'];
+ok(kk.coord[0] === 151.6655 && kk.approx === true && kk.locality === '5km east of Armidale, NSW' && kk.tnsp === 'TransGrid', 'KCI 位置描述 → Armidale 坐标 + approx + locality + tnsp；实际 ' + JSON.stringify({ coord: kk.coord, approx: kk.approx, locality: kk.locality, tnsp: kk.tnsp }));
+ok(et.coord[0] === 147.0265 && et.approx === true && et.locality === 'Ettamogah' && et.name === 'Ettamogah 光伏电站', '按场站名定位 → Ettamogah + 自动中文名；实际 ' + JSON.stringify({ coord: et.coord, locality: et.locality, name: et.name }));
+ok(bs.id === 'pl-tas-001' && bs.name === '巴斯海上风电' && bs.coord[0] === 146.5 && bs.notes === '旧版备注' && bs.status === 'anticipated', 'aemo 别名匹配上一版（状态变化仍沿用 id / 中文名 / 坐标 / 备注）；实际 ' + JSON.stringify({ id: bs.id, name: bs.name, coord: bs.coord, status: bs.status }));
+const snowyMain = main2.find(p => /^snowy 2\.0/i.test(p.en));
+ok(!snowyMain || (sn.projId === snowyMain.id && !sn.approx && sn.coord[0] === snowyMain.coord[0] && sn.name === snowyMain.name), '主项目库同名 → projId + 精确坐标 + 中文名；实际 ' + JSON.stringify({ projId: sn.projId, approx: sn.approx, name: sn.name }));
+ok(kp2.length === 1 && kp2[0].id === 'pl-wa-001' && items2.some(i => i.id === 'pl-wa-001') && rm2.length === 0, '导 NEM 时 WA 条目原样保留、不计入移除；实际 kept=' + kp2.length + ' removed=' + rm2.length);
+ok(ard.approx === true && ard.coord[0] === 145.0 && nc2.some(i => i.en === 'Ardandra Solar Farm And BESS'), '无 KCI 位置、名字不是地名 → 州质心 + 需补坐标清单');
+ok(geo2.kci === 1 && geo2.name === 1 && geo2.centroid === 1 && geo2.memory === 1, '定位统计：kci 1 / name 1 / centroid 1 / memory 1；实际 ' + JSON.stringify(geo2));
+const ids2 = items2.map(i => i.id); ok(new Set(ids2).size === ids2.length, '2026 版 id 唯一：' + ids2.join(','));
+
 if (fails.length) { console.error('✘ test-import-aemo 失败：\n - ' + fails.join('\n - ')); process.exit(1); }
-console.log('✔ test-import-aemo 通过：xlsx 解析 / 状态过滤 / 多机组合并 / 燃料·COD 归一 / 坐标记忆 / CSV');
+console.log('✔ test-import-aemo 通过：xlsx 解析 / 状态过滤 / 多机组合并 / 燃料·COD 归一 / 坐标记忆 / CSV / 2026 版表头 / KCI / 地名定位 / 中文名');

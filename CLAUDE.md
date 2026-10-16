@@ -67,9 +67,11 @@ verify in a browser — there is no build step.
   `lib/world-110m.js` under a minimal DOM + `Globe` stub and asserts the IIFE init, the extruded-column
   (`buildPoints`) and cross-border-arc (`buildArcs`) assembly, `render()`, `focusProject()` and the
   region-insight card (`showRegionInsight`/`hideRegionInsight`) run without throwing (no WebGL needed).
-- `node scripts/test-import-aemo.js` — after editing `scripts/import-aemo.js`. Builds a minimal xlsx in memory (ZIP writer +
-  CRC32) and asserts header detection, status filtering, multi-unit merging, fuel / COD normalisation, coordinate memory,
-  node fallback and CSV parsing.
+- `node scripts/test-import-aemo.js` — after editing `scripts/import-aemo.js`. Builds minimal xlsx workbooks in memory (ZIP writer +
+  CRC32; old layout, the 2026 "Generator Information" layout and a KCI sheet) and asserts header detection / prioritised column
+  mapping (MW AC over DC), status filtering, multi-unit merging + `mix`/`siteMw`, fuel / COD normalisation, owner cleaning,
+  KCI parsing, gazetteer geocoding (`geocode`), 中文名 generation (`zhName`), coordinate memory + `aemo` aliases, node /
+  centroid fallback, other-market retention and CSV parsing.
 - `node scripts/test-au.js` — after editing `js/au.js` or any `js/au-*.js` / `lib/au-states.js`. Loads util + the
   data chain + the AU layers + `au.js` under a minimal DOM/Leaflet stub and asserts the IIFE init, `window.__AU__`, ≥98%
   of Australian projects resolve to a state (`stateOf`), `render()` / the four cards / `stateToHash()` / `applyLang()` run
@@ -175,18 +177,33 @@ loads the usual `js/data*.js` + `progress.js` + `pinyin-map.js` + `util.js` chai
   pipeline status / fuel / COD enums + coords, REZ polygons ≥ 3 vertices inside Australia).
 - **`js/au-pipeline.js`** (`window.AU_PIPELINE = {asOf, source, items}`): the **🧭 AEMO generation / storage pipeline**
   in AEMO Generation Information terms — `status committed|anticipated|proposed`, `fuel` (solar / wind / offshore_wind /
-  battery / pumped_hydro / hydro / gas / hydrogen / coal / other), `mw/mwh`, `cod` (`YYYY` or `YYYY-MM`), `coord`
-  (`approx:true` = parked on the connection node / state centroid), `connNode`, `rez`, `projId` (link to the main dataset
-  by normalised English name, computed at load if absent). Rendered as **diamond markers** in their own cluster group
+  battery / pumped_hydro / hydro / gas / hydrogen / coal / other; = the technology with the most MW), `mix` (per-fuel MW AC
+  for multi-technology sites), `tech` (AEMO Technology Type · Detail), `mw` (sum of AEMO's Agg Nameplate MW **AC**), `siteMw`
+  (AEMO Max Site Capacity = connection cap, only when it differs), `mwh`, `cod` (`YYYY` or `YYYY-MM`), `coord`
+  (`approx:true` = placed on the locality / postcode / connection node / state centroid), `locality` (KCI Site Location
+  Description or the gazetteer hit), `connNode`, `tnsp` (from KCI), `rez`, `kci` (AEMO KCI ID), `projId` (link to the main
+  dataset by normalised English name, computed at load if absent). The current file is the **AEMO NEM Generation Information
+  April 2026 release** (~900 sites: committed 54 · anticipated 82 · proposed ~770, plus 18 hand-curated WA/SWIS items that the NEM
+  workbook does not cover — `asOf: '2026-04'`); ~130 items keep hand-written 中文 notes from the earlier research pass.
+  Rendered as **diamond markers** in their own cluster group
   (solid = committed, dashed = anticipated, hollow = proposed; colour = fuel), filtered by the 🧭 status / fuel chips
   (`state.plStatus`, default committed + anticipated; `state.plFuelOff`), the state filter, the year presets (via `codYear`)
-  and the search box; right panel shows GW bands / fuel bars / top list; card = `showPipe`. **Refresh path**:
-  `node scripts/import-aemo.js <AEMO Generation Information.xlsx|.csv> [--wem]` — a zero-dep xlsx reader (ZIP +
-  sharedStrings + sheet XML) that finds the header row, maps columns by regex, keeps committed / anticipated / proposed
-  rows, merges multi-unit rows per site, normalises fuel / COD, **remembers coordinates, Chinese names and notes from the
-  previous `au-pipeline.js`** (new sites fall back to the matching `AU_GRID` node or the state centroid with `approx:true`
-  and are listed as 需补坐标) and prints the quarter-on-quarter diff (added / status moved / capacity changed / gone);
-  `scripts/test-import-aemo.js` builds a mini xlsx in memory and asserts the whole path.
+  and the search box; right panel shows GW bands / fuel bars / top list; card = `showPipe` (shows mix / 接入上限 / TNSP / KCI).
+  **Refresh path** (aemo.com.au is not reachable from the Claude cloud container — download the workbooks locally and run):
+  `node scripts/import-aemo.js <NEM Generation Information.xlsx|.csv> [--kci <KCI compiled.xlsx>] [--wem] [--asof YYYY-MM] [--dry]`
+  — a zero-dep xlsx reader (ZIP + sharedStrings + sheet XML) that finds the header row, maps columns by prioritised regexes
+  (handles the 2026 "Generator Information" layout: Commitment Status / Site Owner / Agg Nameplate Capacity (MW AC) over DC /
+  Technology Detail / Max Site Capacity / AEMO KCI ID, and the older Unit Status / Nameplate Capacity (MW) layout), keeps
+  committed / anticipated / proposed rows (drops In Service / Announced Withdrawal / <5 MW placeholders), merges multi-unit rows
+  per site + status, normalises fuel / COD, strips trustee / ABN tails from owners, **remembers coordinates, Chinese names and
+  notes from the previous `au-pipeline.js`** (match by normalised name + status; a renamed site is kept by adding
+  `aemo:"<AEMO Site Name>"` to the old item), links the main dataset's Australian projects (exact coord + `projId` + 中文名),
+  then geocodes new sites: KCI location text / the site name → `scripts/data/au-localities.csv` (18k Australian localities
+  with centroids, slimmed from matthewproctor/australianpostcodes; `--gazetteer` / `--no-gazetteer`) → postcode centroid →
+  `AU_GRID` node → offshore-wind zone / state centroid (listed as 需补坐标); auto-generates 中文名 ("地名 + 光伏电站 / 风电场 /
+  储能电站 / 光储项目 … + 期数") for new sites; keeps the other market's items untouched (WA when importing NEM, east coast when
+  `--wem`); prints the quarter-on-quarter diff (added / status moved / capacity changed / gone / 需补坐标).
+  `scripts/test-import-aemo.js` builds mini xlsx workbooks (old + 2026 layout + KCI) in memory and asserts the whole path.
 - **`js/au-rez.js`** (`window.AU_REZ = {zones}`): **🌞 Renewable Energy Zones** — `status declared|planned|candidate`
   (formally declared with an access scheme / in a state plan / AEMO ISP candidate only), `ispId`, `body`, `targetGw`,
   `timeline/transmission/access/notes` and an **approximate `polygon`** (4–12 vertices traced from published zone maps —

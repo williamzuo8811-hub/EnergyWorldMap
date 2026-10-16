@@ -145,7 +145,9 @@ const SHEETS = global.window.AU_STATES || {};
 /* ---------- 断言：🧭 管线 + 🌞 REZ ---------- */
 const PIPE = (global.window.AU_PIPELINE && global.window.AU_PIPELINE.items) || [];
 const ZONES = (global.window.AU_REZ && global.window.AU_REZ.zones) || [];
-ok(PIPE.length >= 100, '管线 ≥100 条（实际 ' + PIPE.length + '）');
+ok(PIPE.length >= 500, '管线 ≥500 条（实际 ' + PIPE.length + '）');
+ok(/^\d{4}-\d{2}$/.test(String(global.window.AU_PIPELINE && global.window.AU_PIPELINE.asOf)), '管线 asOf 应为 YYYY-MM');
+ok(PIPE.filter(it => it.status === 'committed').length >= 40 && PIPE.filter(it => it.status === 'anticipated').length >= 40 && PIPE.filter(it => it.status === 'proposed').length >= 300, '管线三档各有足够条目');
 ok(ZONES.length >= 40, 'REZ ≥40 个（实际 ' + ZONES.length + '）');
 const pids = new Set();
 PIPE.forEach(it => {
@@ -156,7 +158,12 @@ PIPE.forEach(it => {
   ok(inAU(it.coord), '管线坐标不在澳洲范围：' + it.en + ' ' + JSON.stringify(it.coord));
   ok(['NSW', 'VIC', 'QLD', 'SA', 'WA', 'TAS', 'NT'].indexOf(it.state) >= 0, '管线州代码非法：' + it.en);
   ok(!it.cod || /^\d{4}(-\d{2})?$/.test(String(it.cod)), '管线 COD 格式应为 YYYY 或 YYYY-MM：' + it.en + ' ' + it.cod);
+  ok(!it.mix || (Object.keys(it.mix).length > 1 && Math.abs(Object.keys(it.mix).reduce((a, k) => a + it.mix[k], 0) - it.mw) < 1), '管线 mix 构成应 ≥2 种燃料且合计 = mw：' + it.en);
+  ok(!it.siteMw || (typeof it.siteMw === 'number' && it.siteMw > 0), '管线 siteMw 应为正数：' + it.en);
+  ok(!it.mwh || (typeof it.mwh === 'number' && it.mwh > 0), '管线 mwh 应为正数：' + it.en);
+  ok(it.name && it.en && /[\u4e00-\u9fff]/.test(it.name), '管线中文名缺失：' + it.en);
 });
+ok(PIPE.filter(it => !it.approx).length >= 100, '至少 100 条管线有精确坐标（实际 ' + PIPE.filter(it => !it.approx).length + '）');
 const zkeys = new Set();
 ZONES.forEach(z => {
   ok(z.key && !zkeys.has(z.key), 'REZ key 缺失或重复：' + z.en); zkeys.add(z.key);
