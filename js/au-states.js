@@ -260,7 +260,7 @@ window.AU_STATES = {
         "hq": "Melbourne（40 Market Street，与 Powercor / United Energy 共用）",
         "owner": "Victoria Power Networks：CK Infrastructure / Power Assets（长江基建系）51% + KKR–OTPP–PSP 财团（原 Spark Infrastructure，2021 年私有化）49%",
         "voltages": "66/22/11/6.6 kV（CBD 以地下电缆为主）",
-        "notes": "约 35 万用户、负荷密度全澳最高，与 Powercor、United Energy 共用管理层、技术标准库与自有施工公司 Beon Energy Solutions。2026–31 EDPR 终案 2026-04 发布（待核）。资本开支主题：CBD 高层与数据中心/商业负荷增长（Fishermans Bend 城市更新新建区域变电站、Docklands 与 CBD 北区增容）、6.6 kV 向 11/22 kV 升压改造、地下电缆与开关站到寿更新、Brunswick 等终端站配套 66 kV 扩容、EV 与公共充电、社区电池。设备准入：CitiPower/Powercor/UE 三网统一的 Technical Standards 与核准材料/设备清单，新产品经产品评估（AS/IEC 型式试验 + 现场试用）后进入清单，第三方承包商（Registered Electrical Contractor / 认可施工方）只能用清单设备；主变长期由本地 Wilson Transformer 等框架供货。"
+        "notes": "约 35 万用户、负荷密度全澳最高，与 Powercor、United Energy 共用管理层、技术标准库与自有施工公司 Beon Energy Solutions。2026–31 EDPR 终案 AER 2026-04-30 发布（核定收入约 A$20.39 亿）。资本开支主题：CBD 高层与数据中心/商业负荷增长（Fishermans Bend 城市更新新建区域变电站、Docklands 与 CBD 北区增容）、6.6 kV 向 11/22 kV 升压改造、地下电缆与开关站到寿更新、Brunswick 等终端站配套 66 kV 扩容、EV 与公共充电、社区电池。设备准入：CitiPower/Powercor/UE 三网统一的 Technical Standards 与核准材料/设备清单，新产品经产品评估（AS/IEC 型式试验 + 现场试用）后进入清单，第三方承包商（Registered Electrical Contractor / 认可施工方）只能用清单设备；主变长期由本地 Wilson Transformer 等框架供货。"
       },
       {
         "name": "Powercor",
@@ -268,7 +268,7 @@ window.AU_STATES = {
         "hq": "Melbourne（40 Market Street），区域中心 Geelong / Ballarat / Bendigo / Warrnambool",
         "owner": "Victoria Power Networks：CK Infrastructure / Power Assets 51% + KKR–OTPP–PSP 财团（原 Spark Infrastructure）49%",
         "voltages": "66/22 kV + 12.7 kV SWER（部分 6.6/11 kV）",
-        "notes": "约 93 万用户、维州面积最大配网，承担 REFCL 计划最大份额（Rapid Earth Fault Current Limiter，依据 Electricity Safety (Bushfire Mitigation) Regulations 在 codified areas 的 22 kV 区域变电站加装，三批 2023 年前建成），并执行州 Powerline Replacement Fund 的高风险线路覆盖/地埋改造。2026–31 EDPR 终案 2026-04 发布（待核）。资本开支主题：墨尔本西部增长走廊新建区域变电站与 66 kV 环网、Truganina / Derrimut / Laverton 数据中心集群（AirTrunk MEL2 等）与大型物流负荷接入、西维州与 Murray 区风光储 66 kV 接入及出口受限管理（flexible exports）、SWER 线路以 SAPS 替代、老旧 66/22 kV 区域变电站与断路器更新、Early Fault Detection 与林火韧性、燃气替代与 EV。移动变电站（自有 66/22 kV 单元）是其区域变电站重建与应急供电的常规手段。设备准入：与 CitiPower/UE 共用的 Technical Standards 与核准设备清单，REFCL 区域的 22 kV 设备（变压器、避雷器、电缆附件、开关设备绝缘等级）必须满足健全相对地电压升至线电压的 REFCL 兼容要求——这是维州区别于其他州的核心技术门槛；施工以自有 Beon 为主。"
+        "notes": "约 93 万用户、维州面积最大配网，承担 REFCL 计划最大份额（Rapid Earth Fault Current Limiter，依据 Electricity Safety (Bushfire Mitigation) Regulations 在 codified areas 的 22 kV 区域变电站加装，三批 2023 年前建成），并执行州 Powerline Replacement Fund 的高风险线路覆盖/地埋改造。2026–31 EDPR 终案 AER 2026-04-30 发布（核定收入约 A$53.35 亿）。资本开支主题：墨尔本西部增长走廊新建区域变电站与 66 kV 环网、Truganina / Derrimut / Laverton 数据中心集群（AirTrunk MEL2 等）与大型物流负荷接入、西维州与 Murray 区风光储 66 kV 接入及出口受限管理（flexible exports）、SWER 线路以 SAPS 替代、老旧 66/22 kV 区域变电站与断路器更新、Early Fault Detection 与林火韧性、燃气替代与 EV。移动变电站（自有 66/22 kV 单元）是其区域变电站重建与应急供电的常规手段。设备准入：与 CitiPower/UE 共用的 Technical Standards 与核准设备清单，REFCL 区域的 22 kV 设备（变压器、避雷器、电缆附件、开关设备绝缘等级）必须满足健全相对地电压升至线电压的 REFCL 兼容要求——这是维州区别于其他州的核心技术门槛；施工以自有 Beon 为主。"
       },
       {
         "name": "Jemena Electricity Networks（JEN）",
@@ -276,7 +276,7 @@ window.AU_STATES = {
         "hq": "Melbourne（CBD）",
         "owner": "SGSP (Australia) Assets：中国国家电网（State Grid）60% + Singapore Power 40%",
         "voltages": "66/22/11/6.6 kV",
-        "notes": "约 39 万用户，维州五网中最小但负荷增长最快之一（机场扩建与航空物流、Sunbury 增长走廊、西部内城区更新与数据中心）。2026–31 EDPR 终案 2026-04 发布（待核）。资本开支主题：Tullamarine/机场精密负荷与数据中心接入、6.6 kV 向 22 kV 升压与老旧内城区区域变电站更新、Sunbury/Bulla 新建区域变电站、REFCL 区域（Sunbury 周边）设备兼容化、社区电池与 EV、Brooklyn/Tottenham 工业区增容。施工与运维长期由同集团 Zinfra 以框架方式承担；设备准入按 Jemena 电气设备技术规格与核准产品清单（型式试验 + 产品评估）。股东为国家电网，是中国设备商最可能建立集团级对接的维州 DNSP（对应本库 CLIENT_META 的 sgid 第二梯队客户）。"
+        "notes": "约 39 万用户，维州五网中最小但负荷增长最快之一（机场扩建与航空物流、Sunbury 增长走廊、西部内城区更新与数据中心）。2026–31 EDPR 终案 AER 2026-04-30 发布（核定收入约 A$20 亿）。资本开支主题：Tullamarine/机场精密负荷与数据中心接入、6.6 kV 向 22 kV 升压与老旧内城区区域变电站更新、Sunbury/Bulla 新建区域变电站、REFCL 区域（Sunbury 周边）设备兼容化、社区电池与 EV、Brooklyn/Tottenham 工业区增容。施工与运维长期由同集团 Zinfra 以框架方式承担；设备准入按 Jemena 电气设备技术规格与核准产品清单（型式试验 + 产品评估）。股东为国家电网，是中国设备商最可能建立集团级对接的维州 DNSP（对应本库 CLIENT_META 的 sgid 第二梯队客户）。"
       },
       {
         "name": "United Energy",
@@ -284,7 +284,7 @@ window.AU_STATES = {
         "hq": "Melbourne（40 Market Street，与 CitiPower / Powercor 共用；运营中心 Mount Waverley）",
         "owner": "CK Infrastructure / Power Assets 66% + KKR–OTPP–PSP 财团（原 Spark Infrastructure）34%",
         "voltages": "66/22/11/6.6 kV",
-        "notes": "约 72 万用户，由 CitiPower/Powercor 统一管理。2026–31 EDPR 终案 2026-04 发布（待核）。资本开支主题：Dandenong South 工业区与数据中心/物流负荷接入、Cranbourne/Clyde 增长走廊新建区域变电站、Mornington Peninsula 风暴韧性与 Dandenong Ranges 林火区（REFCL codified area）设备兼容化、老旧 66/22 kV 区域变电站与开关站更新、6.6 kV 升压、社区/杆上电池（UE 为澳洲杆上电池先行者）、EV 与屋顶光伏出口管理。设备准入与框架合同与 CitiPower/Powercor 一致（共用 Technical Standards、核准清单与 Beon 施工）。"
+        "notes": "约 72 万用户，由 CitiPower/Powercor 统一管理。2026–31 EDPR 终案 AER 2026-04-30 发布（核定收入约 A$23.19 亿）。资本开支主题：Dandenong South 工业区与数据中心/物流负荷接入、Cranbourne/Clyde 增长走廊新建区域变电站、Mornington Peninsula 风暴韧性与 Dandenong Ranges 林火区（REFCL codified area）设备兼容化、老旧 66/22 kV 区域变电站与开关站更新、6.6 kV 升压、社区/杆上电池（UE 为澳洲杆上电池先行者）、EV 与屋顶光伏出口管理。设备准入与框架合同与 CitiPower/Powercor 一致（共用 Technical Standards、核准清单与 Beon 施工）。"
       }
     ],
     "rezBody": "VicGrid（维州能源、环境与气候行动部 DEECA 下设）——2023 年成立，2024 年 National Electricity (Victoria) Amendment (VicGrid) 立法赋权，负责 Victorian Transmission Plan（首版 2025 年发布，每 4 年更新）、REZ 划定与接入方案（REZ access scheme）、社区收益与土地主补偿（输电走廊每 km 每年 A$8,000）、Gippsland 海上风电陆上输电规划，并自 2025 年起接管 Transmission Company Victoria 职能、负责 VNI West 维州段交付；AEMO 继续担任系统运营与 declared network 既有增容采购；AusNet 负责既有网络更新。",
@@ -307,7 +307,7 @@ window.AU_STATES = {
         "owner": "VicGrid（维州段，2025 年起接管 AEMO 子公司 Transmission Company Victoria 的交付职能）/ Transgrid（新州段）",
         "status": "规划",
         "year": 2030,
-        "desc": "维州—NSW 西部 500 kV 互联维州段，约 240 km 双回，新建 Kerang 500 kV 站并接 Bulgana（WRL 西端），与 NSW 段 Dinawan 衔接，大幅提升维州—NSW 双向输送能力并接入 North West / Wimmera 区风光；维州段完工目标推迟至 2030-11，早期工程推进中（本地数据集记 2025-11 选定 Iberdrola Australia 为交付伙伴，待核）。"
+        "desc": "维州—NSW 西部 500 kV 互联维州段，约 240 km 双回，新建 Kerang 500 kV 站并接 Bulgana（WRL 西端），与 NSW 段 Dinawan 衔接，大幅提升维州—NSW 双向输送能力并接入 North West / Wimmera 区风光；维州段完工目标推迟至 2030-11，早期工程推进中（2025-11 VicGrid 选定 Iberdrola Australia 为开发伙伴，负责设计、采购与 EES 审批，达标后可获建设—持有—运营授权）。"
       },
       {
         "name": "西部可再生能源链路 (Western Renewables Link, Bulgana—Sydenham)",
@@ -609,12 +609,12 @@ window.AU_STATES = {
     "en": "South Australia",
     "grid": "NEM（国家电力市场）SA1 区域；经 Heywood 275 kV 双回交流（Heywood—South East，2016 年增容后双向约 650 MW）与 Murraylink ±150 kV HVDC（Red Cliffs—Berri，220 MW）连 VIC，经 Project EnergyConnect 330 kV 交流（Robertstown/Bundey—Buronga，SA 段 2024 年带电、全线 800 MW 交换能力待 NSW 东段 2026–27 年完工）连 NSW；州内另有州政府 RAES 计划下的偏远城镇离网微电网（Coober Pedy、Marla、Oodnadatta 等）与矿山自备电（Honeymoon 等）",
     "operator": "AEMO（NEM 市场与系统运营，SA1 区域；因南澳为全球逆变器电源占比最高的大电网之一，AEMO 对南澳设有专门的系统强度、惯量与最低同步机组组合运行要求，并每年发布 SA Advisory 分析）；ElectraNet 为南澳 Jurisdictional Planning Body（年度 Transmission Annual Planning Report、RIT-T）；Department for Energy and Mining（DEM）主导州能源政策、HRE Act 许可与 RAES 离网供电；Essential Services Commission of SA（ESCOSA）负责网络牌照与州级可靠性标准，Office of the Technical Regulator（OTR）负责电气技术与安全监管，Consumer and Business Services（CBS）发放电工/电气承包商执照",
-    "summary": "南澳自 2016 年 Port Augusta 煤电全部关停后，已成为全球高比例风光电网的样板：风电 + 屋顶/集中式光伏约占本州发电量四分之三（2024–25 财年约 75%，待核），其余靠燃气（Torrens Island、Pelican Point、Barker Inlet、Hallett 等）与 Heywood/Murraylink/EnergyConnect 三条跨州联络线调节，大电池（Hornsdale、Torrens Island、Blyth 等）与 Davenport/Robertstown 四台同步调相机承担系统强度与惯量。2025-02 取消 A$5.93 亿 Hydrogen Jobs Plan（Whyalla 250 MW 电解槽 + 200 MW 氢燃机）后，重心转向绿铁/绿钢、BHP 铜矿省扩产、Northern Water 海水淡化等工业负荷以及储能。电网资本开支由四条主线驱动：EnergyConnect 全容量释放与 Mid North / 北部 REZ 送出增容、Olympic Dam 与 Whyalla 等北部大负荷接入、ElectraNet 系统强度（同步调相机 / 构网型储能合同）与老旧 275/132 kV 资产更新、以及 SA Power Networks 2025–30 期的区域变电站更新、林火/风暴韧性、灵活出口（flexible exports）与电动化负荷。",
+    "summary": "南澳自 2016 年 Port Augusta 煤电全部关停后，已成为全球高比例风光电网的样板：风电 + 屋顶/集中式光伏约占本州发电量四分之三以上（2024–25 财年约 77%：风电 44.5%、屋顶光伏 22.4%、集中式光伏 10.1%），其余靠燃气（Torrens Island、Pelican Point、Barker Inlet、Hallett 等）与 Heywood/Murraylink/EnergyConnect 三条跨州联络线调节，大电池（Hornsdale、Torrens Island、Blyth 等）与 Davenport/Robertstown 四台同步调相机承担系统强度与惯量。2025-02 取消 A$5.93 亿 Hydrogen Jobs Plan（Whyalla 250 MW 电解槽 + 200 MW 氢燃机）后，重心转向绿铁/绿钢、BHP 铜矿省扩产、Northern Water 海水淡化等工业负荷以及储能。电网资本开支由四条主线驱动：EnergyConnect 全容量释放与 Mid North / 北部 REZ 送出增容、Olympic Dam 与 Whyalla 等北部大负荷接入、ElectraNet 系统强度（同步调相机 / 构网型储能合同）与老旧 275/132 kV 资产更新、以及 SA Power Networks 2025–30 期的区域变电站更新、林火/风暴韧性、灵活出口（flexible exports）与电动化负荷。",
     "tnsp": {
       "name": "ElectraNet",
       "owner": "State Grid International Development（中国国家电网，46.56%）、YTL Power Investments（马来西亚杨忠礼，33.5%）、Australian Utilities Trust（19.94%）——1999–2000 年 ETSA 私有化后由私营业主持有，2012 年国网入股",
       "voltages": "330/275/132/66 kV",
-      "notes": "南澳唯一 TNSP，总部 Adelaide（East Terrace），约 5,600 km 线路、约 90 座变电站（待核），275 kV 为骨干、132 kV 覆盖 Eyre 半岛/Riverland/东南部、66 kV 少量，330 kV 仅 EnergyConnect 段（Robertstown—Bundey—州界）。监管期 2023–28（2023-07-01 至 2028-06-30），AER 终案 2023-04——本次离线编制未能核验核定收入与资本开支数，请以 AER 决定页为准；2028–33 期收入提案预计 2027 年提交。旗舰项目：Project EnergyConnect 南澳段（约 A$4.6 亿，Downer 施工，新建 Bundey 330/275 kV 站，2024 年带电）；Eyre Peninsula Link（Cultana—Yadnarie—Port Lincoln 约 270 km 132 kV 双回，替换 1960 年代单回老线，约 A$3 亿余，Downer 施工，2023–24 年分段投运，待核完工月份）；Davenport + Robertstown 四台同步调相机（Siemens，约 A$1.66 亿，2021 年投运，使 AEMO 得以放宽最低燃气机组组合）；Dalrymple ESCRI-SA 30 MW/8 MWh 受监管电池（2018，NEM 首个网络侧电池）；系统强度（Main Grid System Strength）RIT-T——2025-12 起 AEMO 系统强度新框架生效，ElectraNet 以新增同步调相机与构网型电池合同组合满足要求（具体合同待核）；ISP 远期项目 Mid North SA REZ 扩容与 SA–NSW 互联扩容；BHP Olympic Dam 冶炼二炉与 Northern Water 淡化厂等北部大负荷接入研究。采购方式为框架承包商（Downer、UGL、CPP、Zinfra 等）+ 项目招标，设备需通过 ElectraNet 供应商预审与型式试验审查。"
+      "notes": "南澳唯一 TNSP，总部 Adelaide（East Terrace），约 6,600 回路公里线路、90 余座变电站（ElectraNet 官网口径），275 kV 为骨干、132 kV 覆盖 Eyre 半岛/Riverland/东南部、66 kV 少量，330 kV 仅 EnergyConnect 段（Robertstown—Bundey—州界）。监管期 2023–28（2023-07-01 至 2028-06-30），AER 终案 2023-04——本次离线编制未能核验核定收入与资本开支数，请以 AER 决定页为准；2028–33 期收入提案预计 2027 年提交。旗舰项目：Project EnergyConnect 南澳段（约 A$4.6 亿，Downer 施工，新建 Bundey 330/275 kV 站，2024 年带电）；Eyre Peninsula Link（Cultana—Yadnarie—Port Lincoln 约 270 km 132 kV 双回，替换 1960 年代单回老线，约 A$3.2 亿，Downer 施工，2023-02 全线带电投运）；Davenport + Robertstown 四台同步调相机（Siemens，约 A$1.66 亿，2021 年投运，使 AEMO 得以放宽最低燃气机组组合）；Dalrymple ESCRI-SA 30 MW/8 MWh 受监管电池（2018，NEM 首个网络侧电池）；系统强度（Main Grid System Strength）RIT-T——2025-12 起 AEMO 系统强度新框架生效，ElectraNet 2025-12 PACR 首选方案为给新建同步机组加装离合器并采购低成本通用系统强度服务（约 A$500 万），按当前预测暂不需新增调相机（A$1.5–2 亿），构网型电池不作为最低强度依赖；ISP 远期项目 Mid North SA REZ 扩容与 SA–NSW 互联扩容；BHP Olympic Dam 冶炼二炉与 Northern Water 淡化厂等北部大负荷接入研究。采购方式为框架承包商（Downer、UGL、CPP、Zinfra 等）+ 项目招标，设备需通过 ElectraNet 供应商预审与型式试验审查。"
     },
     "dnsps": [
       {
@@ -623,18 +623,18 @@ window.AU_STATES = {
         "hq": "Adelaide（Keswick，1 Anzac Highway）",
         "owner": "CK 集团 51%（Cheung Kong Infrastructure 23.07% + Power Assets 27.93%）、Spark Infrastructure 49%（2021-12 起由 KKR / Ontario Teachers' / PSP Investments 财团持有）",
         "voltages": "66/33 kV 次输电 + 11/7.6 kV 配电 + 19 kV SWER + 400/230 V",
-        "notes": "约 95 万用户、约 89,000 km 架空/地下线路（待核），覆盖面积全澳第二大、负荷密度低、夏季 46 °C 高温与林火/风暴风险并存。监管期 2025–30（2025-07-01 至 2030-06-30），AER 终案 2025-04——核定资本开支数字本次未核验，见 AER 决定页。资本开支主题：1950–70 年代区域变电站与 66 kV 线路到寿更新、Adelaide CBD 与北部增长走廊（Playford/Munno Para、Mount Barker）新站、林火高风险区（HBRA）覆盖导线与韧性计划（2022 年 River Murray 洪水、2022-11 全州风暴后强化）、Kangaroo Island 与 Eyre 半岛偏远 SWER 线路的 SAPS 替代、灵活出口（Flexible Exports 动态出口限值，2023-07 起新装光伏强制）与低压可视化、社区电池、EV 与燃气替代电气化、Osborne 船厂（AUKUS）与数据中心等新负荷。设备准入：SAPN 公布 Service & Installation Rules（SIR）、Technical Standards（TS 系列）与核准材料/设备清单，新产品需 AS/IEC 型式试验报告 + 产品评估 + 现场试用后入册（具体文件编号待核）；光伏逆变器须满足州政府 Smarter Homes（2020-09）远程断开与 AS/NZS 4777.2 要求。其非监管子公司 Enerven 承接电池储能、变电站与通信工程（Hallett BESS 一期 BoP、Templers 等），是储能开发商常用的本地 EPC；移动变电站是其区域变电站更新与应急供电的既有手段（待核台数）。"
+        "notes": "约 95 万用户、约 88,000–90,000 km 架空/地下线路（ESCOSA 口径 88,322 km，约 20% 地下），覆盖面积全澳第二大、负荷密度低、夏季 46 °C 高温与林火/风暴风险并存。监管期 2025–30（2025-07-01 至 2030-06-30），AER 终案 2025-04——核定资本开支数字本次未核验，见 AER 决定页。资本开支主题：1950–70 年代区域变电站与 66 kV 线路到寿更新、Adelaide CBD 与北部增长走廊（Playford/Munno Para、Mount Barker）新站、林火高风险区（HBRA）覆盖导线与韧性计划（2022 年 River Murray 洪水、2022-11 全州风暴后强化）、Kangaroo Island 与 Eyre 半岛偏远 SWER 线路的 SAPS 替代、灵活出口（Flexible Exports 动态出口限值，2023-07 起新装光伏强制）与低压可视化、社区电池、EV 与燃气替代电气化、Osborne 船厂（AUKUS）与数据中心等新负荷。设备准入：SAPN 公布 Service & Installation Rules（SIR）、Technical Standards（TS 系列）与核准材料/设备清单，新产品需 AS/IEC 型式试验报告 + 产品评估 + 现场试用后入册（SIR 即 Manual 32，2025 年修订版；技术标准如 TS101/TS108/TS129/TS132）；光伏逆变器须满足州政府 Smarter Homes（2020-09）远程断开与 AS/NZS 4777.2 要求。其非监管子公司 Enerven 承接电池储能、变电站与通信工程（Hallett BESS 一期 BoP、Templers 等），是储能开发商常用的本地 EPC；移动变电站是其区域变电站更新与应急供电的既有手段（待核台数）。"
       },
       {
         "name": "RAES 偏远区供电计划（Remote Area Energy Supply，州政府；Cowell Electric 运营）",
         "area": "未并入 NEM 的内陆偏远城镇与原住民社区：Coober Pedy（市议会 + EDL 风光柴混合电站）、Andamooka、Marla、Oodnadatta、Marree、Glendambo、Kingoonya、Yunta、Manna Hill、Cockburn、Blinman、Parachilna、Nundroo 及 Yalata、Oak Valley 等 APY/西部原住民社区",
         "hq": "Adelaide（DEM 管理）/ Cowell（Cowell Electric Supply）",
-        "owner": "南澳州政府（Department for Energy and Mining）所有，Cowell Electric Supply 合同运营约 13 个城镇（待核城镇数）",
+        "owner": "南澳州政府（Department for Energy and Mining）所有，RAES 覆盖 28 个偏远城镇/原住民社区（13 镇 + 15 社区，约 3,400 用户），绝大部分由 Cowell Electric Supply 合同运营（Coober Pedy、Andamooka、Yunta 为独立运营商）",
         "voltages": "11 kV / 低压孤网，柴油 + 光伏 + 电池混合",
         "notes": "非 AER 监管的 DNSP，由州政府补贴维持与并网区相当的电价；资本开支以柴油机组更新、光伏+储能混合化（Coober Pedy 2017 年 EDL 混合电站约 70% 可再生）、预制式开关站与远程监控为主，设备需耐受 50 °C 高温与粉尘；采购走 SA Tenders & Contracts 州政府招标，是预制变电站/集装箱储能撬块的小批量但稳定的政府采购口。"
       }
     ],
-    "rezBody": "南澳没有 NSW EnergyCo / VIC VicGrid 式的法定 REZ 划定机构：候选 REZ 由 AEMO ISP 划定（S1–S9），接入增容由 ElectraNet 以 TAPR / RIT-T 与 ISP 项目推进（Mid North SA REZ 扩容为 ISP 远期项目）；州政府 DEM 依《Hydrogen and Renewable Energy Act 2023》（2024 年施行，待核具体生效日）在牧区租约地、皇家土地与州属海域划定 release area 并以竞争方式发放可再生能源可行性/基础设施许可，相当于南澳版的『开发区』机制，取代此前逐宗土地谈判",
+    "rezBody": "南澳没有 NSW EnergyCo / VIC VicGrid 式的法定 REZ 划定机构：候选 REZ 由 AEMO ISP 划定（S1–S9），接入增容由 ElectraNet 以 TAPR / RIT-T 与 ISP 项目推进（Mid North SA REZ 扩容为 ISP 远期项目）；州政府 DEM 依《Hydrogen and Renewable Energy Act 2023》（2024-07-11 施行）在牧区租约地、皇家土地与州属海域划定 release area 并以竞争方式发放可再生能源可行性/基础设施许可，相当于南澳版的『开发区』机制，取代此前逐宗土地谈判",
     "rezs": [
       "S1 South East SA",
       "S2 Riverland",
@@ -645,10 +645,10 @@ window.AU_STATES = {
       "S7 Roxby Downs",
       "S8 Eastern Eyre Peninsula",
       "S9 Western Eyre Peninsula",
-      "HRE Act release areas（州政府牧区/海域许可发放区，首批划定与招标结果待核）"
+      "HRE Act release areas（州政府牧区/海域许可发放区，首批 Gawler Ranges East 约 5,200 km² + Whyalla West 约 6,500 km²，REFL 招标 2026-03-30 开标、06-28 截标，结果以 DEM 公布为准）"
     ],
-    "policy": "目标：2027 年净 100% 可再生电力（2024-02 由 2030 提前）、远景『500% 可再生』出口；《Climate Change and Greenhouse Emissions Reduction Act 2007》法定 2030 年减排 60%（较 2005 年）、2050 年净零。政治：Malinauskas 工党政府 2022 年执政，2026-03-21 州选举以压倒性优势连任（席位数待核），能源部长 Tom Koutsantonis 延续；南澳已无煤电，政策分歧集中在燃气机组保留与 Torrens Island B 退役时点。氢能：A$5.93 亿 Hydrogen Jobs Plan（Whyalla 250 MW 电解槽 + 200 MW 氢燃机）2025-02 取消，资金转入 Whyalla 钢厂纾困（州联邦合计 A$24 亿，含 A$10 亿绿铁基金），Office of Hydrogen Power SA 收缩；Port Bonython 氢能枢纽转为按市场需求推进。州属开发商：无（ETSA 1999–2000 年私有化），州政府仅持有 2017 年采购的约 276 MW 应急燃气机组（SA Government Generators，待核现状）及 RAES 离网资产，大型项目靠私营开发商（Neoen、AGL、EnergyAustralia、Pacific Green、Iberdrola、ZEN Energy、Amp 等）。招标机制：无 NSW LTESA 式州级长期合同，依赖联邦 Capacity Investment Scheme——2023-12 首轮 SA/VIC 600 MW 可调度容量试点（ASL 执行）及其后全国轮次，南澳电池多次中标（具体项目待核）；BHP 与 Neoen 的 7×24 基荷绿电 PPA（Goyder South/North 风电 + Blyth 电池，2029-07 起 100 MW）是州内最大企业购电。海上风电：联邦未在南澳水域划定区域，2024-03 正式划定的 Southern Ocean 区（约 1,030 km²）位于维州 Warrnambool—Port Fairy 外海，已较 2023 年拟议的 Warrnambool—Port MacDonnell 范围大幅缩小，并未延伸至南澳州界；州属海域内的海上风电归 HRE Act 许可。本地化：South Australian Industry Participation Policy（IPP，Industry Advocate 执行）对州政府采购要求提交 Industry Participation Plan 并给予经济贡献（本地工作与供应链）评标权重（门槛与权重以 Industry Advocate 官网为准，待核），工党政府 2024 年起强化本地制造与 Whyalla 本地含量要求。",
-    "coalExit": "南澳煤电退出已于 2016 年完成：Playford B（240 MW，Alinta/Flinders Power，Port Augusta）2012 年封存、2016-05 退役；Northern（540 MW，Alinta）2016-05-09 关停，Leigh Creek 煤矿 2015-11 关闭，两厂 2018–19 拆除，场地转为 CU-River 港口/光伏与绿色水泥规划，周边建成 Iberdrola Port Augusta Renewable Energy Park（317 MW）。南澳由此成为 NEM 首个无煤州，退役后十年的『补课』路径——同步调相机、大电池、第三条联络线——已成为其他州煤电退出的参考模板。当前的『退役倒计时』对象是燃气：AGL Torrens Island B（800 MW，4×200 MW）原宣布 2026-06 关停，2025 年 AEMO ESOO 对 2026–28 年南澳可靠性缺口的警示促使州政府与 AGL 协商延长/备用安排（最终执行情况待核）；Torrens Island A 已于 2021 年关停，Pelican Point（479 MW）、Osborne、Quarantine、Hallett、Barker Inlet 等燃气机组仍作为 2030 年前的调峰与系统安全底座。",
+    "policy": "目标：2027 年净 100% 可再生电力（2024-02 由 2030 提前）、远景『500% 可再生』出口；《Climate Change and Greenhouse Emissions Reduction Act 2007》法定 2030 年减排 60%（较 2005 年）、2050 年净零。政治：Malinauskas 工党政府 2022 年执政，2026-03-21 州选举以压倒性优势连任（众议院 47 席中获 34 席，自由党仅 5 席），能源部长 Tom Koutsantonis 延续；南澳已无煤电，政策分歧集中在燃气机组保留与 Torrens Island B 退役时点。氢能：A$5.93 亿 Hydrogen Jobs Plan（Whyalla 250 MW 电解槽 + 200 MW 氢燃机）2025-02 取消，资金转入 Whyalla 钢厂纾困（州联邦合计 A$24 亿，含 A$10 亿绿铁基金），Office of Hydrogen Power SA 收缩；Port Bonython 氢能枢纽转为按市场需求推进。州属开发商：无（ETSA 1999–2000 年私有化），州政府仅持有 2017 年采购的约 276 MW 应急燃气机组（9 台 GE TM2500，2019 年起以 25 年期租给私企运营：5 台 154 MW 成为 Nexif 的 Snapper Point 电站、2022-06 投运，4 台租给 Infigen/Iberdrola 由 Lonsdale 迁往 Bolivar 改燃气）及 RAES 离网资产，大型项目靠私营开发商（Neoen、AGL、EnergyAustralia、Pacific Green、Iberdrola、ZEN Energy、Amp 等）。招标机制：无 NSW LTESA 式州级长期合同，依赖联邦 Capacity Investment Scheme——2023-12 启动的首轮 SA/VIC 600 MW 可调度容量试点（ASL 执行，2024-09 公布结果共 995 MW/3,626 MWh）及其后全国轮次，南澳电池多次中标（试点轮：Limestone Coast West 250 MW、Solar River 170 MW、Clements Gap 60 MW、Hallett 50 MW；Tender 8：Blanche 125 MW/508 MWh、Emeroo 225 MW/900 MWh）；BHP 与 Neoen 的 7×24 基荷绿电 PPA（Goyder South/North 风电 + Blyth 电池，2029-07 起 100 MW）是州内最大企业购电。海上风电：联邦未在南澳水域划定区域，2024-03 正式划定的 Southern Ocean 区（约 1,030 km²）位于维州 Warrnambool—Port Fairy 外海，已较 2023 年拟议的 Warrnambool—Port MacDonnell 范围大幅缩小，并未延伸至南澳州界；州属海域内的海上风电归 HRE Act 许可。本地化：South Australian Industry Participation Policy（IPP，Industry Advocate 执行）对州政府采购要求提交 Industry Participation Plan 并给予经济贡献（本地工作与供应链）评标权重（2023-01 版政策：A$55 万以上采购本地参与权重最低 15%，A$1,000 万以上最低 20%，更小合同适用 Economic Contribution Test），工党政府 2024 年起强化本地制造与 Whyalla 本地含量要求。",
+    "coalExit": "南澳煤电退出已于 2016 年完成：Playford B（240 MW，Alinta/Flinders Power，Port Augusta）2012 年封存、2016-05 退役；Northern（540 MW，Alinta）2016-05-09 关停，Leigh Creek 煤矿 2015-11 关闭，两厂 2018–19 拆除，场地转为 CU-River 港口/光伏与绿色水泥规划，周边建成 Iberdrola Port Augusta Renewable Energy Park（317 MW）。南澳由此成为 NEM 首个无煤州，退役后十年的『补课』路径——同步调相机、大电池、第三条联络线——已成为其他州煤电退出的参考模板。当前的『退役倒计时』对象是燃气：AGL Torrens Island B（原 4×200 MW，剩余 3 台 600 MW）原宣布 2026-06-30 关停，2025 年 AEMO ESOO 对 2027 年初南澳可靠性缺口的警示促使州政府与 AGL 于 2025-10 达成资金协议，3 台机组延至 2028-07-01 关停（金额未披露）；Torrens Island A 已于 2021 年关停，Pelican Point（479 MW）、Osborne、Quarantine、Hallett、Barker Inlet 等燃气机组仍作为 2030 年前的调峰与系统安全底座。",
     "keyProjects": [
       {
         "name": "EnergyConnect 南澳段 (Robertstown—Bundey—州界 330kV)",
@@ -666,7 +666,7 @@ window.AU_STATES = {
         "owner": "ElectraNet",
         "status": "投运",
         "year": 2024,
-        "desc": "约 270 km 新线（Cultana—Yadnarie 段按 275 kV 双回标准建设、初期 132 kV 运行；Yadnarie—Port Lincoln 段 132 kV 双回），替换 1960 年代单回老线、新建/扩建 Yadnarie 等变电站，Downer 施工；2023–24 年分段带电、2024 年全线投运（完工月份与最终造价待核），解除 Eyre 半岛供电可靠性与 Western Eyre 风光接入瓶颈。"
+        "desc": "约 270 km 新线（Cultana—Yadnarie 段按 275 kV 双回标准建设、初期 132 kV 运行；Yadnarie—Port Lincoln 段 132 kV 双回），替换 1960 年代单回老线、新建/扩建 Yadnarie 等变电站，Downer 施工；2023-02 全线带电投运（总投资约 A$3.2 亿，其中 Downer 施工合同约 A$2.45 亿），解除 Eyre 半岛供电可靠性与 Western Eyre 风光接入瓶颈。"
       },
       {
         "name": "Davenport / Robertstown 同步调相机 (4 台)",
@@ -675,7 +675,7 @@ window.AU_STATES = {
         "owner": "ElectraNet",
         "status": "投运",
         "year": 2021,
-        "desc": "两站各 2 台 Siemens 同步调相机（约 A$1.66 亿），2021 年投运，提供故障电流与惯量，使 AEMO 将南澳最低同步燃气机组组合由 4 台降至 2 台，是南澳高比例逆变器电网的核心系统强度资产；2025-12 起 AEMO 新系统强度框架下 ElectraNet 正评估追加调相机与构网型电池合同（待核）。"
+        "desc": "两站各 2 台 Siemens 同步调相机（约 A$1.66 亿），2021 年投运，提供故障电流与惯量，使 AEMO 将南澳最低同步燃气机组组合由 4 台降至 2 台，是南澳高比例逆变器电网的核心系统强度资产；2025-12 起 AEMO 新系统强度框架下，ElectraNet 2025-12 RIT-T PACR 首选方案为新建同步机组加装离合器 + 低成本通用系统强度服务，暂不追加调相机，构网型电池不作最低强度依赖。"
       },
       {
         "name": "Mid North SA REZ 扩容 (ISP 远期项目)",
@@ -684,7 +684,7 @@ window.AU_STATES = {
         "owner": "ElectraNet（规划）",
         "status": "规划",
         "year": 2030,
-        "desc": "AEMO ISP 列为南澳远期（future ISP）输电项目：新建 Bundey—Tungkillo 275 kV 双回线路（约 100 km）并增容既有 Robertstown—Tungkillo 走廊与相关变电站，以释放 Goyder South/North、Hornsdale 等 Mid North 风光储集群经 EnergyConnect 外送的能力；时间、路径与造价待 2026 ISP 终稿与 ElectraNet RIT-T 确定（待核）。"
+        "desc": "AEMO ISP 列为南澳远期（future ISP）输电项目：新建 Bundey—Tungkillo 275 kV 双回线路（约 100 km）并增容既有 Robertstown—Tungkillo 走廊与相关变电站，以释放 Goyder South/North、Hornsdale 等 Mid North 风光储集群经 EnergyConnect 外送的能力；已更名 Northern Transmission Project（NTx），2026 ISP 终稿列为可执行项目；ElectraNet 2026-04 发布 PADR、2026-10 选定 Mid North 段首选走廊（Corridor 5），PACR 预计 2026 年底–2027 年初确定路径与造价。"
       },
       {
         "name": "北部大负荷接入：Olympic Dam 冶炼二炉 / Northern Water 淡化厂 (Davenport 275kV 枢纽)",
@@ -693,7 +693,7 @@ window.AU_STATES = {
         "owner": "ElectraNet / BHP / 南澳州政府",
         "status": "规划",
         "year": 2028,
-        "desc": "BHP Copper SA 冶炼厂二炉扩建（阴极铜 20 万→50 万吨/年以上，FY27 上半年 FID）与州政府 Northern Water 海水淡化—输水工程（Cape Hardy/上斯宾塞湾，供 Olympic Dam 等矿山）将使 Davenport—Olympic Dam 275 kV 走廊与 Cultana 枢纽成为南澳最大的新增负荷接入点，ElectraNet 正与业主研究增容方案（线路/变电站范围待核）。"
+        "desc": "BHP Copper SA 冶炼厂二炉扩建（阴极铜 20 万→50 万吨/年以上，FY27 上半年 FID）与州政府 Northern Water 海水淡化—输水工程（Cape Hardy/上斯宾塞湾，供 Olympic Dam 等矿山）将使 Davenport—Olympic Dam 275 kV 走廊与 Cultana 枢纽成为南澳最大的新增负荷接入点，ElectraNet 正与业主研究增容方案（BHP 报批范围已含 Davenport 起 275 kV 线路升级，州政府 2025-11-05 核定 EIS 评估要求；NTx 北段 Mid North—Whyalla 亦为此类负荷服务）。"
       },
       {
         "name": "Goyder South 风储基地 + Blyth 大电池 (Neoen, BHP 7×24 绿电)",
@@ -702,7 +702,7 @@ window.AU_STATES = {
         "owner": "Neoen",
         "status": "在建",
         "year": 2029,
-        "desc": "Burra 一带 Goyder South 一期 412 MW 风电 2024–25 年投运，Blyth 电池 238.5 MW/477 MWh 2025 年投运（待核），合同为 BHP Olympic Dam 提供 70 MW 基荷绿电；二期 Goyder North（300 MW 风电 + 200 MW/800 MWh 电池）将自 2029-07 起再供 100 MW 7×24 绿电，总规划约 1.2 GW 风电，经 Robertstown 275 kV 接入，是 Mid North REZ 增容的核心驱动。"
+        "desc": "Burra 一带 Goyder South 一期 412 MW 风电 2024–25 年分期投运，Blyth 电池 238.5 MW/477 MWh 2025-04 投运（NHOA/Elecnor 承建，构网型），合同为 BHP Olympic Dam 提供 70 MW 基荷绿电（2025-07 起履约）；二期 Goyder North（300 MW 风电 + 200 MW/800 MWh 电池）将自 2029-07 起再供 100 MW 7×24 绿电，总规划约 1.2 GW 风电，经 Robertstown 275 kV 接入，是 Mid North REZ 增容的核心驱动。"
       },
       {
         "name": "Hornsdale 储能电站 (Hornsdale Power Reserve)",
@@ -720,7 +720,7 @@ window.AU_STATES = {
         "owner": "AGL Energy",
         "status": "投运",
         "year": 2023,
-        "desc": "250 MW/250 MWh 构网型电池（Wärtsilä），2023 年投运于 Torrens Island 燃气电站旁，是 AGL 将该站改造为『能源枢纽』并为 Torrens Island B 退役做准备的首个项目；AGL 规划后续扩容时长与氢/燃气备用（待核）。"
+        "desc": "250 MW/250 MWh 构网型电池（Wärtsilä），2023 年投运于 Torrens Island 燃气电站旁，是 AGL 将该站改造为『能源枢纽』并为 Torrens Island B 退役做准备的首个项目；AGL 保留将电池延长至 4 小时（约 1,000 MWh）的扩容选项，2022 年绿氢枢纽可行性研究后尚无投资决定，2025-10 称仍在洽谈能源枢纽合作方。"
       },
       {
         "name": "Hallett 电池储能一期 (EnergyAustralia)",
@@ -801,7 +801,7 @@ window.AU_STATES = {
       "name": "Western Power（SWIS 输配一体网络运营商，西澳没有独立 TNSP）",
       "owner": "西澳州政府（Electricity Networks Corporation，依 Electricity Corporations Act 2005 设立的政府贸易企业 GTE，由能源部长代表州持有）",
       "voltages": "330/220/132/66 kV 输电 + 33/22/11 kV 配电 + 19 kV SWER",
-      "notes": "总部 Perth（363 Wellington Street）。服务 SWIS 约 120 万用户、线路约 10 万 km（输电约 7,800 km）、区域变电站 160 余座（规模数字本次离线编制未能核验）。由 ERA 依 Electricity Networks Access Code 2004 监管，当前为 AA5 监管期（2022-07-01 至 2027-06-30，ERA 终案 2023 年），下一期 AA6（2027-07-01 至 2032-06-30）提案按 Access Code 时序应于 2026 年提交 ERA、2027 年中前终案——本次未能核验 AA5 核定资本开支额与 AA6 提案金额/提交日期，请以 ERA 决定页为准。旗舰计划：Clean Energy Link North（Three Springs–Pinjar–Neerabup 330 kV 走廊增容与枢纽站扩建，接入 Mid West 风光）；Clean Energy Link South（Collie–Kemerton–Perth 南部走廊，承接退煤与 Kemerton 工业/未来海上风电）；Collie、Kwinana、Muchea 等大储接入；SAPS（偏远长馈线改独立光储系统，已部署逾百套、规划上千套，数量待核）；Wooroloo 2021 大火后的木杆更新与林火治理；Perth 北部 Alkimos/Yanchep、东南 Byford/Mundijong 增长走廊新建区域变电站；PowerBank 社区电池与 DER 动态运行包络（Project Symphony）；州政府与联邦 Rewiring the Nation（对 WA 最高约 A$30 亿优惠融资，SWIS + Pilbara）共同注资。"
+      "notes": "总部 Perth（363 Wellington Street）。服务 SWIS 约 120 万用户、线路约 10 万 km（输电约 7,800 km）、区域变电站 160 余座（规模数字本次离线编制未能核验）。由 ERA 依 Electricity Networks Access Code 2004 监管，当前为 AA5 监管期（2022-07-01 至 2027-06-30，ERA 终案 2023 年），下一期 AA6（2027-07-01 至 2032-06-30）提案按 Access Code 时序应于 2026 年提交 ERA、2027 年中前终案——本次未能核验 AA5 核定资本开支额与 AA6 提案金额/提交日期，请以 ERA 决定页为准。旗舰计划：Clean Energy Link North（Three Springs–Pinjar–Neerabup 330 kV 走廊增容与枢纽站扩建，接入 Mid West 风光）；Clean Energy Link South（Collie–Kemerton–Perth 南部走廊，承接退煤与 Kemerton 工业/未来海上风电）；Collie、Kwinana、Muchea 等大储接入；SAPS（偏远长馈线改独立光储系统，已部署逾 500 套、规划十年内约 4,000 套）；Wooroloo 2021 大火后的木杆更新与林火治理；Perth 北部 Alkimos/Yanchep、东南 Byford/Mundijong 增长走廊新建区域变电站；PowerBank 社区电池与 DER 动态运行包络（Project Symphony）；州政府与联邦 Rewiring the Nation（对 WA 最高约 A$30 亿优惠融资，SWIS + Pilbara）共同注资。"
     },
     "dnsps": [
       {
@@ -810,7 +810,7 @@ window.AU_STATES = {
         "hq": "Perth（363 Wellington Street）",
         "owner": "西澳州政府（Electricity Networks Corporation，GTE）",
         "voltages": "33/22/11 kV 配电 + 19 kV SWER + 415/240 V（上接 66/132/220/330 kV 输电）",
-        "notes": "接入与资产技术规范：ERA 批准的 Technical Rules、WA Distribution Connections Manual（WADCM）、Western Power Network Standards 与设备技术规格；新设备须经 Western Power 产品/材料核准（核准材料与设备登记，要求 AS/IEC 型式试验报告与现场试用，流程名称本次未核验），并符合 WA Electrical Requirements（WAER）。采购：Western Power 供应商注册 + Tenders WA 公示，施工/维护以长期框架承包（Zinfra、Downer、GenusPlus 旗下 Powerlines Plus/ECM、Ventia、Monford 等本地承包商，具体名单待核），受 WA Jobs Act 参与计划约束。AA5 资本开支主题：1950–70 年代木杆与区域变电站到寿更新、林火高风险区（Wooroloo 2021、Parkerville 2014 后）覆盖导线/快速保护、北部 Alkimos–Yanchep 与东南 Byford 增长走廊新站、Clean Energy Link 南北走廊、Collie/Kwinana/Muchea 大储接入、SAPS 与社区电池、EV 充电与 METRONET 铁路牵引供电、Kwinana/Rockingham 锂精炼与数据中心（NEXTDC、AirTrunk、Equinix）等工业负荷接入；移动变电站/模块化变电站用于到寿更新与应急（数量待核）。"
+        "notes": "接入与资产技术规范：ERA 批准的 Technical Rules、WA Distribution Connections Manual（WADCM）、Western Power Network Standards 与设备技术规格；新设备须经 Western Power 产品/材料核准（核准材料与设备登记，要求 AS/IEC 型式试验报告与现场试用，流程名称本次未核验），并符合 WA Electrical Requirements（WAER）。采购：Western Power 供应商注册 + Tenders WA 公示，施工/维护以长期框架/面板合同承包（GenusPlus 五年配网+输电架空服务框架、Ventia 五年输配网维护面板约 A$1.5 亿、UGL 架空维护及 Clean Energy Link 枢纽站/330 kV 线路包、Acciona CEL-North 线路包等），受 WA Jobs Act 参与计划约束。AA5 资本开支主题：1950–70 年代木杆与区域变电站到寿更新、林火高风险区（Wooroloo 2021、Parkerville 2014 后）覆盖导线/快速保护、北部 Alkimos–Yanchep 与东南 Byford 增长走廊新站、Clean Energy Link 南北走廊、Collie/Kwinana/Muchea 大储接入、SAPS 与社区电池、EV 充电与 METRONET 铁路牵引供电、Kwinana/Rockingham 锂精炼与数据中心（NEXTDC、AirTrunk、Equinix）等工业负荷接入；移动变电站/模块化变电站用于到寿更新与应急（如 33 MVA、132 kV 一次侧的快速响应移动变电站 RRST-T81，车队总数未公开）。"
       },
       {
         "name": "Horizon Power（区域电力公司）",
@@ -818,7 +818,7 @@ window.AU_STATES = {
         "hq": "Bentley（Perth 都会区），区域中心 Karratha / Broome / Kununurra / Esperance / Carnarvon",
         "owner": "西澳州政府（Regional Power Corporation，GTE，发输配售一体）",
         "voltages": "220/132/66 kV（NWIS 输电）+ 33/22/11 kV 配电 + 19 kV SWER + 415/240 V",
-        "notes": "约 5 万用户、服务面积约 230 万 km²、30 余个独立微网（规模数字待核）。技术规范：Horizon Power Technical Rules（NWIS 下为 Pilbara Networks Technical Rules）、Distribution/Transmission 接入标准与核准设备清单，沿用 WA Electrical Requirements；偏远站点与气旋区（AS/NZS 1170.2 风区 D/C）决定其偏好预制化、模块化、可空运/海运的设备。采购走 Tenders WA 与 Horizon 供应商注册，受 WA Jobs Act 约束（区域本地含量权重更高）。当前资本主题：Pilbara 气旋韧性与网架重建（2025-01 气旋 Sean 袭 Karratha、2025-02 气旋 Zelia 重创 Port Hedland 片区）、South Hedland 等地下电缆化（Pilbara Underground Power）、Esperance 风光储微网（Contract Power/Pacific Energy 供电 + Horizon 网络）、Kununurra Ord 水电联网区 DER、Denham 氢能微网示范、偏远原住民社区光储改造、集中式 SAPS 替代老旧 SWER 线、WA EV 快充网络（Perth–Kununurra）、矿业与绿氢负荷（Boodarie、Maitland、Ashburton North SIA）接入与 NWIS 公用输电骨干前期工作。"
+        "notes": "约 4.7 万用户连接（覆盖逾 10 万居民）、服务面积约 230 万 km²、30 余个独立微网。技术规范：Horizon Power Technical Rules（NWIS 下为 Pilbara Networks Technical Rules）、Distribution/Transmission 接入标准与核准设备清单，沿用 WA Electrical Requirements；偏远站点与气旋区（AS/NZS 1170.2 风区 D/C）决定其偏好预制化、模块化、可空运/海运的设备。采购走 Tenders WA 与 Horizon 供应商注册，受 WA Jobs Act 约束（区域本地含量权重更高）。当前资本主题：Pilbara 气旋韧性与网架重建（2025-01 气旋 Sean 袭 Karratha、2025-02 气旋 Zelia 重创 Port Hedland 片区）、South Hedland 等地下电缆化（Pilbara Underground Power）、Esperance 风光储微网（Contract Power/Pacific Energy 供电 + Horizon 网络）、Kununurra Ord 水电联网区 DER、Denham 氢能微网示范、偏远原住民社区光储改造、集中式 SAPS 替代老旧 SWER 线、WA EV 快充网络（Perth–Kununurra）、矿业与绿氢负荷（Boodarie、Maitland、Ashburton North SIA）接入与 NWIS 公用输电骨干前期工作。"
       },
       {
         "name": "Pilbara 矿企 / APA 自营网络（NWIS 综合区域许可持有人，非公用 DNSP）",
@@ -829,17 +829,17 @@ window.AU_STATES = {
         "notes": "持 ERA 综合区域许可（Integrated Regional Licence），依 Pilbara Networks Access Code 2021 轻监管开放接入，Pilbara ISO 协调 NWIS 运行。不是公用 DNSP，但却是西澳中高压设备最大的『私营买家』：矿区脱碳驱动 GW 级风光储（Rio Tinto 1 GW 可再生计划、BHP WAIO >500 MW 风光储与 Port Hedland 绿电 PPA、Fortescue PEC 2–3 GW、APA Port Hedland 光储与 Chichester 太阳能），需要 33/132 kV 预制舱升压站、储能并网舱、移动变电站与中压成套开关柜。采购经矿企自有 EPC/框架（Monford、GenusPlus、Zenith Energy、Pacific Energy/Contract Power、Clough-Webuild、Worley/Hatch 设计）与自营供应商预审，设备要求 AS/IEC 型式试验、风区 D 气旋等级、50 °C 环境温度降容、沙尘/盐雾防护，交付以预制舱/E-house 为主流。"
       }
     ],
-    "rezBody": "西澳没有 NSW EnergyCo / VIC VicGrid 式的法定 REZ 划定机构，AEMO ISP 亦不覆盖 WA。主网规划由 Energy Policy WA（Coordinator of Energy）主导：2020 Whole of System Plan → 2023-12 SWIS Demand Assessment 提出 2042 年前新增数十 GW 电源与约 4,000 km 输电线（待核），具体走廊由 Western Power 以 Clean Energy Link North/South 等计划落实并经 ERA Access Arrangement 核定资本开支；AEMO (WA) 发布 WEM ESOO 与 Reserve Capacity 结果提示容量缺口。Pilbara 由 Energy Policy WA 的 Pilbara Energy Transition Plan 规划公用输电骨干（联邦 Rewiring the Nation 优惠融资）。海上风电申报区由联邦 DCCEEW 划定（Bunbury）。工业负荷『开发区』则是 DevelopmentWA 的战略工业区（SIA）。",
+    "rezBody": "西澳没有 NSW EnergyCo / VIC VicGrid 式的法定 REZ 划定机构，AEMO ISP 亦不覆盖 WA。主网规划由 Energy Policy WA（Coordinator of Energy）主导：2020 Whole of System Plan → 2023-05 SWIS Demand Assessment 提出 2042 年前新增最多约 51 GW 电源与储能、约 4,000 km 新建高压输电线，具体走廊由 Western Power 以 Clean Energy Link North/South 等计划落实并经 ERA Access Arrangement 核定资本开支；AEMO (WA) 发布 WEM ESOO 与 Reserve Capacity 结果提示容量缺口。Pilbara 由 Energy Policy WA 的 Pilbara Energy Transition Plan 规划公用输电骨干（联邦 Rewiring the Nation 优惠融资）。海上风电申报区由联邦 DCCEEW 划定（Bunbury）。工业负荷『开发区』则是 DevelopmentWA 的战略工业区（SIA）。",
     "rezs": [
       "Mid West / North Country corridor（Clean Energy Link North：Three Springs–Eneabba–Geraldton 风光，330 kV 接入 Perth）",
       "South West / Collie–Kemerton corridor（Clean Energy Link South：Collie 储能枢纽 + Kemerton 工业区）",
-      "Eastern Goldfields / Kalgoorlie corridor（220 kV 矿业负荷走廊，待核增容计划）",
+      "Eastern Goldfields / Kalgoorlie corridor（单回 655 km 220 kV 矿业负荷走廊，暂无输电增容计划，以 ≤150 MW 本地电池/备用电源招标补强）",
       "Pilbara NWIS common-user infrastructure（Pilbara Energy Transition Plan，Karratha–Port Hedland–Newman 220 kV 公用骨干，规划中）",
       "Bunbury Offshore Wind Declared Area（联邦 2024-09 划定）",
       "Strategic Industrial Areas: Oakajee（Mid West 绿氢）、Boodarie / Maitland / Ashburton North / Anketell（Pilbara）、Kwinana-Rockingham、Collie Shotts（DevelopmentWA，非法定 REZ）"
     ],
-    "policy": "州目标：净零 2050，州政府机构（含 Synergy、Western Power、Horizon Power）2030 年排放较 2020 年降 80%；没有立法的可再生占比目标（州气候变化立法推进状态本次未核验）。退煤政策：2022-06 宣布国有煤电 2030 年前全部退役（Collie 2027、Muja D 2029），配套约 A$38 亿国有新能源与储能投资（Synergy Collie BESS、Kwinana BESS、King Rocks 风电等）与约 A$5.5 亿 Collie 转型/工业转型基金（金额待核）；私营 Bluewaters 未设法定退役日。2025-03 Cook 工党政府连任，路线延续，并以 Clean Energy Link 与 Rewiring the Nation（联邦对 WA 最高约 A$30 亿优惠融资）扩建输电。国有开发主体：Synergy（发电/零售/大储与风电）、Horizon Power（区域微网、SAPS、Pilbara）、Western Power（网络）；州没有 NSW LTESA 式长期合约招标，Synergy 以自有招标采购，但 WEM 参与联邦 Capacity Investment Scheme（WEM 专项可调度/发电标段，中标项目与规模本次未核验）。海上风电：联邦 2024-09 划定 Bunbury 申报区，可行性许可评审结果待核。其他：Domestic Gas Policy（15% 国内留存）、WA Battery & Critical Minerals Strategy（Kwinana 锂精炼集群）、Pilbara 氢能枢纽（联邦 A$7,000 万）、WA EV Network 充电走廊。",
-    "coalExit": "国有煤电 2030 年前全退：Collie（Synergy，340 MW，1999 年投运）2027-10 关停，由 Synergy Collie BESS 500 MW/2,000 MWh（2026 年初投运）与 Neoen Collie Battery 560 MW/2,240 MWh 承接；Muja D 7–8 号机（Synergy，约 450 MW）2029-10 关停，Muja C 5 号机 2022-10、6 号机 2025-04 已退役，Muja AB 2018 已关。私营 Bluewaters（434 MW，2009 年投运，债权人控制）无正式关停日期——AEMO 2025 WEM 展望按其运行至本十年末，2025-09 据报原关停计划被撤回、Griffin Coal 供煤补贴据报延长（待核）。AEMO 提示 2027-28 起 SWIS 若无新增可调度容量将出现缺口，因此退煤倒计时同步意味着燃气调峰、大储与 330 kV 走廊的集中采购窗口。",
+    "policy": "州目标：净零 2050，州政府机构（含 Synergy、Western Power、Horizon Power）2030 年排放较 2020 年降 80%；没有立法的可再生占比目标（州气候变化立法推进状态本次未核验）。退煤政策：2022-06 宣布国有煤电 2030 年前全部退役（Collie 2027、Muja D 2029），配套约 A$38 亿国有新能源与储能投资（Synergy Collie BESS、Kwinana BESS、King Rocks 风电等）与 A$5.474 亿 Collie 转型包（含 A$2 亿 Collie 工业转型基金，后增至 A$2.3 亿）；私营 Bluewaters 未设法定退役日。2025-03 Cook 工党政府连任，路线延续，并以 Clean Energy Link 与 Rewiring the Nation（联邦对 WA 最高约 A$30 亿优惠融资）扩建输电。国有开发主体：Synergy（发电/零售/大储与风电）、Horizon Power（区域微网、SAPS、Pilbara）、Western Power（网络）；州没有 NSW LTESA 式长期合约招标，Synergy 以自有招标采购，但 WEM 参与联邦 Capacity Investment Scheme（WEM 专项可调度/发电标段，中标项目与规模本次未核验）。海上风电：联邦 2024-09 划定 Bunbury 申报区，2026-01 向 3 个项目（Oceanex/EDF 的 Bunbury North/South、Ocean Winds 的 Westward Wind，合计约 4 GW、约 730 km²）发放可行性许可。其他：Domestic Gas Policy（15% 国内留存）、WA Battery & Critical Minerals Strategy（Kwinana 锂精炼集群）、Pilbara 氢能枢纽（联邦 A$7,000 万）、WA EV Network 充电走廊。",
+    "coalExit": "国有煤电 2030 年前全退：Collie（Synergy，340 MW，1999 年投运）2027-10 关停，由 Synergy Collie BESS 500 MW/2,000 MWh（2026 年初投运）与 Neoen Collie Battery 560 MW/2,240 MWh 承接；Muja D 7–8 号机（Synergy，约 450 MW）2029-10 关停，Muja C 5 号机 2022-10、6 号机 2025-04 已退役，Muja AB 2018 已关。私营 Bluewaters（434 MW，2009 年投运，债权人控制）无正式关停日期——AEMO 2025 WEM 展望按其运行至本十年末，2025-09 州政府提前关停方案据报生变，2026-01 州政府将 Griffin Coal 供煤补贴协议延至 2031-06（补贴额度下调，2022 年以来累计约 A$3.08 亿）。AEMO 提示 2027-28 起 SWIS 若无新增可调度容量将出现缺口，因此退煤倒计时同步意味着燃气调峰、大储与 330 kV 走廊的集中采购窗口。",
     "keyProjects": [
       {
         "name": "清洁能源链北线 330kV 走廊 (Clean Energy Link North)",
@@ -898,7 +898,7 @@ window.AU_STATES = {
         "owner": "Energy Policy WA / Horizon Power（联邦 Rewiring the Nation 优惠融资）",
         "status": "规划",
         "year": 2030,
-        "desc": "州政府 Pilbara Energy Transition Plan 提出以 220 kV 公用输电骨干联通 Karratha–Port Hedland–Newman 的矿企自备网与 Horizon Power/APA 网络，接入大规模风光储并向第三方开放，服务铁矿脱碳、绿氢与 Boodarie/Maitland SIA；处于规划与投资决策阶段（路径与投资额待核）。"
+        "desc": "州政府 Pilbara Energy Transition Plan 提出以 220 kV 公用输电骨干联通 Karratha–Port Hedland–Newman 的矿企自备网与 Horizon Power/APA 网络，接入大规模风光储并向第三方开放，服务铁矿脱碳、绿氢与 Boodarie/Maitland SIA；处于规划与前期开发阶段：州政府划定 4 条优先走廊（东、西 Pilbara 各 2 条）并依托联邦 Rewiring the Nation 最高 A$30 亿优惠融资，首段为 Horizon Power 的 Burrup 132 kV 公用线，APA 走廊正洽签 Corridor Development Agreement，整体路径与投资额尚未公布。"
       },
       {
         "name": "福特斯库皮尔巴拉能源连接 PEC 629km 输电网",
@@ -915,7 +915,7 @@ window.AU_STATES = {
         "owner": "联邦 DCCEEW 划定；可行性许可申请方待公布",
         "status": "规划",
         "year": 2035,
-        "desc": "2024-09 联邦宣布西澳首个海上风电申报区（Bunbury 外海，面积约 4,000 km²、离岸 ≥20 km，面积待核），可支撑数 GW 装机；可行性许可评审进展本次未能核验，登陆点预计指向 Kemerton/Collie 330 kV 枢纽。"
+        "desc": "2024-09 联邦宣布西澳首个海上风电申报区（Bunbury 外海 Cape Naturaliste–Dawesville 之间，面积约 4,000 km²、离岸 ≥30 km），潜力最高 11.4 GW；可行性许可评审进展本次未能核验，登陆点预计指向 Kemerton/Collie 330 kV 枢纽。"
       },
       {
         "name": "国王岩风电场 (Synergy King Rocks)",
@@ -923,7 +923,7 @@ window.AU_STATES = {
         "owner": "Synergy",
         "status": "规划",
         "year": 2028,
-        "desc": "Synergy 在 Wheatbelt Hyden 附近规划的国有风电项目（装机约 300 MW 量级，待核），是 2022 年约 A$38 亿『以绿电替代煤电』投资包的主体项目之一，需新建接入线并入 Western Power 东部网架。"
+        "desc": "Synergy 在 Wheatbelt Hyden 东北约 35 km 在建的国有风电项目（17 台 Vestas V162-6.2 MW、105 MW，州政府投入 A$5.13 亿，2025-10 开工、2027 年投运），是 2022 年约 A$38 亿『以绿电替代煤电』投资包的主体项目之一，需新建接入线并入 Western Power 东部网架。"
       }
     ],
     "vendor": "在西澳卖中高压设备，第一道门是两家州有 NSP 的准入体系：Western Power 以 ERA 批准的 Technical Rules、WA Distribution Connections Manual、Network Standards 与核准材料/设备登记约束一切接入与网络资产，Horizon Power 另有自己的 Technical Rules 与核准设备清单，新产品都要先提交 AS/IEC 型式试验报告（AS/IEC 62271 开关设备、AS 60076 变压器、AS/NZS 61439 低压成套、AS 2067 高压变电站、AS/NZS 3000 布线、AS/NZS 7000 架空线、AS/NZS 4777.2 逆变器）并通过产品评估与现场试用，否则进不了采购单；Pilbara 矿企与 APA 不受公用 NSP 清单约束，但执行同等 AS/IEC 型式试验加各自工程规范，采购走矿企自有 EPC 与供应商预审。预制变电站 / E-house 作为建筑物须按 NCC 与 WA Building Act 2011 取得建筑许可（或走网络基础设施豁免路径），结构按 AS/NZS 1170 系列：Pilbara 沿海 Exmouth–Karratha–Port Hedland 为风区 D（全澳最高气旋等级）、Kimberley 与 Carnarvon 为风区 C、Perth/西南为风区 A，并须按 50 °C 环境温度降容与盐雾/沙尘防护；位于 DFES 林火易发区（SPP 3.7）的站房需按 AS 3959 做 BAL 评定。本地含量方面，WA Jobs Act 2017 / WAIPS 要求州政府机构及 Western Power、Synergy、Horizon Power 等 GTE 的招标（货物/服务约 A$100 万、工程约 A$500 万以上，区域门槛更低，具体以 JTSI 现行政策为准）附参与计划并计分，联邦资助项目另需 Australian Industry Participation 计划，WA 还对 Collie、Pilbara 等区域项目加权本地就业。电气施工必须由 Building and Energy（DEMIRS）持牌的电气承包商执行，并遵守 WA Electrical Requirements。真正的买家：Western Power、Horizon Power、Synergy（大储/风电）；它们的框架 EPC（GenusPlus、Zinfra、Downer、UGL、Ventia、Monford）；Pilbara 矿企（Rio Tinto、BHP、Fortescue、Roy Hill、Mineral Resources）、APA 与离网电力商（Zenith Energy、Pacific Energy/Contract Power、Juwi）；BESS 开发商（Neoen、Atmos、Frontier Energy、Potentia）；Kwinana 锂精炼与 Perth 数据中心（NEXTDC、AirTrunk、Equinix）。供货窗口集中在 2026–2030：Collie/Muja 退煤倒计时、Clean Energy Link 南北走廊、Pilbara 公用骨干与矿区脱碳。（本条目为离线编制，上述准入流程名称、门槛与承包商名单请在投标前以官网核验。）",
@@ -976,12 +976,12 @@ window.AU_STATES = {
     "en": "Tasmania",
     "grid": "NEM（国家电力市场）TAS1 区域（2005-05 加入 NEM）；经 Basslink 400 kV 单极 HVDC（Loy Yang VIC—George Town TAS，500 MW 持续南送 / 约 630 MW 短时北送，370 km，APA Group 所有，AER 2026-02-27 终案后自 2026-07-01 起由市场型联络线转为受监管输电资产）连 VIC；Marinus Link 一期 750 MW ±320 kV HVDC（Heybridge—Waratah Bay—Hazelwood）2026-10 正式开工、目标 2030 年投运，二期 750 MW 待决；King Island 与 Flinders Island 为 Hydro Tasmania 运营的离网混合（柴油 + 风 + 光 + 储能/飞轮）孤网，不属 NEM。",
     "operator": "AEMO（NEM 市场与系统运营，TAS1 区域；塔州执行独立于大陆的宽频率带 Tasmanian Frequency Operating Standard，并因 Basslink 单极特性对系统强度/惯量与 FCAS 有专门安排）；TasNetworks 为塔州 Jurisdictional Planning Body（年度 Transmission Annual Planning Report、RIT-T，并执行 NER 第 5 章输电接入流程）；Office of the Tasmanian Economic Regulator（OTTER）负责电力许可、小客户标准零售电价监管、Tasmanian Electricity Code 与配网可靠性标准；Renewables, Climate and Future Industries Tasmania（ReCFIT，隶属 Department of State Growth）主导州能源政策、TRET、REZ 框架、氢能与 Battery of the Nation；Consumer, Building and Occupational Services（CBOS，Department of Justice）发放电气承包商/电工执照并管理建筑控制；WorkSafe Tasmania 负责电气安全监管。",
-    "summary": "塔斯马尼亚是澳大利亚唯一以水电为主体的州：Hydro Tasmania 约 2.6 GW 水电（30 座电站，待核）加上 Woolnorth/Musselroe/Granville Harbour/Cattle Hill 等约 0.6 GW 风电，2020-11 起已实现本州用电 100% 可再生自给（发电量口径），无燃煤电厂，Tamar Valley 燃气机组仅作枯水/备用，余缺靠 Basslink 与大陆互济；四大工业用户（Bell Bay Aluminium、Nyrstar Hobart、Liberty Bell Bay、Norske Skog Boyer）约占州内负荷六成。方向是法定 TRET——2030 年达 2020 年发电量的 150%、2040 年 200%（约 21,000 GWh）——以『国家电池 Battery of the Nation』（Cethana 抽蓄、既有水电增容）+ Marinus Link 第二联络线把塔州风电与水电储能卖往退煤中的大陆，并以 Bell Bay 氢能/绿色燃料、Launceston Firmus AI 数据中心等新负荷消纳本州绿电。电网资本开支由四条主线驱动：Marinus Link 一期（2026-10 开工、2030 年投运）及其前置的 TasNetworks 西北输电工程（NWTD，Hampshire—Staverton—Sheffield 220 kV 与 Heybridge 新站）、北西部/中部高地 REZ 风电（Robbins Island、Cellars Hill、St Patricks Plains 等）送出、TasNetworks 2024–29 期的输电/配电老旧资产更新与林火韧性，以及 Bell Bay 工业区与 Launceston/Hobart 新增大负荷接入。",
+    "summary": "塔斯马尼亚是澳大利亚唯一以水电为主体的州：Hydro Tasmania 30 座水电站（连同 Tamar Valley 燃气机组，集团总装机约 2.6 GW，年报口径）加上 Woolnorth/Musselroe/Granville Harbour/Cattle Hill 等约 0.6 GW 风电，2020-11 起已实现本州用电 100% 可再生自给（发电量口径），无燃煤电厂，Tamar Valley 燃气机组仅作枯水/备用，余缺靠 Basslink 与大陆互济；四大工业用户（Bell Bay Aluminium、Nyrstar Hobart、Liberty Bell Bay、Norske Skog Boyer）约占州内负荷六成。方向是法定 TRET——2030 年达 2020 年发电量的 150%、2040 年 200%（约 21,000 GWh）——以『国家电池 Battery of the Nation』（Cethana 抽蓄、既有水电增容）+ Marinus Link 第二联络线把塔州风电与水电储能卖往退煤中的大陆，并以 Bell Bay 氢能/绿色燃料、Launceston Firmus AI 数据中心等新负荷消纳本州绿电。电网资本开支由四条主线驱动：Marinus Link 一期（2026-10 开工、2030 年投运）及其前置的 TasNetworks 西北输电工程（NWTD，Hampshire—Staverton—Sheffield 220 kV 与 Heybridge 新站）、北西部/中部高地 REZ 风电（Robbins Island、Cellars Hill、St Patricks Plains 等）送出、TasNetworks 2024–29 期的输电/配电老旧资产更新与林火韧性，以及 Bell Bay 工业区与 Launceston/Hobart 新增大负荷接入。",
     "tnsp": {
       "name": "TasNetworks（Tasmanian Networks Pty Ltd）— 输配一体的州有网络公司",
       "owner": "塔斯马尼亚州政府 100%（State-owned Company，股东为 Treasurer 与 Minister for Energy and Renewables）；2014-07 由输电公司 Transend Networks 与 Aurora Energy 配网业务合并而成",
       "voltages": "220/110 kV（输电）",
-      "notes": "塔州唯一 TNSP，总部 Hobart（Lenah Valley, Maria Street），约 3,500 km 输电线路、约 50 座输电变电站（待核）；220 kV 为骨干（Farrell—Sheffield—Palmerston—George Town—Hadspen 北部环，Waddamana—Liapootah—Chapel Street 南下 Hobart），110 kV 覆盖西海岸矿区（Farrell—Rosebery—Queenstown）、西北（Burnie—Smithton）与东北；George Town 220 kV 为 Basslink 换流站与 Bell Bay 工业区落点，Sheffield 为 Mersey-Forth 水电与 NWTD 枢纽，Hampshire 为西北风电汇集点。监管期 2024–29（2024-07-01 至 2029-06-30），AER 2024-04 发布输电 + 配电合并终案——本次离线编制未能核验核定收入与资本开支数（提案口径输配合计资本开支约 A$16 亿量级，待核），请以 AER 决定页为准；2029–34 期收入提案预计 2028-01 提交。旗舰项目：(1) North West Transmission Developments（NWTD）——新建 Hampshire—Staverton—Sheffield 220 kV 双回线、Sheffield—Palmerston 220 kV 增容、新建 Heybridge 220 kV 变电站（Marinus 换流站接入点）及 Hampshire/Sheffield/Palmerston 站扩建，为 Marinus 一期与北西 REZ 送出的前置工程，2026-02 与 Marinus 同获 AER 批复、CEFC/Rewiring the Nation 优惠融资支持，目标与 Marinus 同步在 2030 年前投运（分期范围、造价与承包商待核）；(2) Marinus Link 配套的 Heybridge 220 kV 接入与系统强度措施；(3) 既有 220/110 kV 老旧资产更新（1950–70 年代水电送出线与变电站、变压器/断路器到寿替换、保护与通信更新）；(4) 中部高地 Waddamana/Palmerston 一带 REZ 并网增容（Cattle Hill、St Patricks Plains、Cellars Hill 等）；(5) George Town/Bell Bay 氢能与 Launceston 数据中心等大负荷接入研究。采购模式：框架承包商（Zinfra、Downer、UGL 等及本地土建商 Hazell Bros、VEC Civil 等，名单待核）+ 大项目单独招标，设备须通过 TasNetworks 供应商预审、核准设备/材料评审与 AS/IEC 型式试验审查。"
+      "notes": "塔州唯一 TNSP，总部 Hobart（Lenah Valley, Maria Street），约 3,600 回路公里输电线路、49 座输电变电站（另 7 座开关站）；220 kV 为骨干（Farrell—Sheffield—Palmerston—George Town—Hadspen 北部环，Waddamana—Liapootah—Chapel Street 南下 Hobart），110 kV 覆盖西海岸矿区（Farrell—Rosebery—Queenstown）、西北（Burnie—Smithton）与东北；George Town 220 kV 为 Basslink 换流站与 Bell Bay 工业区落点，Sheffield 为 Mersey-Forth 水电与 NWTD 枢纽，Hampshire 为西北风电汇集点。监管期 2024–29（2024-07-01 至 2029-06-30），AER 2024-04-30 发布输电 + 配电合并终案——核定收入配电约 A$18.5 亿、输电约 A$8.9 亿（名义、平滑后，合计约 A$27.4 亿），输电资本开支核定约 A$2.9 亿（2023–24 价），配电资本开支提案净额约 A$7.3 亿（终案数请以 AER 决定页为准）；2029–34 期收入提案预计 2028-01 提交。旗舰项目：(1) North West Transmission Developments（NWTD）——新建 Hampshire—Staverton—Sheffield 220 kV 双回线、Sheffield—Palmerston 220 kV 增容、新建 Heybridge 220 kV 变电站（Marinus 换流站接入点）及 Hampshire/Sheffield/Palmerston 站扩建，为 Marinus 一期与北西 REZ 送出的前置工程，2026-02 与 Marinus 同获 AER 批复、CEFC/Rewiring the Nation 优惠融资支持，目标与 Marinus 同步在 2030 年前投运（一期 129 km：Cressy/Palmerston—Sheffield—Heybridge/Burnie 新建与增容线路及新建变电站/开关站，造价估算约 A$13.2 亿，主承包商 GenusPlus〔2024-12 委任，合同约 A$7.5 亿〕，2026-05 融资关闭、主体施工预计 2026 Q3 起；二期 Staverton—Hampshire Hills 约 A$5.5 亿另行推进）；(2) Marinus Link 配套的 Heybridge 220 kV 接入与系统强度措施；(3) 既有 220/110 kV 老旧资产更新（1950–70 年代水电送出线与变电站、变压器/断路器到寿替换、保护与通信更新）；(4) 中部高地 Waddamana/Palmerston 一带 REZ 并网增容（Cattle Hill、St Patricks Plains、Cellars Hill 等）；(5) George Town/Bell Bay 氢能与 Launceston 数据中心等大负荷接入研究。采购模式：常规输配电维护/资本工程/应急抢修由单一战略伙伴 Zinfra 承担（5 年 Distribution and Transmission Services 合同，取代此前多家承包商 panel 模式）+ 大项目单独招标（如 NWTD 一期主承包商 GenusPlus），设备须通过 TasNetworks 供应商预审、核准设备/材料评审与 AS/IEC 型式试验审查。"
     },
     "dnsps": [
       {
@@ -989,27 +989,27 @@ window.AU_STATES = {
         "area": "塔斯马尼亚本岛全部并网区域：Hobart 都会区（Glenorchy、Kingston、Clarence）、Launceston 与 Tamar Valley、Devonport—Burnie 西北沿海、Smithton—Circular Head、西海岸矿业城镇（Queenstown、Rosebery、Zeehan、Strahan）、中部高地与 Midlands 农业区、东海岸（St Helens—Swansea）、Huon Valley 与 Bruny Island（海底电缆供电）——全州唯一持牌 DNSP（Bass Strait 两岛除外）",
         "hq": "Hobart（Lenah Valley）",
         "owner": "塔斯马尼亚州政府 100%（同 TNSP，输配一体）",
-        "voltages": "33/22/11 kV 配电（Hobart 旧城区残留 6.6 kV，待核）+ 19.1 kV SWER + 400/230 V",
-        "notes": "约 29.5 万用户、约 22,000 km 架空/地下线路（待核），地广人稀、用户密度低，冬季为用电高峰（电采暖为主，与大陆夏峰相反），林火、强风与山区覆冰并存。监管期 2024–29，AER 2024-04 终案（配电核定资本开支数本次未核验）。资本开支主题：老旧区域变电站（zone substation）与 33/22 kV 次输电更新（Hobart 周边 1950–70 年代站房、油浸开关与 11 kV 开关柜到寿替换，具体站名待核）；木杆与导线更新（全州数十万根木杆的检测/替换计划）；林火减灾（Bushfire Mitigation Plan，覆盖 2013 Dunalley 等高风险区的导线、跌落式熔断器与重合闸策略、植被管理、高风险日停电协议）；Launceston（Firmus AI 数据中心、St Leonards）与 Hobart 东岸增长区的 33/11 kV 扩容；电动车与电采暖负荷增长、屋顶光伏（渗透率低于大陆但在增长）与动态出口管理；偏远支线以 SAPS（独立供电系统）替代长距离 SWER 线路的试点（AEMC 2022 年 SAPS 框架下，数量待核）；移动变电站/应急备用变压器用于区域站更新期间保供。技术/准入：执行 TasNetworks Service & Installation Rules、Network Design Standards 与核准设备/材料清单（Approved Products），对外接入按 OTTER Tasmanian Electricity Code 与 NER；对 EPC 以框架承包为主（Zinfra、Downer 等，待核）。"
+        "voltages": "33/22/11 kV 配电（少量旧区馈线仍为 6.6 kV）+ 19.1 kV SWER + 400/230 V",
+        "notes": "约 29.5 万用户、约 22,400 km 架空/地下配电线路（约 22.7 万根电杆），地广人稀、用户密度低，冬季为用电高峰（电采暖为主，与大陆夏峰相反），林火、强风与山区覆冰并存。监管期 2024–29，AER 2024-04 终案（配电核定资本开支数本次未核验）。资本开支主题：老旧区域变电站（zone substation）与 33/22 kV 次输电更新（Hobart 周边 1950–70 年代站房、油浸开关与 11 kV 开关柜到寿替换，已知案例如 North Hobart 开关柜更换工程〔Zinfra 中标〕）；木杆与导线更新（全州数十万根木杆的检测/替换计划）；林火减灾（Bushfire Mitigation Plan，覆盖 2013 Dunalley 等高风险区的导线、跌落式熔断器与重合闸策略、植被管理、高风险日停电协议）；Launceston（Firmus AI 数据中心、St Leonards）与 Hobart 东岸增长区的 33/11 kV 扩容；电动车与电采暖负荷增长、屋顶光伏（渗透率低于大陆但在增长）与动态出口管理；偏远支线以 SAPS（独立供电系统）替代长距离 SWER 线路的试点（AEMC 2022 年 SAPS 框架下，数量待核）；移动变电站/应急备用变压器用于区域站更新期间保供。技术/准入：执行 TasNetworks Service & Installation Rules、Network Design Standards 与核准设备/材料清单（Approved Products），对外接入按 OTTER Tasmanian Electricity Code 与 NER；对 EPC 以单一战略伙伴 Zinfra 的 5 年输配电服务合同承担常规工程为主，大项目另行招标。"
       },
       {
         "name": "Hydro Tasmania — Bass Strait Islands（King Island / Flinders Island 离网系统）",
-        "area": "King Island（Currie）与 Flinders Island（Whitemark / Lady Barron）两座巴斯海峡岛屿的发电与配电（非 NEM 孤网，Hydro Tasmania 兼营发电与配网，待核）",
+        "area": "King Island（Currie）与 Flinders Island（Whitemark / Lady Barron）两座巴斯海峡岛屿的发电与配电（非 NEM 孤网，Hydro Tasmania 兼营发电与配网，约 2,150 用户，无输电网）",
         "hq": "Hobart（Hydro Tasmania 总部，4 Elizabeth Street）",
         "owner": "塔斯马尼亚州政府 100%（Hydro Tasmania 为 GBE）",
         "voltages": "11 kV 配电 + 400/230 V（待核）",
         "notes": "两岛由 Hydro Tasmania 以柴油 + 风电 + 光伏 + 电池/飞轮的混合微网供电：King Island Renewable Energy Integration Project（KIREIP，含飞轮、电池、动态电阻与柴油 UPS，可实现 100% 瞬时可再生渗透）与 Flinders Island Hybrid Energy Hub（2017 年投运），是澳大利亚离网混合微网的标杆；柴油机组更新、储能扩容、11 kV 开关设备与微网控制由 Hydro Tasmania 采购，Entura 任工程顾问；Aurora Energy 零售；OTTER 发放许可。规模小，但对集装箱式储能、预制开关站与 11 kV 开关柜是对口场景（具体资本计划待核）。"
       }
     ],
-    "rezBody": "塔州没有 NSW EnergyCo / VIC VicGrid 式的独立 REZ 法定机构：州政府 ReCFIT（Department of State Growth）通过 Renewable Energy Coordination Framework 主导 REZ 政策与划定方式，TasNetworks 作为 Jurisdictional Planner 负责 REZ 网络规划与送出方案（NWTD 即北西 REZ 的送出骨干），AEMO ISP 把塔州划为三个候选 REZ（T1 North East Tasmania、T2 North West Tasmania、T3 Tasmania Midlands / Central Highlands）；Marinus Link Pty Ltd（联邦 49% / 维州 33.3% / 塔州 17.7%）负责联络线；海上风电申报区由联邦 DCCEEW 划定（Bass Strait off Northern Tasmania）。州政府 2023–24 年就『塔州 REZ 框架』完成咨询，北西 REZ 为首个推进对象（正式法定划定状态待核）。",
+    "rezBody": "塔州没有 NSW EnergyCo / VIC VicGrid 式的独立 REZ 法定机构：州政府 ReCFIT（Department of State Growth）通过 Renewable Energy Coordination Framework 主导 REZ 政策与划定方式，TasNetworks 作为 Jurisdictional Planner 负责 REZ 网络规划与送出方案（NWTD 即北西 REZ 的送出骨干），AEMO ISP 把塔州划为三个候选 REZ（T1 North East Tasmania、T2 North West Tasmania、T3 Tasmania Midlands / Central Highlands）；Marinus Link Pty Ltd（联邦 49% / 维州 33.3% / 塔州 17.7%）负责联络线；海上风电申报区由联邦 DCCEEW 划定（Bass Strait off Northern Tasmania）。州政府 2023–24 年就『塔州 REZ 框架』完成咨询（REZ 修正法案 2024 草案 + 拟议北西 REZ 公众咨询 2024-05 至 2024-09），北西 REZ 为首个推进对象（正式法定划定以 renewableenergyzones.tas.gov.au 公告为准）。",
     "rezs": [
       "North West Tasmania REZ (T2 — Robbins Island / Jim's Plain / Hampshire–Burnie corridor, 由 NWTD 220 kV 送出)",
       "North East Tasmania REZ (T1 — Musselroe / Scottsdale–George Town corridor)",
       "Tasmania Midlands / Central Highlands REZ (T3 — Waddamana / Bothwell: Cattle Hill, St Patricks Plains, Cellars Hill)",
-      "Bass Strait off Northern Tasmania Offshore Wind Declared Area (联邦 DCCEEW 划定, 可行性许可进度待核)"
+      "Bass Strait off Northern Tasmania Offshore Wind Declared Area (联邦 DCCEEW 2024-12 划定, 约 7,100 km²; 可行性许可申请 2025-04 截止, 2026-01 初步决定不授予许可, 终决待定)"
     ],
-    "policy": "法定 Tasmanian Renewable Energy Target（TRET，Energy Co-ordination and Planning Amendment (TRET) Act 2022）：2030 年可再生发电量达 2020 年水平的 150%（约 15,750 GWh）、2040 年 200%（约 21,000 GWh），2020-11 已达成 100% 自给；Tasmanian Renewable Energy Action Plan（2020）与 Tasmanian Renewable Hydrogen Action Plan（Bell Bay 氢能枢纽：联邦 A$7,000 万 Regional Hydrogen Hub + 州 A$5,000 万基金；ABEL Bell Bay Powerfuels、HIF Tasmania 入围联邦 Hydrogen Headstart，Fortescue 2023 年、Woodside 2024 年先后退出）；Battery of the Nation（Hydro Tasmania：Cethana 750 MW 抽蓄、既有电站增容/延寿）与 Marinus Link 是州政府两大旗舰，2023 年 Marinus 股权重谈后塔州出资比例降至 17.7%。州有企业：Hydro Tasmania（发电 + Entura 工程顾问 + Bass Strait Islands 微网）、TasNetworks（输配一体）、Aurora Energy（零售，小客户电价由 OTTER 监管）。政治：Rockliff 自由党少数政府 2024-03 连任，2025-06 不信任案后 2025-07-19 提前选举再度组阁，能源政策连续（Minister for Energy and Renewables：Nick Duigan，待核）；州政府支持新增风电但严格执行 Tasmanian Planning Commission / EPA 评估（Robbins Island 橙腹鹦鹉停机条件之争为典型）。联邦：Cellars Hill（341 MW + 600 MW/2,400 MWh）2026-05 获 CIS Tender 7 合同；Marinus 获 CEFC A$38 亿（2025-09）与 Rewiring the Nation 优惠融资，NWTD 亦获 CEFC 支持；Bass Strait off Northern Tasmania 海上风电区由 DCCEEW 划定（可行性许可发放进度待核）。塔州无 NSW LTESA 式州级长期合约机制，可再生项目主要依赖 PPA（Hydro Tasmania、大陆零售商、Firmus 等）与联邦 CIS。",
-    "coalExit": "塔州无燃煤电厂，不存在退煤倒计时——本州约九成电量来自 Hydro Tasmania 水电、其余为风电；Tamar Valley 燃气电站（Bell Bay，约 0.4 GW，含 208 MW CCGT 封存备用 + OCGT 调峰机组，待核）仅在枯水年或 Basslink 停运时启用。塔州的『保供风险』是水库枯水与对 Basslink 单回联络线的依赖（2016 年 Basslink 断缆 + 枯水危机曾启用柴油发电），因此 Marinus Link（2030）、Cethana 抽蓄与大陆 Yallourn（2028）/ Loy Yang A（2035）退煤共同决定塔州风电/抽蓄的出口窗口——大陆煤电退役越快，塔州 Battery of the Nation 与 REZ 风电的商业价值越高。",
+    "policy": "法定 Tasmanian Renewable Energy Target（TRET，Energy Co-ordination and Planning Amendment (TRET) Act 2022）：2030 年可再生发电量达 2020 年水平的 150%（约 15,750 GWh）、2040 年 200%（约 21,000 GWh），2020-11 已达成 100% 自给；Tasmanian Renewable Energy Action Plan（2020）与 Tasmanian Renewable Hydrogen Action Plan（Bell Bay 氢能枢纽：联邦 A$7,000 万 Regional Hydrogen Hub + 州 A$5,000 万基金；ABEL Bell Bay Powerfuels、HIF Tasmania 入围联邦 Hydrogen Headstart，Fortescue 2023 年、Woodside 2024 年先后退出）；Battery of the Nation（Hydro Tasmania：Cethana 750 MW 抽蓄、既有电站增容/延寿）与 Marinus Link 是州政府两大旗舰，2023 年 Marinus 股权重谈后塔州出资比例降至 17.7%。州有企业：Hydro Tasmania（发电 + Entura 工程顾问 + Bass Strait Islands 微网）、TasNetworks（输配一体）、Aurora Energy（零售，小客户电价由 OTTER 监管）。政治：Rockliff 自由党少数政府 2024-03 连任，2025-06 不信任案后 2025-07-19 提前选举再度组阁，能源政策连续（Minister for Energy and Renewables：Nick Duigan，兼 Parks and Heritage、Sport）；州政府支持新增风电但严格执行 Tasmanian Planning Commission / EPA 评估（Robbins Island 橙腹鹦鹉停机条件之争为典型）。联邦：Cellars Hill（341 MW + 600 MW/2,400 MWh）2026-05 获 CIS Tender 7 合同；Marinus 获 CEFC A$38 亿（2025-09）与 Rewiring the Nation 优惠融资，NWTD 亦获 CEFC 支持；Bass Strait off Northern Tasmania 海上风电区由 DCCEEW 2024-12 划定（可行性许可申请 2025-04 截止，2026-01 初步决定不授予许可，终决待定）。塔州无 NSW LTESA 式州级长期合约机制，可再生项目主要依赖 PPA（Hydro Tasmania、大陆零售商、Firmus 等）与联邦 CIS。",
+    "coalExit": "塔州无燃煤电厂，不存在退煤倒计时——本州约九成电量来自 Hydro Tasmania 水电、其余为风电；Tamar Valley 燃气电站（Bell Bay，386 MW，含 208 MW CCGT + 178 MW OCGT 调峰机组〔58 MW Trent 60 + 3×40 MW FT8〕，2025 年招标将 CCGT 改为联合/开式双模式运行）仅在枯水年或 Basslink 停运时启用。塔州的『保供风险』是水库枯水与对 Basslink 单回联络线的依赖（2016 年 Basslink 断缆 + 枯水危机曾启用柴油发电），因此 Marinus Link（2030）、Cethana 抽蓄与大陆 Yallourn（2028）/ Loy Yang A（2035）退煤共同决定塔州风电/抽蓄的出口窗口——大陆煤电退役越快，塔州 Battery of the Nation 与 REZ 风电的商业价值越高。",
     "keyProjects": [
       {
         "name": "Marinus Link 一期 (Heybridge—Waratah Bay—Hazelwood)",
@@ -1027,7 +1027,7 @@ window.AU_STATES = {
         "owner": "TasNetworks（州有；CEFC / Rewiring the Nation 优惠融资）",
         "status": "在建",
         "year": 2030,
-        "desc": "Marinus 一期与北西 REZ 的前置送出工程：新建 Hampshire—Staverton—Sheffield 220 kV 双回线、Sheffield—Palmerston 220 kV 增容、新建 Heybridge 220 kV 变电站（Marinus 换流站接入）及 Hampshire/Sheffield/Palmerston 站扩建，合计约 240 km 新建/改建线路（待核）；2026-02 与 Marinus 同获监管批复，主体施工 2026 年启动（分期范围、造价与承包商待核），须在 2030 年 Marinus 投运前完成。"
+        "desc": "Marinus 一期与北西 REZ 的前置送出工程：新建 Hampshire—Staverton—Sheffield 220 kV 双回线、Sheffield—Palmerston 220 kV 增容、新建 Heybridge 220 kV 变电站（Marinus 换流站接入）及 Hampshire/Sheffield/Palmerston 站扩建，合计约 238 km 新建/改建双回线路（约 390 基新塔，其中一期 129 km）；2026-02 与 Marinus 同获监管批复，2026-05 一期融资关闭（CEFC 债务 + 州政府股权），一期造价估算约 A$13.2 亿（AER 核定可回收约 A$11.75 亿）、主承包商 GenusPlus（2024-12 委任，合同约 A$7.5 亿），主体施工预计 2026 Q3 起；二期 Staverton—Hampshire Hills（约 A$5.5 亿）另行推进，须在 2030 年 Marinus 投运前完成。"
       },
       {
         "name": "Basslink 维州—塔州 HVDC 转受监管资产 (Loy Yang—George Town)",
@@ -1045,7 +1045,7 @@ window.AU_STATES = {
         "owner": "Hydro Tasmania（州有）",
         "status": "规划",
         "year": 2032,
-        "desc": "Battery of the Nation 首选抽蓄站址，约 750 MW / 20 小时以上储能（待核），以既有 Cethana 水库为下库、新建上库，拟经 NWTD 新建的 Staverton 220 kV 变电站接入（再经 Staverton—Sheffield 220 kV 入网），与 Marinus 一期配套；已完成可行性与前期工程设计，FID 取决于 Marinus 进度与联邦承销/合作方（目标 2026–27 年，投运约 2032 年，待核）。"
+        "desc": "Battery of the Nation 首选抽蓄站址，约 750 MW / 20 小时储能，以既有 Cethana 水库为下库、新建上库，拟经 NWTD 新建的 Staverton 220 kV 变电站接入（再经 Staverton—Sheffield 220 kV 入网），与 Marinus 一期配套；已完成可行性与前期工程设计，2026-01 重新提交 EPBC 申报（2026-02 判定为 controlled action）、EIS 与开发申请 2026 年中公示，FID 取决于 Marinus 进度与联邦承销/合作方（目标 2027 年，建设期约 6–8 年）。"
       },
       {
         "name": "Tarraleah 水电重建/延寿 (Tarraleah Redevelopment)",
@@ -1054,7 +1054,7 @@ window.AU_STATES = {
         "owner": "Hydro Tasmania（州有）",
         "status": "规划",
         "year": 2030,
-        "desc": "原计划把 1938 年投运的 Tarraleah 电站（约 90 MW）重建为约 190 MW 的灵活调峰电站（BOTN 组成部分，造价升至约 A$10 亿量级），2024 年底因成本上升暂缓全面重建、转向既有机组延寿与分阶段更新（待核）；仍是 Derwent 梯级 220 kV 送出与开关设备更新的潜在标的。"
+        "desc": "拟把 1938 年投运的 Tarraleah 电站（约 90 MW）重建为约 190 MW 的灵活调峰电站（BOTN 组成部分，造价估算已由 2023 年的约 A$10.5 亿升至约 A$19.6 亿〔2024 年价〕），项目未暂停：2026-02 启动首阶段施工招标、2026-04 EIS 公示，FID 尚待作出；仍是 Derwent 梯级 220 kV 送出与开关设备更新的潜在标的。"
       },
       {
         "name": "Robbins Island 与 Jim's Plain 风电 (ACEN)",
@@ -1063,7 +1063,7 @@ window.AU_STATES = {
         "owner": "ACEN Australia（菲律宾 Ayala 集团）",
         "status": "规划",
         "year": 2030,
-        "desc": "北西 REZ 旗舰：Robbins Island 最多 100 台风机、约 900 MW，Jim's Plain 约 200 MW，经新建 220 kV 线接入 Hampshire 并依赖 NWTD；塔州 EPA 2022 年批复并附橙腹鹦鹉迁徙期停机条件，TASCAT 与州最高法院维持该条件，联邦 EPBC 决定与 ACEN 最终投资决定截至编制时待核；若落地将是塔州最大单体风电与升压站/汇集站需求。"
+        "desc": "北西 REZ 旗舰：Robbins Island 最多 100 台风机、约 900 MW，Jim's Plain 约 200 MW，经新建 220 kV 线接入 Hampshire 并依赖 NWTD；塔州 EPA 2022 年批复并附橙腹鹦鹉迁徙期停机条件，TASCAT 与州最高法院维持该条件，联邦 EPBC 于 2025-08 由环境部长 Murray Watt 附条件批准（送出线路另行审批、预计 2026 年完成），ACEN 尚未公布 FID，开工预计 2030–31 年；若落地将是塔州最大单体风电与升压站/汇集站需求。"
       },
       {
         "name": "Cellars Hill 风电+储能 (Bothwell)",
@@ -1072,7 +1072,7 @@ window.AU_STATES = {
         "owner": "Gamuda Renewables（马来西亚）/ Alternate Path",
         "status": "规划",
         "year": 2030,
-        "desc": "中部高地 Bothwell 附近 56 台风机 341 MW + 600 MW/2,400 MWh 电池，2026-05 获联邦 CIS Tender 7 合同、已获塔州 Major Project 认定，计划 2027 年开工、2030 年投运，经 Waddamana 一带 220 kV 接入（待核）；Gamuda 自身具承建能力，升压站、储能升压与 33 kV 汇集设备为供货窗口。"
+        "desc": "中部高地 Bothwell 附近 56 台风机 341 MW + 600 MW/2,400 MWh 电池（EPBC 申报口径风电上限 350 MW），2026-05 获联邦 CIS Tender 7 合同（仅风电部分）、2025-02 获塔州 Major Project 认定，计划 2027–28 年开工（视 FID）、2030 年投运，经穿越场址的既有 220 kV 线路就地接入、不新建外部送出线路（Gamuda 持股并担任 EPC）；Gamuda 自身具承建能力，升压站、储能升压与 33 kV 汇集设备为供货窗口。"
       },
       {
         "name": "St Patricks Plains 风电 (Central Highlands)",
@@ -1081,7 +1081,7 @@ window.AU_STATES = {
         "owner": "Ark Energy（韩国高丽亚铅 Korea Zinc 旗下，原 Epuron）",
         "status": "规划",
         "year": 2029,
-        "desc": "中部高地 Steppes 附近约 47 台风机、约 300 MW，拟接入 Waddamana 220 kV；塔州 Planning Commission 审批与 EPBC 程序 2024–25 年推进（最终批复与开工时间待核），与 Cattle Hill（144 MW，Goldwind 建设）相邻形成 Central Highlands 风电集群。"
+        "desc": "中部高地 Steppes 附近约 47 台风机、约 300 MW，拟接入 Waddamana 220 kV；塔州审批经 TASCAT 2025-08 驳回上诉后维持（噪声裕度窄、开工前须编制噪声管理计划），联邦 EPBC 2025-12 批准，2026-07 Vestas 自 Ark Energy 收购项目，计划 2027 上半年开工、2030 年投运，与 Cattle Hill（144 MW，Goldwind 建设）相邻形成 Central Highlands 风电集群。"
       },
       {
         "name": "Firmus Southgate AI 数据中心 (Launceston St Leonards)",
@@ -1099,10 +1099,10 @@ window.AU_STATES = {
         "owner": "ABEL Energy（Bell Bay Powerfuels 300 MW）/ HIF Asia Pacific（140 MW）/ TasPorts 与州政府（Bell Bay Advanced Manufacturing Zone）",
         "status": "规划",
         "year": 2030,
-        "desc": "George Town 220 kV 枢纽旁的工业区：ABEL 300 MW 电解制绿色甲醇与 HIF 140 MW e-fuel 入围联邦 Hydrogen Headstart，Woodside/Fortescue 2024 年退出；Bell Bay Aluminium（Rio Tinto）与 Liberty Bell Bay 为既有大负荷；若氢能项目 FID 落地，将带来 220/33 kV 整流变电站、MV 开关柜与 E-house 需求（FID 时间待核）。"
+        "desc": "George Town 220 kV 枢纽旁的工业区：ABEL 300 MW 电解制绿色甲醇与 HIF 140 MW e-fuel 入围联邦 Hydrogen Headstart，Woodside/Fortescue 2024 年退出；Bell Bay Aluminium（Rio Tinto）与 Liberty Bell Bay 为既有大负荷；若氢能项目 FID 落地，将带来 220/33 kV 整流变电站、MV 开关柜与 E-house 需求（ABEL Bell Bay Powerfuels 300 MW 电解槽项目 2026-05 入围 Hydrogen Headstart 第二轮、尚未 FID、拟 2030 年前后投产；Countrywide 10 MW 一期预计 2027 上半年 FID）。"
       }
     ],
-    "vendor": "在塔州卖中高压设备，第一道门是 TasNetworks 的准入体系：输配一体的 TasNetworks 以 Service & Installation Rules、Network Design Standards 与核准设备/材料清单约束一切网络资产与接入，新产品须先提交 AS/IEC 型式试验报告（AS/IEC 62271 开关设备、AS 60076 变压器、AS/NZS 61439 低压成套、AS 2067 高压变电站设计、AS/NZS 3000 布线、AS/NZS 7000 架空线、AS/NZS 4777.2 逆变器）并通过产品评估与现场试用才能入册；Hydro Tasmania（含 Bass Strait Islands 微网）与 Marinus Link 不受 TasNetworks 清单约束但执行同等 AS/IEC 型式试验加各自工程规范（Entura 常任业主工程师），Marinus 的换流站/电缆一次设备已由 Hitachi Energy 与 Prysmian 锁定，海外厂商的机会在 Heybridge 220 kV 站、NWTD 变电站二次/MV 设备与风电场升压站。预制变电站 / E-house 作为建筑物须按 NCC 与 Tasmanian Building Act 2016 取得建筑许可（或走公用基础设施豁免路径），结构按 AS/NZS 1170 系列——全州为 AS/NZS 1170.2 风区 A、无气旋 C/D 要求，但西海岸与巴斯海峡沿岸盐雾腐蚀严重、中部高地（Waddamana、Bothwell、Steppes）须计雪/覆冰荷载与低温启动，位于 Tasmanian Planning Scheme『Bushfire-Prone Areas Code』划定区的站房须按 AS 3959 做 BAL 评定（Tasmania Fire Service 认可评估师出具）。本地含量方面，塔州政府 Buy Local Policy（Treasurer's Instructions）要求 A$5 万以上采购优先考虑本地企业并在评标中设置『本地效益』权重，大额合同（据称 ≥A$500 万，门槛待核）须附 Tasmanian Industry Participation Plan，TasNetworks / Hydro Tasmania 等 GBE 按其采购政策比照执行；Marinus Link 同时是维州 Local Jobs First 战略项目并须向联邦提交 Australian Industry Participation（AIP）计划，联邦 CIS 合同亦附本地供应链/社会许可承诺——海外厂商通常须与 ICN Gateway 注册的塔州集成/安装伙伴（如 Hazell Bros、Fairbrother、Haywards、Elphinstone 等本地土建/钢构/机电商，待核）组队并提供本地装配、备件与售后方案。电气施工必须由 CBOS（Department of Justice）持牌的电气承包商与电工完成（Occupational Licensing Act 2005），并接受 WorkSafe Tasmania 电气安全监管；输电侧并网走 AEMO + TasNetworks 的 NER 5.3 流程并须满足塔州独有的宽频率带 Frequency Operating Standard 与 Basslink 相关的系统强度要求。真正的买家：TasNetworks（NWTD、区域变电站更新、移动变电站、SAPS）、Hydro Tasmania / Entura（Cethana、Tarraleah、水电站 220 kV 开关站更新、King/Flinders 微网）、Marinus Link Pty Ltd 及其 EPC（Samsung C&T / DT Infrastructure、Hitachi Energy）、TasNetworks 的框架承包商（Zinfra、Downer、UGL）、风电/储能开发商（ACEN、Ark Energy、Gamuda、Goldwind、Woolnorth Renewables——神华 75% / Hydro Tasmania 25%、Lacuna）、矿企（Grange Resources Savage River——沙钢为大股东、MMG Rosebery、Renison 锡矿——Metals X / 云南锡业合资、Mt Lyell 铜矿重启方）、工业用户（Nyrstar Hobart、Bell Bay Aluminium、Norske Skog Boyer 电气化）、Firmus 数据中心与 Bell Bay 氢能开发商；供货窗口集中在 2026–2030：Marinus/NWTD 建设高峰、REZ 风电 FID 潮、TasNetworks 2024–29 与 2029–34 期更新计划。（本条目为离线编制，上述准入流程名称、门槛与承包商名单请在投标前以官网核验。）",
+    "vendor": "在塔州卖中高压设备，第一道门是 TasNetworks 的准入体系：输配一体的 TasNetworks 以 Service & Installation Rules、Network Design Standards 与核准设备/材料清单约束一切网络资产与接入，新产品须先提交 AS/IEC 型式试验报告（AS/IEC 62271 开关设备、AS 60076 变压器、AS/NZS 61439 低压成套、AS 2067 高压变电站设计、AS/NZS 3000 布线、AS/NZS 7000 架空线、AS/NZS 4777.2 逆变器）并通过产品评估与现场试用才能入册；Hydro Tasmania（含 Bass Strait Islands 微网）与 Marinus Link 不受 TasNetworks 清单约束但执行同等 AS/IEC 型式试验加各自工程规范（Entura 常任业主工程师），Marinus 的换流站/电缆一次设备已由 Hitachi Energy 与 Prysmian 锁定，海外厂商的机会在 Heybridge 220 kV 站、NWTD 变电站二次/MV 设备与风电场升压站。预制变电站 / E-house 作为建筑物须按 NCC 与 Tasmanian Building Act 2016 取得建筑许可（或走公用基础设施豁免路径），结构按 AS/NZS 1170 系列——全州为 AS/NZS 1170.2 风区 A、无气旋 C/D 要求，但西海岸与巴斯海峡沿岸盐雾腐蚀严重、中部高地（Waddamana、Bothwell、Steppes）须计雪/覆冰荷载与低温启动，位于 Tasmanian Planning Scheme『Bushfire-Prone Areas Code』划定区的站房须按 AS 3959 做 BAL 评定（Tasmania Fire Service 认可评估师出具）。本地含量方面，塔州政府 Buy Local Policy（Treasurer's Instructions）要求 A$10 万以上竞争性采购至少邀请两家本地企业并在评标中设 30% 权重的『经济与社会效益』指标，A$500 万以上合同（含延期选项；A$200–500 万可酌情要求）须附 Tasmanian Industry Participation Plan，TasNetworks / Hydro Tasmania 等 GBE 按其采购政策比照执行；Marinus Link 同时是维州 Local Jobs First 战略项目并须向联邦提交 Australian Industry Participation（AIP）计划，联邦 CIS 合同亦附本地供应链/社会许可承诺——海外厂商通常须与 ICN Gateway 注册的塔州集成/安装伙伴组队并提供本地装配、备件与售后方案（Marinus 一期主体工程由 DT Infrastructure + Samsung C&T 的 TasVic Greenlink JV 承建，Heybridge 换流站土建/机电分包是本地企业的切入口）。电气施工必须由 CBOS（Department of Justice）持牌的电气承包商与电工完成（Occupational Licensing Act 2005），并接受 WorkSafe Tasmania 电气安全监管；输电侧并网走 AEMO + TasNetworks 的 NER 5.3 流程并须满足塔州独有的宽频率带 Frequency Operating Standard 与 Basslink 相关的系统强度要求。真正的买家：TasNetworks（NWTD、区域变电站更新、移动变电站、SAPS）、Hydro Tasmania / Entura（Cethana、Tarraleah、水电站 220 kV 开关站更新、King/Flinders 微网）、Marinus Link Pty Ltd 及其 EPC（Samsung C&T / DT Infrastructure、Hitachi Energy）、TasNetworks 的框架承包商（Zinfra、Downer、UGL）、风电/储能开发商（ACEN、Ark Energy、Gamuda、Goldwind、Woolnorth Renewables——神华 75% / Hydro Tasmania 25%、Lacuna）、矿企（Grange Resources Savage River——沙钢为大股东、MMG Rosebery、Renison 锡矿——Metals X / 云南锡业合资、Mt Lyell 铜矿重启方）、工业用户（Nyrstar Hobart、Bell Bay Aluminium、Norske Skog Boyer 电气化）、Firmus 数据中心与 Bell Bay 氢能开发商；供货窗口集中在 2026–2030：Marinus/NWTD 建设高峰、REZ 风电 FID 潮、TasNetworks 2024–29 与 2029–34 期更新计划。（本条目为离线编制，上述准入流程名称、门槛与承包商名单请在投标前以官网核验。）",
     "tenderPortals": [
       "Tasmanian Government Tenders（州政府部门与部分 GBE 公开招标）：https://www.tenders.tas.gov.au",
       "Tasmanian Government Buy Local Policy / 采购政策（Department of Treasury and Finance）：https://www.purchasing.tas.gov.au",
