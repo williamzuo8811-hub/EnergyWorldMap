@@ -147,7 +147,8 @@ The library `lib/globe.gl.min.js` is a vendored standalone UMD bundle (globe.gl 
 
 A fourth standalone page, the **澳洲电网与能源动态地图** — linked from the 2D map's map-tools (`🇦🇺 澳洲地图`) and the
 globe's top bar (`🇦🇺 澳洲`). It is the TGOOD Australia-market BD cockpit: the same data layer **filtered to
-`country === '澳大利亚'`** (~260 projects) plus four Australia-only layers. Fully independent of `app.js`; `au.html`
+`country === '澳大利亚'`** (~260 projects) plus six Australia-only layers (state borders, transmission backbone, coal
+fleet, state fact sheets, AEMO pipeline, REZ zones). Fully independent of `app.js`; `au.html`
 loads the usual `js/data*.js` + `progress.js` + `pinyin-map.js` + `util.js` chain, then the AU layers, then `js/au.js`
 (one IIFE, debug handle `window.__AU__`, guarded for the `scripts/test-au.js` DOM/Leaflet stub).
 

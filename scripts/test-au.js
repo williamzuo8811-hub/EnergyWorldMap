@@ -145,6 +145,8 @@ const SHEETS = global.window.AU_STATES || {};
 /* ---------- 断言：🧭 管线 + 🌞 REZ ---------- */
 const PIPE = (global.window.AU_PIPELINE && global.window.AU_PIPELINE.items) || [];
 const ZONES = (global.window.AU_REZ && global.window.AU_REZ.zones) || [];
+ok(PIPE.length >= 100, '管线 ≥100 条（实际 ' + PIPE.length + '）');
+ok(ZONES.length >= 40, 'REZ ≥40 个（实际 ' + ZONES.length + '）');
 const pids = new Set();
 PIPE.forEach(it => {
   ok(it.id && !pids.has(it.id), '管线 id 缺失或重复：' + it.en); pids.add(it.id);
