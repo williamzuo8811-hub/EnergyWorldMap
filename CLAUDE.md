@@ -183,8 +183,9 @@ loads the usual `js/data*.js` + `progress.js` + `pinyin-map.js` + `util.js` chai
   (`approx:true` = placed on the locality / postcode / connection node / state centroid), `locality` (KCI Site Location
   Description or the gazetteer hit), `connNode`, `tnsp` (from KCI), `rez`, `kci` (AEMO KCI ID), `projId` (link to the main
   dataset by normalised English name, computed at load if absent). The current file is the **AEMO NEM Generation Information
-  July 2026 release** (~900 sites: committed ~50 · anticipated ~90 · proposed ~750, plus 18 hand-curated WA/SWIS items that the NEM
-  workbook does not cover — `asOf: '2026-07'`); ~130 items keep hand-written 中文 notes from the earlier research pass, and
+  July 2026 release** (~900 sites: committed ~50 · anticipated ~90 · proposed ~750, plus ~20 hand-curated WA items that the NEM
+  workbook does not cover — AEMO publishes no per-project list for the WEM, so the WA/SWIS items are reconciled by hand against the
+  **2026 WEM ESOO** (facilities newly assigned 2027-28 Capacity Credits = committed; see `data-src/aemo/README.md`) — `asOf: '2026-07'`); ~130 items keep hand-written 中文 notes from the earlier research pass, and
   ~90 formerly centroid-parked sites carry web-researched approximate coordinates. The source workbooks (NEM GI 2026-07, KCI 2026Q2,
   Generating Unit Expected Closure Year 2026-07) are kept under **`data-src/aemo/`** (not loaded by the page; see its README)
   so the quarterly diff is reproducible; the closure-year workbook is cross-referenced in `js/au-coal.js` notes.

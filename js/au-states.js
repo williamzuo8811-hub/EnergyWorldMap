@@ -796,7 +796,7 @@ window.AU_STATES = {
     "en": "Western Australia",
     "grid": "WEM/SWIS（西南互联系统，AEMO 运行，不属 NEM）+ NWIS（Pilbara 西北互联系统，Pilbara ISO 协调）+ Horizon Power 30 余个区域微网 + 矿区离网自备电网",
     "operator": "AEMO（WEM / SWIS 市场与系统运行）；Pilbara ISO（NWIS，Pilbara Networks Rules）；Horizon Power（区域独立系统）；监管：Economic Regulation Authority (ERA) + Energy Policy WA (Coordinator of Energy)",
-    "summary": "西澳是澳洲大陆唯一不在 NEM 的州：主网 SWIS 以 Perth 为中心，北到 Geraldton/Kalbarri、东到 Kalgoorlie、南到 Albany，由 AEMO 运行的 WEM（含容量机制）供电；当前电源仍以 Collie 片区煤电（Collie、Muja D、Bluewaters 合计约 1.2 GW）与 Synergy/Alinta 等燃气为基荷，屋顶光伏（>2.5 GW）为最大单一电源，可再生占比约三分之一强（比例本次未核验）。到 2030 年国有煤电全部退出，Collie 转为 >1 GW 的储能枢纽，Synergy 大储 + 风电 + 燃气调峰与 Western Power 330 kV Clean Energy Link 南北走廊是电网资本开支的主线；SWIS Demand Assessment 预计 2042 年前负荷成倍增长（绿色工业、绿氢、数据中心、电气化），需要数千公里新输电线。Pilbara NWIS 与矿企自备网由铁矿脱碳驱动，是全球最大的离网/弱网风光储市场之一，也是预制舱升压站、移动变电站与 E-house 的最直接买家。",
+    "summary": "西澳是澳洲大陆唯一不在 NEM 的州：主网 SWIS 以 Perth 为中心，北到 Geraldton/Kalbarri、东到 Kalgoorlie、南到 Albany，由 AEMO 运行的 WEM（含容量机制）供电；当前电源仍以 Collie 片区煤电（Collie、Muja D、Bluewaters 合计约 1.2 GW）与 Synergy/Alinta 等燃气为基荷，屋顶光伏（>2.5 GW）为最大单一电源，可再生占比约三分之一强（比例本次未核验）。到 2030 年国有煤电全部退出，Collie 转为 >1 GW 的储能枢纽，Synergy 大储 + 风电 + 燃气调峰与 Western Power 330 kV Clean Energy Link 南北走廊是电网资本开支的主线；SWIS Demand Assessment 预计 2042 年前负荷成倍增长（绿色工业、绿氢、数据中心、电气化），需要数千公里新输电线。Pilbara NWIS 与矿企自备网由铁矿脱碳驱动，是全球最大的离网/弱网风光储市场之一，也是预制舱升压站、移动变电站与 E-house 的最直接买家。AEMO 2026 WEM ESOO（2026-06）：2028-29 容量年峰值储备容量目标 6,323 MW，现有 + 承诺容量盈余 347 MW；2029-30 起出现 166 MW 缺口并在 2035-36 扩大到 2,161 MW，预期项目按期交付可把缺口推迟到 2031-32；2030-31 前将新增逾 1,000 MW 承诺发电与储能（含 CIS 与 Priority Project 支持项目），预期储能逾 600 MW，2026 储备容量周期 EOI 收到 85 份、约 3,747 MW；2026 周期起新储能的容量义务时长升至 7 小时，2028-29 基准储备容量价格 A$488,500/MW·年（上限 732,750、下限 244,250）。",
     "tnsp": {
       "name": "Western Power（SWIS 输配一体网络运营商，西澳没有独立 TNSP）",
       "owner": "西澳州政府（Electricity Networks Corporation，依 Electricity Corporations Act 2005 设立的政府贸易企业 GTE，由能源部长代表州持有）",
@@ -839,7 +839,7 @@ window.AU_STATES = {
       "Strategic Industrial Areas: Oakajee（Mid West 绿氢）、Boodarie / Maitland / Ashburton North / Anketell（Pilbara）、Kwinana-Rockingham、Collie Shotts（DevelopmentWA，非法定 REZ）"
     ],
     "policy": "州目标：净零 2050，州政府机构（含 Synergy、Western Power、Horizon Power）2030 年排放较 2020 年降 80%；没有立法的可再生占比目标（州气候变化立法推进状态本次未核验）。退煤政策：2022-06 宣布国有煤电 2030 年前全部退役（Collie 2027、Muja D 2029），配套约 A$38 亿国有新能源与储能投资（Synergy Collie BESS、Kwinana BESS、King Rocks 风电等）与 A$5.474 亿 Collie 转型包（含 A$2 亿 Collie 工业转型基金，后增至 A$2.3 亿）；私营 Bluewaters 未设法定退役日。2025-03 Cook 工党政府连任，路线延续，并以 Clean Energy Link 与 Rewiring the Nation（联邦对 WA 最高约 A$30 亿优惠融资）扩建输电。国有开发主体：Synergy（发电/零售/大储与风电）、Horizon Power（区域微网、SAPS、Pilbara）、Western Power（网络）；州没有 NSW LTESA 式长期合约招标，Synergy 以自有招标采购，但 WEM 参与联邦 Capacity Investment Scheme（WEM 专项可调度/发电标段，中标项目与规模本次未核验）。海上风电：联邦 2024-09 划定 Bunbury 申报区，2026-01 向 3 个项目（Oceanex/EDF 的 Bunbury North/South、Ocean Winds 的 Westward Wind，合计约 4 GW、约 730 km²）发放可行性许可。其他：Domestic Gas Policy（15% 国内留存）、WA Battery & Critical Minerals Strategy（Kwinana 锂精炼集群）、Pilbara 氢能枢纽（联邦 A$7,000 万）、WA EV Network 充电走廊。",
-    "coalExit": "国有煤电 2030 年前全退：Collie（Synergy，340 MW，1999 年投运）2027-10 关停，由 Synergy Collie BESS 500 MW/2,000 MWh（2026 年初投运）与 Neoen Collie Battery 560 MW/2,240 MWh 承接；Muja D 7–8 号机（Synergy，约 450 MW）2029-10 关停，Muja C 5 号机 2022-10、6 号机 2025-04 已退役，Muja AB 2018 已关。私营 Bluewaters（434 MW，2009 年投运，债权人控制）无正式关停日期——AEMO 2025 WEM 展望按其运行至本十年末，2025-09 州政府提前关停方案据报生变，2026-01 州政府将 Griffin Coal 供煤补贴协议延至 2031-06（补贴额度下调，2022 年以来累计约 A$3.08 亿）。AEMO 提示 2027-28 起 SWIS 若无新增可调度容量将出现缺口，因此退煤倒计时同步意味着燃气调峰、大储与 330 kV 走廊的集中采购窗口。",
+    "coalExit": "国有煤电 2030 年前全退：Collie（Synergy，340 MW，1999 年投运）2027-10 关停，由 Synergy Collie BESS 500 MW/2,000 MWh（2026 年初投运）与 Neoen Collie Battery 560 MW/2,240 MWh 承接；Muja D 7–8 号机（Synergy，约 450 MW）2029-10 关停，Muja C 5 号机 2022-10、6 号机 2025-04 已退役，Muja AB 2018 已关。私营 Bluewaters（434 MW，2009 年投运，债权人控制）无正式关停日期——AEMO 2025 WEM 展望按其运行至本十年末，2025-09 州政府提前关停方案据报生变，2026-01 州政府将 Griffin Coal 供煤补贴协议延至 2031-06（补贴额度下调，2022 年以来累计约 A$3.08 亿）。AEMO 提示 2027-28 起 SWIS 若无新增可调度容量将出现缺口，因此退煤倒计时同步意味着燃气调峰、大储与 330 kV 走廊的集中采购窗口。AEMO 2026 WEM ESOO 建模口径：Collie 2027-10-01、Muja G7/G8 2029-10-01 退出，Bluewaters 两台机组假定 2031-10-01 起不可用，Synergy Pinjar 燃机 2031-32 起分期退役（GT1–5/GT7 2031-10、GT9 2032-10、GT10 2034-10），Tesla Geraldton 2027-10、Tiwest 热电 2034-12 退出；2031-32 起若无新增可调度容量，缺口迅速扩大。",
     "keyProjects": [
       {
         "name": "清洁能源链北线 330kV 走廊 (Clean Energy Link North)",
@@ -945,7 +945,7 @@ window.AU_STATES = {
       "联邦 Australian Industry Participation（AIP）计划：https://www.industry.gov.au"
     ],
     "sources": [
-      "https://www.westernpower.com.au/about/reports-publications/access-arrangement/",
+      "https://www.aemo.com.au/energy-systems/electricity/wholesale-electricity-market-wem/wem-forecasting-and-planning/wem-electricity-statement-of-opportunities-wem-esoo","https://www.westernpower.com.au/about/reports-publications/access-arrangement/",
       "https://www.erawa.com.au/electricity/electricity-access/western-power-network",
       "https://www.wa.gov.au/organisation/energy-policy-wa",
       "https://aemo.com.au/energy-systems/electricity/wholesale-electricity-market-wem",
