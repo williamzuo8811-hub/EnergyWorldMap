@@ -175,7 +175,7 @@ function normCod(v) {
   m = s.match(/(\d{4})/); if (m) return m[1];
   return null;
 }
-const normKey = s => String(s || '').toLowerCase().replace(/\(.*?\)/g, ' ').replace(/\b(the|project|stage|phase|unit|units|bess|battery energy storage system|battery|wind farm|solar farm|power station|energy storage|farm|hybrid|ltd|pty)\b/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
+const normKey = s => String(s || '').toLowerCase().replace(/^[a-z]{2,4}\d{4,}\s*[-–]\s*/, '').replace(/\s*[-–]\s*kci\b.*$/, '').replace(/\bkci\b/g, ' ').replace(/\(.*?\)/g, ' ').replace(/\b(the|project|stage|phase|unit|units|bess|battery energy storage system|battery|wind farm|solar farm|power station|energy storage|farm|hybrid|ltd|pty)\b/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
 // AEMO 表里偶见多重转义（"&amp;amp;amp;"）：反复解码到没有实体为止
 const unent = s => { let t = String(s == null ? '' : s); for (let i = 0; i < 6 && /&(amp|lt|gt|quot|apos|#x?[0-9a-f]+);/i.test(t); i++) t = decode(t); return t; };
 // AEMO 的 Site Owner 常是冗长法人名（"… Pty Ltd as trustee for … Trust (ABN …)"）——去掉受托 / ABN / ACN 尾巴
@@ -286,7 +286,8 @@ function geocode(text, state, gaz, nodes) {
   if (hits.length) { hits.sort((a, b) => b.n - a.n || a.pi - b.pi || a.i - b.i); return { coord: hits[0].c.slice(), label: titleCase(hits[0].ph), how: 'locality' }; }
   const pcs = up.match(/\b(0[289]\d{2}|[2-7]\d{3})\b/g) || [];
   for (const pc of pcs) { const P = gaz.byPostcode[pc]; if (P && P.length) { const c = [0, 0]; P.forEach(x => { c[0] += x[0]; c[1] += x[1]; }); return { coord: [Math.round(c[0] / P.length * 1e4) / 1e4, Math.round(c[1] / P.length * 1e4) / 1e4], label: 'postcode ' + pc, how: 'postcode' }; } }
-  if (nodes) for (const nd of nodes) { if (nd.en && nd.en.length >= 4 && nd.coord && up.indexOf(nd.en.toUpperCase()) >= 0) return { coord: nd.coord.slice(), label: nd.en, how: 'node' }; }
+  // 接入站名：去掉括号里的别名后再比对（"Western Downs (Chinchilla / Kogan)" → "WESTERN DOWNS"）
+  if (nodes) for (const nd of nodes) { const nm = String(nd.en || '').replace(/\(.*?\)/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase(); if (nm.length >= 4 && nd.coord && up.indexOf(nm) >= 0) return { coord: nd.coord.slice(), label: nd.en, how: 'node' }; }
   return null;
 }
 // 场站名 → 去掉技术 / 类型词，留下地名部分（用于按名定位与生成中文名）
@@ -333,8 +334,18 @@ function offshoreShift(coord, it) { const d = it.fuel === 'offshore_wind' && OFF
 function enrich(items, prev, nodes, opts) {
   opts = opts || {}; nodes = nodes || [];
   const gaz = opts.gaz || null, kci = opts.kci || {}, main = opts.main || [];
-  const byKS = {}, byKey = {};
-  prev.forEach(p => { const k = normKey(p.aemo || p.en); byKS[k + '|' + p.status] = p; if (!byKey[k]) byKey[k] = p; });
+  // 上一版索引：精确英文名 → 归一名（同一地名下常有 "X Solar Farm" / "X BESS" / "X Wind Farm Stage 2" 多条，归一后同键，
+  // 故按 燃料+状态 > 燃料 > 状态 > 唯一候选 逐级消歧，避免光伏 / 储能记录互换）
+  const normEn = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const byEn = {}, byKey = {};
+  prev.forEach(p => { const e = normEn(p.aemo || p.en); if (!byEn[e]) byEn[e] = p; const k = normKey(p.aemo || p.en); (byKey[k] = byKey[k] || []).push(p); });
+  const pick = (cands, it) => {
+    if (!cands) return null;
+    const free = cands.filter(p => !used.has(p.id)); if (!free.length) return null;
+    const tiers = [p => p.fuel === it.fuel && p.status === it.status, p => p.fuel === it.fuel, p => !p.fuel && p.status === it.status, p => p.status === it.status, () => true];
+    for (const t of tiers) { const m = free.filter(t); if (m.length === 1) return m[0]; if (m.length > 1 && t === tiers[0]) return m[0]; }
+    return free.length === 1 ? free[0] : null;
+  };
   const kciBySite = {}; Object.keys(kci).forEach(id => kci[id].sites.forEach(s => { const k = normKey(s); if (k && !kciBySite[k]) kciBySite[k] = kci[id]; }));
   const mainBy = {}; main.forEach(p => { const k = normKey(p.en); if (k && !mainBy[k]) mainBy[k] = p; });
   const uniquePrefix = (k, map) => { if (!k || k.length < 6) return null; const c = Object.keys(map).filter(x => x && x.length >= 6 && (x.startsWith(k) || k.startsWith(x))); return c.length === 1 ? map[c[0]] : null; };
@@ -342,9 +353,9 @@ function enrich(items, prev, nodes, opts) {
   const geo = { memory: 0, main: 0, kci: 0, name: 0, node: 0, centroid: 0 };
   items.forEach(it => {
     const k = normKey(it.en);
-    let p = byKS[k + '|' + it.status]; if (p && used.has(p.id)) p = null;
-    if (!p) { p = byKey[k]; if (p && used.has(p.id)) p = null; }
-    if (!p) { p = uniquePrefix(k, byKey); if (p && used.has(p.id)) p = null; }
+    let p = byEn[normEn(it.en)]; if (p && used.has(p.id)) p = null;
+    if (!p) p = pick(byKey[k], it);
+    if (!p) { const c = uniquePrefix(k, byKey); p = c ? pick(c, it) : null; }
     if (p) {
       used.add(p.id);
       it.id = p.id; it.name = p.name || it.en;
@@ -365,7 +376,7 @@ function enrich(items, prev, nodes, opts) {
       if (!g && gaz) { const r = geocode(stripTypeWords(it.en), it.state, gaz, null); if (r && r.how === 'locality') { g = r; how = 'name'; } }
       if (g) { it.coord = offshoreShift(g.coord, it); it.approx = true; if (!it.locality) it.locality = g.label; geo[how]++; }
       else if (!it.coord) {
-        const node = it.connNode ? nodes.find(n => n.en && n.coord && it.connNode.toLowerCase().indexOf(n.en.toLowerCase()) >= 0) : null;
+        const node = it.connNode ? nodes.find(n => n.en && n.coord && it.connNode.toLowerCase().indexOf(String(n.en).replace(/\(.*?\)/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase()) >= 0) : null;
         const off = offshoreFallback(it);
         it.coord = node ? node.coord.slice() : off || (STATE_CENTROID[it.state] || [134, -27]).slice();
         it.approx = true; geo[node ? 'node' : 'centroid']++; needCoord.push(it);

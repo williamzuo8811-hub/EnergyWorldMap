@@ -183,20 +183,24 @@ loads the usual `js/data*.js` + `progress.js` + `pinyin-map.js` + `util.js` chai
   (`approx:true` = placed on the locality / postcode / connection node / state centroid), `locality` (KCI Site Location
   Description or the gazetteer hit), `connNode`, `tnsp` (from KCI), `rez`, `kci` (AEMO KCI ID), `projId` (link to the main
   dataset by normalised English name, computed at load if absent). The current file is the **AEMO NEM Generation Information
-  April 2026 release** (~900 sites: committed 54 · anticipated 82 · proposed ~770, plus 18 hand-curated WA/SWIS items that the NEM
-  workbook does not cover — `asOf: '2026-04'`); ~130 items keep hand-written 中文 notes from the earlier research pass.
+  July 2026 release** (~900 sites: committed ~50 · anticipated ~90 · proposed ~750, plus 18 hand-curated WA/SWIS items that the NEM
+  workbook does not cover — `asOf: '2026-07'`); ~130 items keep hand-written 中文 notes from the earlier research pass, and
+  ~90 formerly centroid-parked sites carry web-researched approximate coordinates. The source workbooks (NEM GI 2026-07, KCI 2026Q2,
+  Generating Unit Expected Closure Year 2026-07) are kept under **`data-src/aemo/`** (not loaded by the page; see its README)
+  so the quarterly diff is reproducible; the closure-year workbook is cross-referenced in `js/au-coal.js` notes.
   Rendered as **diamond markers** in their own cluster group
   (solid = committed, dashed = anticipated, hollow = proposed; colour = fuel), filtered by the 🧭 status / fuel chips
   (`state.plStatus`, default committed + anticipated; `state.plFuelOff`), the state filter, the year presets (via `codYear`)
   and the search box; right panel shows GW bands / fuel bars / top list; card = `showPipe` (shows mix / 接入上限 / TNSP / KCI).
-  **Refresh path** (aemo.com.au is not reachable from the Claude cloud container — download the workbooks locally and run):
-  `node scripts/import-aemo.js <NEM Generation Information.xlsx|.csv> [--kci <KCI compiled.xlsx>] [--wem] [--asof YYYY-MM] [--dry]`
+  **Refresh path** (aemo.com.au is not reachable from the Claude cloud container — download the workbooks locally, drop them in
+  `data-src/aemo/`, and run): `node scripts/import-aemo.js data-src/aemo/<NEM GI>.xlsx [--kci <KCI>.xlsx] [--wem] [--asof YYYY-MM] [--dry] [--prev <old au-pipeline.js>]`
   — a zero-dep xlsx reader (ZIP + sharedStrings + sheet XML) that finds the header row, maps columns by prioritised regexes
   (handles the 2026 "Generator Information" layout: Commitment Status / Site Owner / Agg Nameplate Capacity (MW AC) over DC /
   Technology Detail / Max Site Capacity / AEMO KCI ID, and the older Unit Status / Nameplate Capacity (MW) layout), keeps
   committed / anticipated / proposed rows (drops In Service / Announced Withdrawal / <5 MW placeholders), merges multi-unit rows
   per site + status, normalises fuel / COD, strips trustee / ABN tails from owners, **remembers coordinates, Chinese names and
-  notes from the previous `au-pipeline.js`** (match by normalised name + status; a renamed site is kept by adding
+  notes from the previous `au-pipeline.js`** (exact name first, then normalised name disambiguated by fuel + status so "X Solar Farm" /
+  "X BESS" at one locality never swap; `- KCI` suffixes and leading survey codes are ignored; a renamed site is kept by adding
   `aemo:"<AEMO Site Name>"` to the old item), links the main dataset's Australian projects (exact coord + `projId` + 中文名),
   then geocodes new sites: KCI location text / the site name → `scripts/data/au-localities.csv` (18k Australian localities
   with centroids, slimmed from matthewproctor/australianpostcodes; `--gazetteer` / `--no-gazetteer`) → postcode centroid →
