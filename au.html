@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>澳洲电网与能源动态地图 · Australia Grid &amp; Energy Map</title>
+  <meta name="description" content="澳大利亚电网与能源动态地图：输电骨架、州与电网公司档案、燃煤退役倒计时、EPC 未招标窗口期项目。Australia grid &amp; energy BD map — transmission backbone, state network companies, coal retirement countdown, pre-tender EPC opportunities.">
+  <meta name="theme-color" content="#060b18">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="澳洲电网与能源动态地图">
+  <meta property="og:description" content="输电骨架 · 州与电网公司 · 燃煤退役倒计时 · EPC 未招标窗口期">
+  <meta property="og:image" content="assets/og-cover.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="assets/og-cover.png">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  <link rel="stylesheet" href="lib/leaflet.css">
+  <link rel="stylesheet" href="lib/MarkerCluster.css">
+  <link rel="stylesheet" href="lib/MarkerCluster.Default.css">
+  <link rel="stylesheet" href="css/au.css?v=2">
+</head>
+<body>
+  <!-- 首屏加载态：底图瓦片到位（或超时）后淡出 -->
+  <div class="app-loader" id="au-loader" aria-live="polite">
+    <div class="al-logo">🇦🇺</div>
+    <div class="al-spin"></div>
+    <div class="al-text">澳洲电网与能源动态地图<span>加载电网骨架 · 州档案 · 项目数据…</span></div>
+  </div>
+
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">🇦🇺</div>
+        <div class="brand-text">
+          <h1 id="t-title">澳洲电网与能源动态地图</h1>
+          <div class="sub" id="t-sub">输电骨架 · 州与电网公司 · 燃煤退役倒计时 · EPC 窗口期 · AEMO 管线 · REZ</div>
+        </div>
+      </div>
+      <div class="kpis" id="kpis">
+        <div class="kpi"><div class="num accent" id="kpi-proj">0</div><div class="lab" id="lab-proj">澳洲项目</div></div>
+        <div class="kpi"><div class="num good" id="kpi-inv">0</div><div class="lab" id="lab-inv">总投资</div></div>
+        <div class="kpi"><div class="num warn" id="kpi-open">0</div><div class="lab" id="lab-open">🔧 EPC 未招标</div></div>
+        <div class="kpi"><div class="num warn" id="kpi-open-inv">0</div><div class="lab" id="lab-open-inv">未招标投资</div></div>
+        <div class="kpi"><div class="num hot" id="kpi-coal">0</div><div class="lab" id="lab-coal">⏳ 2035 前退役煤电</div></div>
+        <div class="kpi"><div class="num pipe" id="kpi-pipe">0</div><div class="lab" id="lab-pipe">🧭 承诺+预期管线</div></div>
+      </div>
+      <div class="top-actions">
+        <button class="tbtn" id="btn-lang" aria-label="中文 / English" title="中文 / English">EN</button>
+        <button class="tbtn" id="btn-share" aria-label="复制当前视图链接" title="复制当前视图链接">🔗</button>
+        <a class="tbtn" id="btn-world" href="index.html" aria-label="返回全球地图">🗺️ 全球地图</a>
+      </div>
+    </header>
+
+    <div class="body">
+      <!-- 左：筛选 -->
+      <aside class="panel left" id="left-panel" aria-label="筛选面板">
+        <div class="block">
+          <div class="block-title" id="t-states">州 / 领地 <span class="count" id="states-hint">点州看电网公司档案</span></div>
+          <div class="state-list" id="state-list"></div>
+        </div>
+        <div class="block">
+          <div class="block-title" id="t-layers">图层</div>
+          <div class="chip-row" id="layer-chips">
+            <button class="chip on" data-layer="grid" aria-pressed="true">⚡ 输电骨架</button>
+            <button class="chip on" data-layer="planned" aria-pressed="true">🚧 在建 / 规划线路</button>
+            <button class="chip on" data-layer="nodes" aria-pressed="true">🔘 枢纽变电站</button>
+            <button class="chip on" data-layer="coal" aria-pressed="true">🏭 燃煤电厂</button>
+            <button class="chip on" data-layer="projects" aria-pressed="true">📍 能源项目</button>
+            <button class="chip on" data-layer="fill" aria-pressed="true">🗺️ 州界着色</button>
+            <button class="chip on" data-layer="pipe" aria-pressed="true">🧭 AEMO 管线</button>
+            <button class="chip on" data-layer="rez" aria-pressed="true">🌞 REZ 区划</button>
+          </div>
+          <div class="kv-row" id="kv-chips" role="group" aria-label="电压等级"></div>
+        </div>
+        <div class="block">
+          <div class="block-title" id="t-epc">EPC / 总承包状态 <span class="count" id="epc-hint">未招标 = BD 窗口期</span></div>
+          <div class="chip-row" id="epc-chips"></div>
+          <button class="tgl epc-open-btn" id="btn-epc-open" aria-pressed="false">🔧 只看 EPC 未招标</button>
+        </div>
+        <div class="block">
+          <div class="block-title" id="t-pipe">🧭 AEMO 管线 <span class="count" id="pipe-hint">承诺 / 预期 / 拟建</span></div>
+          <div class="chip-row" id="pl-status-chips"></div>
+          <div class="chip-row" id="pl-fuel-chips" style="margin-top:6px"></div>
+        </div>
+        <div class="block">
+          <div class="block-title" id="t-cats">能源品类</div>
+          <div class="cat-list" id="cat-list"></div>
+        </div>
+        <div class="block">
+          <div class="block-title" id="t-status">项目状态</div>
+          <div class="chip-row" id="status-chips"></div>
+        </div>
+        <div class="block">
+          <div class="block-title" id="t-year">年份</div>
+          <div class="chip-row" id="year-presets">
+            <button class="chip on" data-preset="all" aria-pressed="true">全部</button>
+            <button class="chip" data-preset="recent" aria-pressed="false">🆕 近一年</button>
+            <button class="chip" data-preset="future" aria-pressed="false">未来 2027+</button>
+          </div>
+        </div>
+        <div class="block">
+          <div class="search"><span class="ico">🔍</span><input id="q" type="search" placeholder="搜项目 / 业主 / EPC / 拼音…" aria-label="搜索项目"></div>
+          <button class="btn-reset" id="btn-reset">↺ 重置全部筛选</button>
+        </div>
+        <div class="credit">数据：AEMO Generation Information（2026-07）+ KCI · AEMO ISP · TNSP/DNSP 规划报告 · 业主公告 · 自建项目库 · 州界 Natural Earth · 地名 Australian Postcodes（走廊为示意，非测绘线路；管线示意坐标按所在地 / 接入站放置）</div>
+      </aside>
+
+      <!-- 中：地图 -->
+      <main class="map-wrap">
+        <div id="map" role="region" aria-label="澳洲能源地图"></div>
+        <div class="map-legend" id="map-legend"></div>
+        <div class="card" id="card" role="region" aria-label="详情卡"></div>
+        <button class="fab fab-l" id="fab-filters" aria-label="展开 / 收起筛选" aria-expanded="false">🔍 筛选</button>
+        <button class="fab fab-r" id="fab-dash" aria-label="展开 / 收起看板" aria-expanded="false">📊 看板</button>
+        <button class="home" id="btn-home" title="复位视图" aria-label="复位视图">⤢</button>
+      </main>
+
+      <!-- 右：看板 -->
+      <aside class="panel right" id="right-panel" aria-label="看板">
+        <div class="block">
+          <div class="block-title" id="t-coal">⏳ 燃煤退役倒计时 <span class="count" id="coal-sum"></span></div>
+          <div class="coal-bands" id="coal-bands"></div>
+          <div class="coal-list" id="coal-list"></div>
+        </div>
+        <div class="block">
+          <div class="block-title" id="t-opps">🔧 EPC 未招标机会榜 <span class="count" id="opps-sum"></span></div>
+          <div class="opp-list" id="opp-list"></div>
+        </div>
+        <div class="block">
+          <div class="block-title" id="t-pipe-r">🧭 AEMO 管线 · 当前筛选 <span class="count" id="pipe-sum"></span></div>
+          <div class="coal-bands" id="pipe-bands"></div>
+          <div class="bars" id="pipe-fuel"></div>
+          <div class="opp-list" id="pipe-list" style="margin-top:8px"></div>
+        </div>
+        <div class="block">
+          <div class="block-title" id="t-zones">🌞 可再生能源区 REZ <span class="count" id="zone-sum"></span></div>
+          <div class="line-list" id="zone-list"></div>
+        </div>
+        <div class="block">
+          <div class="block-title" id="t-mix">📊 当前筛选 · 品类投资</div>
+          <div class="bars" id="cat-bars"></div>
+        </div>
+        <div class="block">
+          <div class="block-title" id="t-lines">🚧 在建 / 规划输电工程</div>
+          <div class="line-list" id="line-list"></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- 库（Leaflet + 聚合）-->
+  <script defer src="lib/leaflet.js"></script>
+  <script defer src="lib/leaflet.markercluster.js"></script>
+  <!-- 数据层（与 index.html 同序）-->
+  <script defer src="js/data.js"></script>
+  <script defer src="js/data-extra.js"></script>
+  <script defer src="js/data-brazil.js"></script>
+  <script defer src="js/data-mideast.js"></script>
+  <script defer src="js/data-russia-ca.js"></script>
+  <script defer src="js/data-clients.js"></script>
+  <script defer src="js/data-brazil-future.js"></script>
+  <script defer src="js/data-saudi-future.js"></script>
+  <script defer src="js/data-seasia.js"></script>
+  <script defer src="js/data-africa.js"></script>
+  <script defer src="js/data-oceania.js"></script>
+  <script defer src="js/data-europe.js"></script>
+  <script defer src="js/data-nuclear.js"></script>
+  <script defer src="js/data-northam.js"></script>
+  <script defer src="js/data-southasia.js"></script>
+  <script defer src="js/data-china-future.js"></script>
+  <script defer src="js/data-clients2.js"></script>
+  <script defer src="js/data-refresh2606.js"></script>
+  <script defer src="js/data-refresh2606b.js"></script>
+  <script defer src="js/data-refresh2606c.js"></script>
+  <script defer src="js/data-clients3.js"></script>
+  <script defer src="js/data-mining2607.js"></script>
+  <script defer src="js/data-mining2608.js"></script>
+  <script defer src="js/data-australia2608.js"></script>
+  <script defer src="js/data-clients-mining.js"></script>
+  <script defer src="js/data-refresh2607.js"></script>
+  <script defer src="js/data-refresh2608.js"></script>
+  <script defer src="js/progress.js"></script>
+  <script defer src="js/pinyin-map.js"></script>
+  <script defer src="js/util.js"></script>
+  <!-- 澳洲专属层：州界（Natural Earth）+ 州电网公司档案 + 输电骨架 + 燃煤机组 -->
+  <script defer src="lib/au-states.js"></script>
+  <script defer src="js/au-states.js"></script>
+  <script defer src="js/au-grid.js"></script>
+  <script defer src="js/au-coal.js"></script>
+  <script defer src="js/au-pipeline.js"></script>
+  <script defer src="js/au-rez.js"></script>
+  <script defer src="js/au.js?v=3"></script>
+  <!-- PWA：注册 Service Worker（离线 + 重访秒开）。失败静默。 -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+    }
+  </script>
+</body>
+</html>
