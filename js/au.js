@@ -198,7 +198,7 @@
     kKv: ['电压', 'Voltage'], kStatus: ['状态', 'Status'], kLen: ['长度', 'Length'], kYear: ['投运 / 目标年', 'Year'], kCost: ['投资', 'Cost'], kRoute: ['🧭 走廊节点', '🧭 Route'],
     black: ['烟煤', 'black coal'], brown: ['褐煤', 'brown coal'],
     pCountry: ['所属州', 'State'], pStatus: ['状态', 'Status'], pCap: ['规模 / 容量', 'Capacity'], pInv: ['投资额', 'Investment'], pOwner: ['业主 / 参与方', 'Owner'], pUpd: ['最近动态', 'Updated'], pEpc: ['🔧 EPC / 总承包', '🔧 EPC'], pProg: ['📍 最新进展', '📍 Latest'],
-    filters: ['🔍 筛选', '🔍 Filters'], dash: ['📊 看板', '📊 Dashboard'],
+    filters: ['🔍 筛选', '🔍 Filters'], dash: ['📊 看板', '📊 Dashboard'], drawerClose: ['✕ 收起', '✕ Close'], kpiToggle: ['📊 数据 ▾', '📊 Data ▾'],
     lgPipe: ['🧭 AEMO 管线', '🧭 AEMO pipeline'], lgRez: ['🌞 REZ 区划', '🌞 REZ zones'],
     pipeKpi: ['🧭 承诺+预期管线', '🧭 Committed + anticipated'], pipeT: ['🧭 AEMO 管线', '🧭 AEMO pipeline'], pipeHint: ['承诺 / 预期 / 拟建', 'committed / anticipated / proposed'],
     pipeR: ['🧭 AEMO 管线 · 当前筛选', '🧭 Pipeline · current filter'], zones: ['🌞 可再生能源区 REZ', '🌞 Renewable Energy Zones'],
@@ -567,6 +567,7 @@
   const navBtns = cur => ['leads', 'accounts', 'changes'].filter(v => v !== cur).map(v => '<button data-view="' + v + '">' + L_(v === 'leads' ? 'leadsBtn' : v === 'accounts' ? 'accBtn' : 'chBtn') + '</button>').join('');
   function openModal(html, view) {
     if (!modalEl || !modalBox) return;
+    closeDrawers();
     modalBox.innerHTML = html; modalEl.hidden = false; if (modalEl.removeAttribute) modalEl.removeAttribute('hidden');
     state.view = view; writeHash();
     const cl = modalBox.querySelector('.m-close'); if (cl) { cl.addEventListener('click', closeModal); if (cl.focus) cl.focus(); }
@@ -578,6 +579,8 @@
   function closeModal() { if (!modalEl) return; modalEl.hidden = true; if (modalEl.setAttribute) modalEl.setAttribute('hidden', ''); if (state.view) { state.view = null; writeHash(); } }
   function openView(v) { if (v === 'leads') showLeads(); else if (v === 'accounts') showAccounts('owner'); else if (v === 'epc') showAccounts('epc'); else if (v === 'changes') showChanges(); }
   const csvCell = v => { const s = String(v == null ? '' : v); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  // 表格单元：data-l = 列名；窄屏下 au.css 把每行拆成一张卡、用它当标签（.mtable td::before），12 列表格不必横向滑动
+  const td = (label, html, cls) => '<td' + (cls ? ' class="' + cls + '"' : '') + ' data-l="' + esc(label) + '">' + html + '</td>';
   function download(name, text, mime) {
     try {
       if (typeof Blob === 'undefined' || typeof URL === 'undefined' || !URL.createObjectURL || !document.body || !document.body.appendChild) return false;
@@ -592,11 +595,11 @@
   function leadRow(it, i) {
     const s = leadScore(it), f = fuelOf(it.fuel), pj = it.projId ? PROJ_BY_ID[it.projId] : null;
     const w = s.window ? ymFmt(s.window.from) + ' ~ ' + ymFmt(s.window.to) : '—';
-    return '<tr class="clk" data-plid="' + esc(it.id) + '"><td class="num">' + (i + 1) + '</td><td><div class="nm">' + esc(en() ? it.en : it.name) + '<small>' + esc(en() ? it.name : it.en) + (it.owner ? ' · ' + esc(it.owner) : '') + '</small></div></td>'
-      + '<td class="nw">' + esc(stShort(it.state)) + '</td><td class="nw"><span style="color:' + f.color + '">' + f.icon + '</span> ' + esc(en() ? f.en : f.zh) + '</td><td class="num">' + esc(mwFmt(it) || '—') + '</td><td class="nw">' + esc(it.cod || '—') + '</td>'
-      + '<td><span class="tag ' + it.status + '">' + esc(plStatusName(it.status)) + '</span></td><td><span class="tag' + (s.epc === '未招标' || s.epc === '未公开' ? ' open' : '') + '">' + esc(epcName(s.epc)) + '</span></td><td class="num">' + esc(w) + '</td><td>' + esc(en() ? s.product.en : s.product.zh) + '</td>'
-      + '<td class="num"><span class="sc ' + scoreCls(s.score) + '" title="' + esc((en() ? 'product ' : '产品 ') + s.prod + ' + ' + (en() ? 'window ' : '窗口 ') + s.win + '（' + (s.winWhy || '') + '）+ ' + (en() ? 'status/EPC ' : '状态/EPC ') + s.st + '（' + (s.stWhy || '') + '）') + '">' + s.score + '</span></td>'
-      + '<td class="act"><button data-plid="' + esc(it.id) + '">' + L_('lCard') + '</button>' + (pj ? '<a href="coach.html#project=' + pj.id + '" target="_blank" rel="noopener" title="' + esc(en() ? 'Open this project in the sales coach' : '用这个项目开一局销售陪练') + '">' + L_('lCoach') + '</a>' : '') + '</td></tr>';
+    return '<tr class="clk" data-plid="' + esc(it.id) + '">' + td('#', String(i + 1), 'num rk') + td('', '<div class="nm"><span class="rk-in">' + (i + 1) + '. </span>' + esc(en() ? it.en : it.name) + '<small>' + esc(en() ? it.name : it.en) + (it.owner ? ' · ' + esc(it.owner) : '') + '</small></div>', 'full')
+      + td(L_('pCountry'), esc(stShort(it.state)), 'nw') + td(L_('pFuel'), '<span style="color:' + f.color + '">' + f.icon + '</span> ' + esc(en() ? f.en : f.zh), 'nw') + td(L_('pMw'), esc(mwFmt(it) || '—'), 'num') + td('COD', esc(it.cod || '—'), 'nw')
+      + td(L_('pAemo'), '<span class="tag ' + it.status + '">' + esc(plStatusName(it.status)) + '</span>') + td(L_('lEpc'), '<span class="tag' + (s.epc === '未招标' || s.epc === '未公开' ? ' open' : '') + '">' + esc(epcName(s.epc)) + '</span>') + td(L_('lWindow'), esc(w), 'num') + td(L_('lProduct'), esc(en() ? s.product.en : s.product.zh))
+      + td(L_('lScore'), '<span class="sc ' + scoreCls(s.score) + '" title="' + esc((en() ? 'product ' : '产品 ') + s.prod + ' + ' + (en() ? 'window ' : '窗口 ') + s.win + '（' + (s.winWhy || '') + '）+ ' + (en() ? 'status/EPC ' : '状态/EPC ') + s.st + '（' + (s.stWhy || '') + '）') + '">' + s.score + '</span>', 'num')
+      + td('', '<button data-plid="' + esc(it.id) + '">' + L_('lCard') + '</button>' + (pj ? '<a href="coach.html#project=' + pj.id + '" target="_blank" rel="noopener" title="' + esc(en() ? 'Open this project in the sales coach' : '用这个项目开一局销售陪练') + '">' + L_('lCoach') + '</a>' : ''), 'act') + '</tr>';
   }
   function showLeads() {
     const all = leads(), top = all.slice(0, 50);
@@ -636,13 +639,13 @@
       const acc = buildAccounts(PIPE), top = acc.slice(0, 60), nearAll = acc.reduce((s, a) => s + a.near, 0), near10 = acc.slice(0, 10).reduce((s, a) => s + a.near, 0);
       body = '<div class="m-kpis"><div><b>' + fmtNum(acc.length) + '</b><span>' + (en() ? 'owner groups' : '业主（归并后）') + '</span></div><div><b>' + gw(nearAll) + '</b><span>' + (en() ? 'committed + anticipated MW' : '承诺 + 预期 MW') + '</span></div><div><b>' + (nearAll ? Math.round(near10 / nearAll * 100) : 0) + '%</b><span>' + (en() ? 'top-10 owners share' : '前 10 家业主占比') + '</span></div></div>'
         + '<div class="tbl-wrap"><table class="mtable"><thead><tr><th>#</th><th>' + (en() ? 'Owner' : '业主') + '</th><th class="num">' + (en() ? 'Projects' : '项目') + '</th><th class="num">' + esc(plStatusName('committed')) + '</th><th class="num">' + esc(plStatusName('anticipated')) + '</th><th class="num">' + esc(plStatusName('proposed')) + '</th><th>' + (en() ? 'By state' : '各州') + '</th><th>' + (en() ? 'Flagship' : '最大项目') + '</th><th class="num">' + L_('lScore') + '</th><th></th></tr></thead><tbody>'
-        + top.map((a, i) => '<tr><td class="num">' + (i + 1) + '</td><td><div class="nm">' + esc(a.name) + (Object.keys(a.raw).length > 1 ? '<small>' + esc(Object.keys(a.raw).filter(r => r !== a.name).slice(0, 3).join(' / ')) + (Object.keys(a.raw).length > 4 ? ' …' : '') + '</small>' : '') + '</div></td><td class="num">' + a.items.length + '</td><td class="num">' + (a.mw.committed ? gw(a.mw.committed) : '—') + '</td><td class="num">' + (a.mw.anticipated ? gw(a.mw.anticipated) : '—') + '</td><td class="num">' + (a.mw.proposed ? gw(a.mw.proposed) : '—') + '</td><td class="mini">' + stChips(a.states) + '</td><td>' + (a.top ? '<span class="d-link" data-plid="' + esc(a.top.id) + '">' + esc(en() ? a.top.en : a.top.name) + '</span> <span class="mini">' + esc(mwFmt(a.top)) + '</span>' : '—') + '</td><td class="num"><span class="sc ' + scoreCls(a.lead) + '">' + a.lead + '</span></td><td class="act"><button data-owner="' + esc(a.key) + '">' + (en() ? '📍 Map' : '📍 地图筛选') + '</button></td></tr>').join('')
+        + top.map((a, i) => '<tr>' + td('#', String(i + 1), 'num rk') + td('', '<div class="nm"><span class="rk-in">' + (i + 1) + '. </span>' + esc(a.name) + (Object.keys(a.raw).length > 1 ? '<small>' + esc(Object.keys(a.raw).filter(r => r !== a.name).slice(0, 3).join(' / ')) + (Object.keys(a.raw).length > 4 ? ' …' : '') + '</small>' : '') + '</div>', 'full') + td(en() ? 'Projects' : '项目', String(a.items.length), 'num') + td(plStatusName('committed'), (a.mw.committed ? gw(a.mw.committed) : '—'), 'num') + td(plStatusName('anticipated'), (a.mw.anticipated ? gw(a.mw.anticipated) : '—'), 'num') + td(plStatusName('proposed'), (a.mw.proposed ? gw(a.mw.proposed) : '—'), 'num') + td(en() ? 'By state' : '各州', stChips(a.states), 'mini') + td(en() ? 'Flagship' : '最大项目', (a.top ? '<span class="d-link" data-plid="' + esc(a.top.id) + '">' + esc(en() ? a.top.en : a.top.name) + '</span> <span class="mini">' + esc(mwFmt(a.top)) + '</span>' : '—')) + td(L_('lScore'), '<span class="sc ' + scoreCls(a.lead) + '">' + a.lead + '</span>', 'num') + td('', '<button data-owner="' + esc(a.key) + '">' + (en() ? '📍 Map' : '📍 地图筛选') + '</button>', 'act') + '</tr>').join('')
         + '</tbody></table></div><p class="m-note">' + L_('accNote') + '</p>';
     } else {
       const ep = buildEpcAccounts();
       body = '<div class="m-kpis"><div><b>' + fmtNum(ep.length) + '</b><span>' + (en() ? 'contractors identified' : '识别到的承包商') + '</span></div><div><b>' + fmtNum(ep.reduce((s, a) => s + a.main.length, 0)) + '</b><span>' + (en() ? 'awards in project library' : '主项目库授标记录') + '</span></div><div><b>' + fmtNum(ep.reduce((s, a) => s + a.pipe.length, 0)) + '</b><span>' + (en() ? 'mentions in pipeline notes' : '管线备注提及') + '</span></div></div>'
         + '<div class="tbl-wrap"><table class="mtable"><thead><tr><th>#</th><th>EPC</th><th class="num">' + (en() ? 'Projects' : '项目') + '</th><th class="num">' + (en() ? 'Value' : '参与投资') + '</th><th class="num">' + (en() ? 'Pipeline MW' : '管线 MW') + '</th><th>' + (en() ? 'By state' : '各州') + '</th><th>' + (en() ? 'Projects (click for card)' : '承接项目（点开卡片）') + '</th></tr></thead><tbody>'
-        + ep.map((a, i) => { const chips = a.main.map(p => '<span class="d-link" data-pid="' + p.id + '">' + esc(nm(p)) + (p.epcStatus === '未招标' ? ' 🔧' : '') + '</span>').concat(a.pipe.map(it => '<span class="d-link" data-plid="' + esc(it.id) + '">🧭 ' + esc(en() ? it.en : it.name) + '</span>')); return '<tr><td class="num">' + (i + 1) + '</td><td><div class="nm">' + esc(a.name) + '</div></td><td class="num">' + a.n + ' <span class="mini">(' + a.main.length + '+' + a.pipe.length + ')</span></td><td class="num">' + (a.inv ? '$' + invMag(a.inv) : '—') + '</td><td class="num">' + (a.mw ? gw(a.mw) : '—') + '</td><td class="mini">' + stChips(a.states) + '</td><td><div class="chips">' + chips.slice(0, 8).join('') + (chips.length > 8 ? '<span class="mini">+' + (chips.length - 8) + '</span>' : '') + '</div></td></tr>'; }).join('')
+        + ep.map((a, i) => { const chips = a.main.map(p => '<span class="d-link" data-pid="' + p.id + '">' + esc(nm(p)) + (p.epcStatus === '未招标' ? ' 🔧' : '') + '</span>').concat(a.pipe.map(it => '<span class="d-link" data-plid="' + esc(it.id) + '">🧭 ' + esc(en() ? it.en : it.name) + '</span>')); return '<tr>' + td('#', String(i + 1), 'num rk') + td('', '<div class="nm"><span class="rk-in">' + (i + 1) + '. </span>' + esc(a.name) + '</div>', 'full') + td(en() ? 'Projects' : '项目', a.n + ' <span class="mini">(' + a.main.length + '+' + a.pipe.length + ')</span>', 'num') + td(en() ? 'Value' : '参与投资', (a.inv ? '$' + invMag(a.inv) : '—'), 'num') + td(en() ? 'Pipeline MW' : '管线 MW', (a.mw ? gw(a.mw) : '—'), 'num') + td(en() ? 'By state' : '各州', stChips(a.states), 'mini') + td('', '<div class="chips">' + chips.slice(0, 8).join('') + (chips.length > 8 ? '<span class="mini">+' + (chips.length - 8) + '</span>' : '') + '</div>', 'full') + '</tr>'; }).join('')
         + '</tbody></table></div><p class="m-note">' + L_('epcNote') + '</p>';
     }
     openModal(mhead(L_('accT'), L_('accHint'), navBtns('accounts')) + '<div class="m-body">' + tabs + body + '</div>', tab === 'epc' ? 'epc' : 'accounts');
@@ -658,7 +661,7 @@
   }
   function chRow(x, mid) {
     const f = fuelOf(x.fuel), live = PIPE_BY_ID[x.id];
-    return '<tr' + (live ? ' class="clk" data-plid="' + esc(x.id) + '"' : '') + '><td><div class="nm">' + esc(en() ? x.en : x.name) + '<small>' + esc(en() ? x.name : x.en) + (x.owner ? ' · ' + esc(x.owner) : '') + '</small></div></td><td class="nw">' + esc(stShort(x.state)) + '</td><td class="nw"><span style="color:' + f.color + '">' + f.icon + '</span> ' + esc(en() ? f.en : f.zh) + '</td><td class="num">' + (x.mw ? fmtNum(x.mw) + ' MW' : '—') + (x.mwh ? ' / ' + fmtNum(x.mwh) + ' MWh' : '') + '</td><td>' + (mid || '<span class="tag ' + x.status + '">' + esc(plStatusName(x.status)) + '</span>') + '</td><td>' + esc(x.cod || '—') + '</td><td class="num">' + (live ? '<span class="sc ' + scoreCls(leadScore(live).score) + '">' + leadScore(live).score + '</span>' : '—') + '</td></tr>';
+    return '<tr' + (live ? ' class="clk" data-plid="' + esc(x.id) + '"' : '') + '>' + td('', '<div class="nm">' + esc(en() ? x.en : x.name) + '<small>' + esc(en() ? x.name : x.en) + (x.owner ? ' · ' + esc(x.owner) : '') + '</small></div>', 'full') + td(L_('pCountry'), esc(stShort(x.state)), 'nw') + td(L_('pFuel'), '<span style="color:' + f.color + '">' + f.icon + '</span> ' + esc(en() ? f.en : f.zh), 'nw') + td(L_('pMw'), (x.mw ? fmtNum(x.mw) + ' MW' : '—') + (x.mwh ? ' / ' + fmtNum(x.mwh) + ' MWh' : ''), 'num') + td(L_('pAemo'), (mid || '<span class="tag ' + x.status + '">' + esc(plStatusName(x.status)) + '</span>')) + td('COD', esc(x.cod || '—')) + td(L_('lScore'), (live ? '<span class="sc ' + scoreCls(leadScore(live).score) + '">' + leadScore(live).score + '</span>' : '—'), 'num') + '</tr>';
   }
   const chTable = (rows, mid) => rows.length ? '<div class="tbl-wrap"><table class="mtable"><thead><tr><th>' + (en() ? 'Project' : '项目') + '</th><th>' + L_('pCountry') + '</th><th>' + L_('pFuel') + '</th><th class="num">' + L_('pMw') + '</th><th>' + L_('pAemo') + '</th><th>COD</th><th class="num">' + L_('lScore') + '</th></tr></thead><tbody>' + rows.map(x => chRow(x, mid ? mid(x) : null)).join('') + '</tbody></table></div>' : '<div class="empty">' + L_('noData') + '</div>';
   function showChanges() {
@@ -871,8 +874,8 @@
     el.querySelectorAll('.row').forEach(r => { r.addEventListener('click', () => showLine(r.dataset.line)); r.addEventListener('keydown', e => { if (e.key === 'Enter') showLine(r.dataset.line); }); });
   }
   function renderLegend() {
-    const el = $('map-legend'); if (!el) return;
-    el.innerHTML = '<div class="lg-h">' + L_('legend') + '</div>'
+    const el = $('map-legend'), inl = $('legend-inline'); if (!el && !inl) return;
+    const html = '<div class="lg-h">' + L_('legend') + '</div>'
       + KV_BANDS.map(b => '<div class="lg-row"><i style="--c:' + b.color + '"></i>' + b.label + '</div>').join('')
       + '<div class="lg-row"><i style="--c:' + DC.color + '"></i>' + DC.label + '</div>'
       + '<div class="lg-row"><i class="dash" style="--c:#cfd8ea"></i>' + L_('building') + ' / ' + L_('planned') + '</div>'
@@ -882,6 +885,8 @@
       + '<div class="lg-row"><i class="dia hollow" style="--c:#21c7ff"></i>' + esc(plStatusName('proposed')) + '</div>'
       + '<div class="lg-row"><i class="zone" style="--c:#2ee6a6"></i>REZ ' + esc(zoneStatusName('declared')) + ' <i class="zone" style="--c:#ffb02e;margin-left:6px"></i>' + esc(zoneStatusName('planned')) + '</div>'
       + '<div class="lg-note">' + L_('legendNote') + '</div>';
+    if (el) el.innerHTML = html;
+    if (inl) inl.innerHTML = html;   // 窄屏：同一份图例画进左栏「图层」块
   }
   function updateCounts(items) {
     const byCat = {}, bySt = {}, byEpc = {};
@@ -902,11 +907,14 @@
   }
 
   /* ---------- 卡片 ---------- */
-  const cardEl = $('card');
-  function hideCard() { if (cardEl && cardEl.classList) cardEl.classList.remove('show'); state.card = null; writeHash(); }
+  const cardEl = $('card'), appEl = $('app');
+  const appFlag = (cls, on) => { if (appEl && appEl.classList) appEl.classList.toggle(cls, !!on); };   // .app.card-open / .drawer-open：窄屏隐藏浮钮
+  function hideCard() { if (cardEl && cardEl.classList) cardEl.classList.remove('show'); appFlag('card-open', false); state.card = null; writeHash(); }
   function openCard(html, kind, id) {
     if (!cardEl) return;
-    cardEl.innerHTML = html; if (cardEl.classList) cardEl.classList.add('show');
+    closeDrawers();   // 窄屏：底部抽屉会盖住底部卡片，开卡先收抽屉
+    cardEl.innerHTML = html; if (cardEl.classList) cardEl.classList.add('show'); appFlag('card-open', true);
+    try { cardEl.scrollTop = 0; } catch (e) { /* stub */ }
     state.card = { kind, id };
     const cl = $('c-close'); if (cl) cl.addEventListener('click', hideCard);
     const sh = $('c-share'); if (sh) sh.addEventListener('click', () => copyLink());
@@ -1089,16 +1097,44 @@
     const hm = $('btn-home'); if (hm) hm.addEventListener('click', fitAU);
     const lg = $('btn-lang'); if (lg) lg.addEventListener('click', () => { state.lang = en() ? 'zh' : 'en'; applyLang(); });
     const sh = $('btn-share'); if (sh) sh.addEventListener('click', copyLink);
-    const fl = $('fab-filters'), fd = $('fab-dash'), lp = $('left-panel'), rp = $('right-panel');
-    if (fl && lp) fl.addEventListener('click', () => { const on = !lp.classList.contains('open'); lp.classList.toggle('open', on); if (rp) rp.classList.remove('open'); fl.setAttribute('aria-expanded', on ? 'true' : 'false'); });
-    if (fd && rp) fd.addEventListener('click', () => { const on = !rp.classList.contains('open'); rp.classList.toggle('open', on); if (lp) lp.classList.remove('open'); fd.setAttribute('aria-expanded', on ? 'true' : 'false'); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (state.view) closeModal(); else hideCard(); } });
+    const fl = $('fab-filters'), fd = $('fab-dash');
+    if (fl) fl.addEventListener('click', () => toggleDrawer('left'));
+    if (fd) fd.addEventListener('click', () => toggleDrawer('right'));
+    const bd = $('drawer-backdrop'); if (bd) bd.addEventListener('click', closeDrawers);
+    document.querySelectorAll('.drawer-close').forEach(b => b.addEventListener('click', closeDrawers));
+    // 把手下滑 ≥48px 也收起抽屉（触屏习惯）
+    document.querySelectorAll('.drawer-head').forEach(h => {
+      let y0 = null;
+      h.addEventListener('touchstart', e => { y0 = e.touches && e.touches[0] ? e.touches[0].clientY : null; }, { passive: true });
+      h.addEventListener('touchend', e => { const t = e.changedTouches && e.changedTouches[0]; if (y0 != null && t && t.clientY - y0 > 48) closeDrawers(); y0 = null; }, { passive: true });
+    });
+    const kt = $('kpi-toggle'), tb = document.querySelector('.topbar');
+    if (kt && tb && tb.classList) kt.addEventListener('click', () => { const open = tb.classList.toggle('kpis-open'); kt.setAttribute('aria-expanded', open ? 'true' : 'false'); setTimeout(() => { try { map.invalidateSize(); } catch (e) { /* stub */ } }, 230); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (state.view) closeModal(); else if (state.card) hideCard(); else closeDrawers(); } });
     const bl = $('btn-leads'), bl2 = $('btn-leads-more'), ba = $('btn-accounts'), bc = $('btn-changes'), bc2 = $('btn-changes-more');
     if (bl) bl.addEventListener('click', showLeads); if (bl2) bl2.addEventListener('click', showLeads);
     if (ba) ba.addEventListener('click', () => showAccounts('owner'));
     if (bc) bc.addEventListener('click', showChanges); if (bc2) bc2.addEventListener('click', showChanges);
     if (modalEl) modalEl.addEventListener('click', e => { if (e && e.target === modalEl) closeModal(); });
     const op = $('pl-owner-pill'); if (op) op.addEventListener('click', () => { state.plOwner = null; syncUI(); render(); });
+  }
+  /* ---------- 窄屏抽屉（🔍 筛选 / 📊 看板）：遮罩 + 关闭钮 + 把手下滑；开卡 / 开宽面板时自动收起 ---------- */
+  function closeDrawers() {
+    ['left-panel', 'right-panel'].forEach(id => { const el = $(id); if (el && el.classList) el.classList.remove('open'); });
+    const bd = $('drawer-backdrop'); if (bd && bd.classList) bd.classList.remove('show');
+    ['fab-filters', 'fab-dash'].forEach(id => { const b = $(id); if (b && b.setAttribute) b.setAttribute('aria-expanded', 'false'); });
+    appFlag('drawer-open', false);
+  }
+  function toggleDrawer(side) {
+    const el = $(side === 'left' ? 'left-panel' : 'right-panel'), other = $(side === 'left' ? 'right-panel' : 'left-panel'), fab = $(side === 'left' ? 'fab-filters' : 'fab-dash');
+    if (!el || !el.classList) return;
+    const willOpen = !el.classList.contains('open');
+    if (other && other.classList) other.classList.remove('open');
+    el.classList.toggle('open', willOpen);
+    const bd = $('drawer-backdrop'); if (bd && bd.classList) bd.classList.toggle('show', willOpen);
+    if (fab && fab.setAttribute) fab.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    appFlag('drawer-open', willOpen);
+    if (willOpen && state.card) hideCard();   // 窄屏下底部抽屉与底部卡片共用一个槽位
   }
   function resetState() {
     state.states = new Set(); state.cats = new Set(CAT_KEYS); state.statuses = new Set(); state.epc = new Set(); state.epcOnly = false;
@@ -1129,6 +1165,7 @@
     set('t-title', L_('title')); set('t-sub', L_('sub')); set('lab-proj', L_('proj')); set('lab-inv', L_('inv')); set('lab-open', L_('open')); set('lab-open-inv', L_('openInv')); set('lab-coal', L_('coalKpi'));
     set('states-hint', L_('statesHint')); set('t-layers', L_('layers')); set('epc-hint', L_('epcHint')); set('btn-epc-open', L_('epcOpen')); set('t-cats', L_('cats')); set('t-status', L_('status')); set('t-year', L_('year'));
     set('btn-reset', L_('reset')); set('btn-world', L_('world')); set('t-mix', L_('mix')); set('t-lines', L_('lines')); set('fab-filters', L_('filters')); set('fab-dash', L_('dash'));
+    set('drawer-title-l', L_('filters')); set('drawer-title-r', L_('dash')); set('drawer-close-l', L_('drawerClose')); set('drawer-close-r', L_('drawerClose')); set('kpi-toggle', L_('kpiToggle'));
     set('lab-pipe', L_('pipeKpi')); set('pipe-hint', L_('pipeHint'));
     set('btn-leads', L_('leadsBtn')); set('btn-accounts', L_('accBtn')); set('btn-changes', L_('chBtn')); set('btn-leads-more', L_('leadsMore')); set('btn-changes-more', L_('chMore'));
     const tt = (id, k, keep) => { const el = $(id); if (!el) return; const c = el.querySelector('.count'); el.textContent = L_(k) + ' '; if (keep && c) el.appendChild(c); };
