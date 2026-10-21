@@ -198,6 +198,7 @@ if (CH) {
   CH.needCoord.forEach(id => ok(pids.has(id), '需补坐标 id 不在管线里：' + id));
   ok(CH.counts.added === CH.added.length && CH.counts.gone === CH.gone.length && CH.counts.status === CH.status.length && CH.counts.mw === CH.mw.length && CH.counts.now === PIPE.length, 'AU_CHANGES counts 与数组 / 管线条数一致');
 }
+try { AU.STATES.forEach(s => { const b = AU.buildStateBrief(s.abbr); ok(/^# .*能源市场机会简报/.test(b) && /## 关键数字/.test(b) && /## 本季度线索 Top 10/.test(b) && /## 煤电退役时间表/.test(b) && /## 行动建议/.test(b) && b.length > 1500, '州机会简报 ' + s.abbr + ' 结构 / 长度（' + b.length + '）'); }); const wa = AU.buildStateBrief('WA'); ok(/Parron|Marri|Narrogin/.test(wa) && /Collie/.test(wa) && /Western Power/.test(wa), 'WA 简报含承诺风电 / Collie / Western Power'); ok(AU.buildStateBrief('ACT').indexOf('新南威尔士州') === 0 || /新南威尔士州/.test(AU.buildStateBrief('ACT').slice(0, 40)), 'ACT 并入 NSW 简报'); } catch (e) { fails.push('buildStateBrief 抛错：' + (e && e.message)); }
 try { const b = AU.buildChangesBrief(); ok(/^# 澳洲 AEMO 管线季度变化简报/.test(b) && /升级为承诺/.test(b) && /线索 Top 10/.test(b) && b.length > 800, 'buildChangesBrief 生成简报'); } catch (e) { fails.push('buildChangesBrief 抛错：' + (e && e.message)); }
 
 /* ---------- 汇报 ---------- */

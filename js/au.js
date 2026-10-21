@@ -219,6 +219,7 @@
     chNone: ['尚无季度变化数据：运行 node scripts/import-aemo.js <新季度 AEMO 表> 会生成 js/au-changes.js', 'No quarterly change data yet: run node scripts/import-aemo.js <new AEMO workbook> to generate js/au-changes.js'],
     chNote: ['每季度换一份 AEMO Generation Information 表并运行 scripts/import-aemo.js，即自动生成这四类清单（js/au-changes.js）与一页中文简报（data-src/aemo/brief-<asOf>.md）；点行可打开管线卡片（「不再出现」的条目已不在管线里）。', 'Each quarter, drop in the new AEMO Generation Information workbook and run scripts/import-aemo.js: these four lists (js/au-changes.js) and a one-page brief (data-src/aemo/brief-<asOf>.md) regenerate automatically; click a row to open its card ("gone" rows are no longer in the pipeline).'],
     ownerPill: ['🏢 业主', '🏢 Owner'],
+    stBrief: ['⤓ 州机会简报', '⤓ State brief'],
   };
   const L_ = k => (T[k] || [k, k])[state.lang === 'en' ? 1 : 0];
   const en = () => state.lang === 'en';
@@ -708,6 +709,61 @@
   }
   function exportBrief() { const t = buildChangesBrief(); if (!t) return ''; if (download('au-pipeline-brief-' + ((CHANGES && CHANGES.asOf) || 'now') + '.md', t, 'text/markdown;charset=utf-8')) toast(en() ? 'Brief exported' : '已导出简报 (.md)'); return t; }
 
+  /* ---------- 📄 州机会简报（一键导出给总部：Markdown 一页）---------- */
+  function buildStateBrief(a) {
+    a = normState(a); const s = ST[a]; if (!s) return '';
+    const sh = SHEETS[a] || {}, d = stateStats(a), today = NOW.toISOString().slice(0, 10);
+    const ps = PIPE.filter(it => it.state === a);
+    const mwBy = st => ps.filter(i => i.status === st).reduce((x, i) => x + (i.mw || 0), 0);
+    const cell = v => String(v == null ? '' : v).replace(/\|/g, '／').replace(/\s*\n+\s*/g, ' ');
+    const tbl = (head, rows) => rows.length ? '| ' + head.join(' | ') + ' |\n|' + head.map(() => '---').join('|') + '|\n' + rows.map(r => '| ' + r.map(cell).join(' | ') + ' |').join('\n') : '（无）';
+    const coalRows = coalSorted.filter(p => p.state === a && p.status !== 'closed').map(p => { const cd = countdown(p); return [p.name, p.owner || '', p.mw ? fmtNum(p.mw) + ' MW' : '', (p.closeYear || '—') + (p.closeMonth ? '-' + String(p.closeMonth).padStart(2, '0') : ''), cd.txt + (p.closeText ? ' · ' + p.closeText : '')]; });
+    const top = leads(ps).slice(0, 10).map((it, i) => { const sc = leadScore(it); return [i + 1, it.name, fuelOf(it.fuel).zh, mwFmt(it), it.cod || '—', PL_ZH[it.status] || it.status, sc.epc, sc.window ? ymFmt(sc.window.from) + '~' + ymFmt(sc.window.to) : '—', sc.product.zh, sc.score]; });
+    const open = d.ps.filter(p => p.epcStatus === '未招标').sort((x, y) => (y.inv || 0) - (x.inv || 0)).slice(0, 10).map(p => [p.name, (CATEGORIES[p.cat] || {}).short || p.cat, p.status + ' ' + p.year, usd(p), p.owner || '', p.cap || '']);
+    const owners = buildAccounts(ps).slice(0, 8).map(o => '- ' + o.name + '：' + o.items.length + ' 条 · 承诺 ' + fmtNum(o.mw.committed) + ' MW · 预期 ' + fmtNum(o.mw.anticipated) + ' MW · 拟建 ' + fmtNum(o.mw.proposed) + ' MW' + (o.top ? ' · 最大：' + o.top.name + '（' + mwFmt(o.top) + '）' : ''));
+    const lines = LINES.filter(l => l.status !== 'existing' && (l.nodes || []).some(id => NODE[id] && normState(NODE[id].state) === a)).sort((x, y) => (x.status === 'building' ? 0 : 1) - (y.status === 'building' ? 0 : 1) || (x.year || 9999) - (y.year || 9999)).map(l => '- ' + l.name + '（' + (l.type === 'dc' ? 'HVDC ' : '') + l.kv + ' kV · ' + (l.status === 'building' ? '在建' : '规划') + (l.year ? ' ' + l.year : '') + (l.owner ? ' · ' + l.owner : '') + (l.lengthKm ? ' · ' + fmtNum(l.lengthKm) + ' km' : '') + (l.costAud ? ' · ' + l.costAud : '') + '）');
+    const zones = ZONES_SORTED.filter(z => normState(z.state) === a).map(z => { const st = ZONE_STAT[z.key] || {}; return '- ' + (z.ispId ? z.ispId + ' ' : '') + z.name + '（' + (ZONE_ZH[z.status] || z.status) + (z.body ? ' · ' + z.body : '') + (z.targetGw ? ' · 目标 ' + z.targetGw + ' GW' : '') + '）：承诺+预期 ' + gw((st.committed || 0) + (st.anticipated || 0)) + ' · 拟建 ' + gw(st.proposed || 0) + ' · 项目 ' + (st.projects || 0); });
+    const chUp = CHANGES ? (CHANGES.status || []).filter(x => x.state === a && x.to === 'committed') : [], chAdd = CHANGES ? (CHANGES.added || []).filter(x => x.state === a) : [], chGone = CHANGES ? (CHANGES.gone || []).filter(x => x.state === a) : [];
+    const keyProj = (sh.keyProjects || []).map(k => '- ' + k.name + (k.kv ? '（' + k.kv + ' kV）' : '') + '：' + (k.status || '') + (k.year ? ' ' + k.year : '') + (k.owner ? ' · ' + k.owner : '') + (k.desc ? ' — ' + k.desc : ''));
+    const L = [];
+    L.push('# ' + s.name + '（' + a + '）能源市场机会简报 · ' + today.slice(0, 7), '');
+    L.push('来源：澳洲电网与能源动态地图 au.html（项目库 + AEMO ' + (PIPE_ASOF || '') + ' 管线 + 州电网档案' + (CHANGES ? ' + 本季变化 ' + (CHANGES.prevAsOf || '') + '→' + CHANGES.asOf : '') + '）· 生成 ' + today + '。线索分 = 产品匹配 × 采购窗口 × 状态/EPC（0–100）；管线坐标与 EPC 推断以实地核实为准。', '');
+    if (sh.summary) L.push('## 一句话', '', sh.summary, '');
+    L.push('## 关键数字', '');
+    L.push('- 项目库：' + fmtNum(d.n) + ' 个项目 · 投资 ≈$' + invMag(d.inv) + ' · EPC 未招标 ' + fmtNum(d.open) + ' 个');
+    L.push('- AEMO 管线：承诺 ' + gw(mwBy('committed')) + ' · 预期 ' + gw(mwBy('anticipated')) + ' · 拟建 ' + gw(mwBy('proposed')) + '（共 ' + fmtNum(ps.length) + ' 条）');
+    L.push('- 在运煤电 ' + gw(d.coal) + '，≤2030 退役 ' + gw(coalOperating.filter(p => p.state === a && p.closeYear && p.closeYear <= 2030).reduce((x, p) => x + (p.mw || 0), 0)) + '，≤2035 退役 ' + gw(coalOperating.filter(p => p.state === a && p.closeYear && p.closeYear <= 2035).reduce((x, p) => x + (p.mw || 0), 0)));
+    L.push('- REZ：' + zones.length + ' 个（已划定 ' + ZONES_SORTED.filter(z => normState(z.state) === a && z.status === 'declared').length + '）· 在建 / 规划输电工程 ' + lines.length + ' 项', '');
+    L.push('## 电网与政策', '');
+    if (sh.grid) L.push('- 电网 / 市场：' + sh.grid + (sh.operator ? ' · ' + sh.operator : ''));
+    if (sh.tnsp) L.push('- 输电商 TNSP：' + sh.tnsp.name + (sh.tnsp.owner ? '（' + sh.tnsp.owner + '）' : '') + (sh.tnsp.voltages ? ' · ' + sh.tnsp.voltages : '') + (sh.tnsp.notes ? ' — ' + cell(sh.tnsp.notes) : ''));
+    if (sh.dnsps && sh.dnsps.length) L.push('- 配电商 DNSP：' + sh.dnsps.map(x => x.name + (x.owner ? '（' + x.owner + '）' : '')).join('；'));
+    if (sh.policy) L.push('- 州政策：' + sh.policy);
+    if (sh.coalExit) L.push('- 煤电退出：' + sh.coalExit);
+    L.push('', '## 煤电退役时间表', '', tbl(['电厂', '业主', '在运', '关停', '倒计时 / 口径'], coalRows), '');
+    L.push('## 本季度线索 Top 10（该州管线，按线索分）', '', tbl(['#', '项目', '类型', '装机', 'COD', 'AEMO 状态', 'EPC', '采购窗口', '产品匹配', '线索分'], top), '');
+    L.push('## EPC 未招标机会（项目库，按投资）', '', tbl(['项目', '品类', '状态 · 年', '投资', '业主', '规模'], open), '');
+    L.push('## 重点业主（该州管线）', '', owners.join('\n') || '（无）', '');
+    L.push('## 在建 / 规划输电工程', '', lines.join('\n') || '（无）', '');
+    L.push('## 可再生能源区 REZ', '', zones.join('\n') || '（无）', '');
+    if (CHANGES) {
+      L.push('## 本季变化（' + (CHANGES.prevAsOf || '上一版') + ' → ' + CHANGES.asOf + '，该州）', '');
+      L.push('- 升级为承诺 ' + chUp.length + ' 条' + (chUp.length ? '：' + chUp.map(x => x.name + '（' + fmtNum(x.mw) + ' MW' + (x.cod ? '，COD ' + x.cod : '') + '）').join('；') : ''));
+      L.push('- 新增 ' + chAdd.length + ' 条' + (chAdd.length ? '：' + chAdd.slice(0, 6).map(x => x.name + '（' + (PL_ZH[x.status] || x.status) + '，' + fmtNum(x.mw) + ' MW）').join('；') + (chAdd.length > 6 ? '；…' : '') : ''));
+      L.push('- 不再出现 ' + chGone.length + ' 条' + (chGone.length ? '（投运 / 撤回 / 改名）：' + chGone.slice(0, 6).map(x => x.name).join('；') + (chGone.length > 6 ? '；…' : '') : ''), '');
+    }
+    if (keyProj.length) L.push('## 重点电网工程（州档案）', '', keyProj.join('\n'), '');
+    if (sh.vendor) L.push('## 设备商必读', '', sh.vendor, '');
+    if (sh.tenderPortals && sh.tenderPortals.length) L.push('## 招标 / 供应商门户', '', sh.tenderPortals.map(x => '- ' + x).join('\n'), '');
+    L.push('## 行动建议', '');
+    L.push('- 优先跟进线索分 ≥75 且 EPC 未招标 / 未公开的承诺项目：储能 → 储能升压一体化舱 / E-house；风光 → 预制舱变电站 + 集电线路开关设备；燃气调峰 → 中压开关柜。');
+    L.push('- EPC 已授标的项目转为找总包分包（升压站成套、中压柜、预制舱）；煤电退役场址关注替代储能 / 燃气项目的接入改造。');
+    L.push('- 升级为承诺的项目 = FID 已过，设备定标期在 COD 前 24→9 个月，按采购窗口倒排拜访计划。', '');
+    if (sh.sources && sh.sources.length) L.push('## 来源', '', sh.sources.map(x => '- ' + x).join('\n'), '');
+    return L.join('\n') + '\n';
+  }
+  function exportStateBrief(a) { const t = buildStateBrief(a); if (!t) return ''; if (download('au-' + normState(a) + '-brief-' + NOW.toISOString().slice(0, 7) + '.md', t, 'text/markdown;charset=utf-8')) toast(en() ? 'State brief exported' : '已导出州机会简报 (.md)'); return t; }
+
   /* ---------- 项目筛选 / 标记 ---------- */
   function pass(p) {
     return state.cats.has(p.cat)
@@ -862,6 +918,7 @@
     cardEl.querySelectorAll('[data-line]').forEach(b => b.addEventListener('click', () => showLine(b.dataset.line)));
     cardEl.querySelectorAll('[data-plid]').forEach(b => b.addEventListener('click', () => showPipe(b.dataset.plid)));
     cardEl.querySelectorAll('[data-zone]').forEach(b => b.addEventListener('click', () => showZone(b.dataset.zone)));
+    cardEl.querySelectorAll('[data-brief]').forEach(b => b.addEventListener('click', () => exportStateBrief(b.dataset.brief)));
     writeHash();
   }
   const cell = (k, v) => '<div class="d-cell"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
@@ -965,7 +1022,7 @@
     const dnsps = sh && sh.dnsps && sh.dnsps.length ? sh.dnsps.map(x => '<div class="co-row"><span><b>' + esc(x.name) + '</b>' + (x.owner ? ' <small style="display:inline">' + esc(x.owner) + '</small>' : '') + '<small>' + esc(x.area || '') + (x.voltages ? ' · ' + esc(x.voltages) : '') + '</small>' + (x.notes ? '<small>' + esc(x.notes) + '</small>' : '') + '</span></div>').join('') : '';
     const html = head(s.color, '🗺️ ' + (en() ? 'State grid sheet' : '州电网档案'), esc(en() ? s.en : s.name) + ' <small style="color:#7b8ca6;font-weight:500">' + s.abbr + '</small>', esc(en() ? s.name : s.en))
       + '<div class="kv-pills"><div><b>' + fmtNum(d.n) + '</b><span>' + L_('cProjects') + '</span></div><div><b>$' + invMag(d.inv) + '</b><span>' + L_('cInv') + '</span></div><div><b style="color:#ffd48a">' + fmtNum(d.open) + '</b><span>' + L_('cOpen') + '</span></div><div><b style="color:#ff8fa3">' + gw(d.coal) + '</b><span>' + L_('cCoal') + '</span></div></div>'
-      + '<div class="d-actions"><button data-fly="st:' + a + '">' + L_('fly') + '</button><button data-st-filter="' + a + '">' + L_('filterSt') + '</button></div>'
+      + '<div class="d-actions"><button data-fly="st:' + a + '">' + L_('fly') + '</button><button data-st-filter="' + a + '">' + L_('filterSt') + '</button><button data-brief="' + a + '" title="' + esc(en() ? 'One-page Markdown brief for HQ: KPIs, coal exit, top leads, pre-tender projects, owners, grid works, REZ, this quarter' : '一页 Markdown 简报（向总部汇报）：关键数字、煤电退役、线索 Top 10、EPC 未招标、重点业主、输电工程、REZ、本季变化') + '">' + L_('stBrief') + '</button></div>'
       + (sh ? (sh.summary ? '<div class="d-strip">' + esc(sh.summary) + '</div>' : '')
         + sec(L_('kGrid'), '<p>' + esc(sh.grid || '') + (sh.operator ? ' · ' + esc(sh.operator) : '') + '</p>')
         + sec(L_('kTnsp'), sh.tnsp ? '<p><b>' + esc(sh.tnsp.name) + '</b>' + (sh.tnsp.owner ? ' · ' + esc(sh.tnsp.owner) : '') + (sh.tnsp.voltages ? ' · ' + esc(sh.tnsp.voltages) : '') + '</p>' + paras(sh.tnsp.notes) : '')
@@ -1156,5 +1213,5 @@
   if (state.view && state.lang !== 'en') openView(state.view);   // EN 时 applyLang() 已按 state.view 打开
 
   window.__AU__ = { state, PROJECTS, LINES, NODE, COAL, STATES, PIPE, ZONES, ZONE_STAT, CHANGES, render, filtered, filteredPipe, stateOf, zoneOf, countdown, showDetail, showCoal, showState, showLine, showPipe, showZone, stateToHash, applyHash, applyLang, resetState, syncUI, kpis, stateStats,
-    leadScore, leads, leadsCSV, exportLeadsCSV, epcHintOf, ownerGroup, buildAccounts, buildEpcAccounts, filterOwner, showLeads, showAccounts, showChanges, buildChangesBrief, exportBrief, openModal, closeModal, openView };
+    leadScore, leads, leadsCSV, exportLeadsCSV, epcHintOf, ownerGroup, buildAccounts, buildEpcAccounts, filterOwner, showLeads, showAccounts, showChanges, buildChangesBrief, exportBrief, buildStateBrief, exportStateBrief, openModal, closeModal, openView };
 })();

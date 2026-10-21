@@ -251,6 +251,13 @@ loads the usual `js/data*.js` + `progress.js` + `pinyin-map.js` + `util.js` chai
   the right-panel 4-band summary (新增 / 升级为承诺 / 容量变化 / 不再出现) plus a modal with the five lists (rows → `showPipe` while
   the item still exists; 升级为承诺 highlighted as the FID signal; 需补坐标 chips), `⤓ 导出简报 (.md)` / `📋 复制简报` building the
   same one-page Chinese brief client-side (plus the current Top 10 leads).
+- **📄 State opportunity brief** (`buildStateBrief(abbr)` / `exportStateBrief`, the `⤓ 州机会简报` button on the state card): a one-page
+  Chinese Markdown report for HQ assembled from everything the page knows about one state — sheet summary, 关键数字 (projects /
+  investment / pre-tender count, pipeline MW by status, coal online and ≤2030 / ≤2035 retirements, REZ + grid works counts), 电网与政策
+  (grid / TNSP / DNSPs / policy / coal exit), the coal retirement table, that state's **Top 10 leads** (via `leads` + `leadScore`),
+  EPC 未招标 projects by investment, top owners (`buildAccounts` on the state's pipeline), building / planned corridors touching the
+  state, REZ zones with MW, the quarter's changes for that state (from `AU_CHANGES`), key grid projects, vendor notes, tender portals,
+  行动建议 and sources; downloads as `au-<ABBR>-brief-<YYYY-MM>.md`. ACT folds into NSW like everywhere else.
 - **EPC window**: the left panel has EPC-status chips (`state.epc`, incl. 无数据) and a `🔧 只看 EPC 未招标` toggle
   (`state.epcOnly`, same `epcStatus === '未招标'` rule as `app.js`); pre-tender markers pulse orange and the right-panel
   **EPC 未招标机会榜** ranks them by `inv`. Investment KPIs apply the `cat==='client'` exclusion rule.
