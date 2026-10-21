@@ -173,8 +173,9 @@
   const state = {
     states: new Set(), cats: new Set(CAT_KEYS), statuses: new Set(), epc: new Set(), epcOnly: false,
     minYear: MIN_YEAR, maxYear: MAX_YEAR, recentOnly: false, q: '',
-    layers: { grid: true, planned: true, nodes: true, coal: true, projects: true, fill: true, pipe: true, rez: true },
+    layers: { grid: true, planned: true, nodes: true, coal: true, projects: true, fill: true, pipe: true, rez: true, changes: true },
     plStatus: new Set(['committed', 'anticipated']), plFuelOff: new Set(),   // 🧭 管线：默认只显示承诺 + 预期（拟建按需打开）
+    codMax: null, playYear: null,   // 🗓️ COD 时间轴：截止年（null = 关闭）/ ▶ 播放中的当前年
     plWin: false, plHot: false, plUp: false, plMine: false,   // 🧭 快捷筛选：⏰ 采购窗口进行中 / 🔥 线索分 ≥75 / ⬆️ 本季升级为承诺 / 📋 我的线索
     kvOff: new Set(), lang: 'zh',
     basemap: null,   // 底图 key（dark | osm | amap；null = 按时区默认）
@@ -205,7 +206,11 @@
     black: ['烟煤', 'black coal'], brown: ['褐煤', 'brown coal'],
     pCountry: ['所属州', 'State'], pStatus: ['状态', 'Status'], pCap: ['规模 / 容量', 'Capacity'], pInv: ['投资额', 'Investment'], pOwner: ['业主 / 参与方', 'Owner'], pUpd: ['最近动态', 'Updated'], pEpc: ['🔧 EPC / 总承包', '🔧 EPC'], pProg: ['📍 最新进展', '📍 Latest'],
     filters: ['🔍 筛选', '🔍 Filters'], dash: ['📊 看板', '📊 Dashboard'], drawerClose: ['✕ 收起', '✕ Close'], kpiToggle: ['📊 数据 ▾', '📊 Data ▾'],
-    lgPipe: ['🧭 AEMO 管线', '🧭 AEMO pipeline'], lgRez: ['🌞 REZ 区划', '🌞 REZ zones'],
+    lgPipe: ['🧭 AEMO 管线', '🧭 AEMO pipeline'], lgRez: ['🌞 REZ 区划', '🌞 REZ zones'], lgChanges: ['📰 本季变化高亮', '📰 Highlight this quarter'],
+    lgUp: ['升级为承诺', 'upgraded'], lgAdded: ['本季新增', 'added'],
+    codAll: ['全部年份', 'All COD years'], codLab: ['COD ≤ {y} · 无 COD 的 {n} 条已隐藏', 'COD ≤ {y} · {n} without COD hidden'], codPlay: ['▶ 逐年播放 COD 时间轴', '▶ Play COD timeline'], codPause: ['⏸ 暂停', '⏸ Pause'], codTick: ['预期投运累计至', 'pipeline online by'],
+    codTitle: ['按预期投运年份累计显示管线：拖动看到某年为止投运 / 在建的容量（KPI 与右栏同步），拉到最右恢复全部；▶ 从今年起逐年播放', 'Cumulative pipeline by expected COD: drag to see capacity online by a year (KPIs follow), far right = all; ▶ plays year by year'],
+    stPoster: ['📸 海报 PNG', '📸 Poster PNG'], posterOk: ['📸 已导出州海报 (PNG)，可直接发微信', '📸 State poster exported (PNG)'], posterSvg: ['已导出海报 (SVG)', 'Poster exported (SVG)'],
     pipeKpi: ['🧭 承诺+预期管线', '🧭 Committed + anticipated'], pipeT: ['🧭 AEMO 管线', '🧭 AEMO pipeline'], pipeHint: ['承诺 / 预期 / 拟建', 'committed / anticipated / proposed'],
     pipeR: ['🧭 AEMO 管线 · 当前筛选', '🧭 Pipeline · current filter'], zones: ['🌞 可再生能源区 REZ', '🌞 Renewable Energy Zones'],
     pMw: ['装机', 'Capacity'], pMwh: ['储能', 'Storage'], pCod: ['预期投运 COD', 'Expected COD'], pFuel: ['类型', 'Type'], pConn: ['接入点', 'Connection'], pRez: ['所在 REZ', 'REZ'], pAemo: ['AEMO 状态', 'AEMO status'], pApprox: ['⚠ 示意位置（按所在地 / 邮编 / 接入站 / 州质心放置），待补精确坐标', '⚠ Approximate location (locality / postcode / connection node / state centroid)'], pMix: ['构成', 'Mix'], pSiteMw: ['接入上限', 'site cap'], pTnsp: ['TNSP', 'TNSP'],
@@ -340,10 +345,13 @@
     maxClusterRadius: 34, showCoverageOnHover: false, spiderfyOnMaxZoom: true,
     iconCreateFunction: function (c) {
       const ms = c.getAllChildMarkers ? c.getAllChildMarkers() : [];
-      let mw = 0; const cnt = {}; ms.forEach(m => { mw += m._mw || 0; cnt[m._fuel] = (cnt[m._fuel] || 0) + (m._mw || 0); });
+      let mw = 0, up = 0, added = 0, yr = 0; const cnt = {};
+      ms.forEach(m => { mw += m._mw || 0; cnt[m._fuel] = (cnt[m._fuel] || 0) + (m._mw || 0); if (m._up) up++; if (m._added) added++; if (m._yr) yr++; });
       const top = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0];
       const col = fuelOf(top).color, n = c.getChildCount ? c.getChildCount() : ms.length, d = n < 10 ? 28 : n < 50 ? 34 : 40;
-      return L.divIcon({ className: 'mk-cluster', iconSize: [d, d], html: '<div class="mkc pl" style="--c:' + col + ';width:' + d + 'px;height:' + d + 'px" title="' + Math.round(mw) + ' MW"><b>' + n + '</b></div>' });
+      // 聚合气泡也带本季变化 / 播放年高亮（全国视角下单个菱形都在聚合里，否则高亮看不见）
+      const hl = (yr ? ' yr' : up ? ' up' : added ? ' added' : '');
+      return L.divIcon({ className: 'mk-cluster', iconSize: [d, d], html: '<div class="mkc pl' + hl + '" style="--c:' + col + ';width:' + d + 'px;height:' + d + 'px" title="' + Math.round(mw) + ' MW' + (up ? ' · ' + up + ' ' + L_('lgUp') : '') + (added ? ' · ' + added + ' ' + L_('lgAdded') : '') + '"><b>' + n + '</b></div>' });
     },
   });
   plCluster.addTo(map);
@@ -464,8 +472,16 @@
       && (state.states.size === 0 || state.states.has(it.state))
       // 年份滑块两端为开区间：手柄在最左 / 最右时视为「及更早 / 及以后」，COD 在项目库年份范围之外的管线不会被「全部」误滤掉
       && (!it.codYear || ((it.codYear >= state.minYear || state.minYear <= MIN_YEAR) && (it.codYear <= state.maxYear || state.maxYear >= MAX_YEAR)))
+      // COD 时间轴打开时：只显示预期投运年 ≤ 截止年的管线（无 COD 的暂隐藏，标签里提示条数）
+      && (!state.codMax || (it.codYear && it.codYear <= state.codMax))
       && (!state.q || plMatch(it));
   }
+  // 🗓️ COD 时间轴：按预期投运年份累计显示管线（codMax = 截止年；null = 关闭）；范围 = 今年 → 数据最晚年（最多 +10）
+  const codYears = PIPE.map(i => i.codYear).filter(y => y && y >= 2000);
+  const COD_MIN = Math.max(THIS_YEAR, codYears.length ? Math.min.apply(null, codYears) : THIS_YEAR);
+  const COD_MAX = Math.max(COD_MIN + 1, Math.min(THIS_YEAR + 10, codYears.length ? Math.max.apply(null, codYears) : THIS_YEAR + 9));
+  // 📰 本季新增的管线 id（来自 js/au-changes.js）——地图高亮虚线框
+  const ADDED = new Set(((CHANGES && CHANGES.added) || []).map(x => x.id));
   const PL_QUICK = [
     { key: 'win', st: 'plWin', t: 'quickWin', fn: it => windowOpen(it) },   // 惰性引用：windowOpen 在下文评分段定义
     { key: 'hot', st: 'plHot', t: 'quickHot', fn: it => leadScore(it).score >= 75 },
@@ -483,8 +499,11 @@
     const ms = [];
     items.forEach(it => {
       const f = fuelOf(it.fuel), d = Math.round(plSize(it.mw));
-      const m = L.marker(toLatLng(it.coord), { icon: L.divIcon({ className: 'pl-mk', iconSize: [d, d], iconAnchor: [d / 2, d / 2], html: '<i class="' + it.status + (it.approx ? ' approx' : '') + '" style="--c:' + f.color + '"></i>' }), riseOnHover: true });
+      // 📰 本季变化高亮：升级为承诺 = 绿色脉冲框，新增 = 青色虚线框；▶ 播放时当年投运的闪白框
+      const hl = (state.layers.changes ? (UPGRADED.has(it.id) ? ' is-up' : ADDED.has(it.id) ? ' is-added' : '') : '') + (state.playYear && it.codYear === state.playYear ? ' is-year' : '');
+      const m = L.marker(toLatLng(it.coord), { icon: L.divIcon({ className: 'pl-mk', iconSize: [d, d], iconAnchor: [d / 2, d / 2], html: '<i class="' + it.status + (it.approx ? ' approx' : '') + hl + '" style="--c:' + f.color + '"></i>' }), riseOnHover: true, zIndexOffset: hl ? 200 : 0 });
       m._mw = it.mw || 0; m._fuel = it.fuel;
+      m._up = state.layers.changes && UPGRADED.has(it.id); m._added = state.layers.changes && ADDED.has(it.id); m._yr = !!(state.playYear && it.codYear === state.playYear);
       m.bindTooltip('<b>' + esc(en() ? it.en : it.name) + '</b><br><span style="color:' + f.color + '">' + f.icon + ' ' + esc(en() ? f.en : f.zh) + '</span> · ' + esc(mwFmt(it)) + '<br><span style="color:' + PL_COLOR[it.status] + '">' + esc(plStatusName(it.status)) + '</span>' + (it.cod ? ' · COD ' + esc(it.cod) : '') + (it.owner ? ' · ' + esc(it.owner) : '') + (it.connNode ? '<br><span style="color:#93a4c4">⚡ ' + esc(it.connNode) + '</span>' : ''), { direction: 'top', offset: [0, -d / 2 - 2], className: 'au-tip', sticky: true });
       m.on('click', () => showPipe(it.id, { noFly: true }));
       ms.push(m);
@@ -915,6 +934,88 @@
   }
   function exportStateBrief(a) { const t = buildStateBrief(a); if (!t) return ''; if (download('au-' + normState(a) + '-brief-' + NOW.toISOString().slice(0, 7) + '.md', t, 'text/markdown;charset=utf-8')) toast(en() ? 'State brief exported' : '已导出州机会简报 (.md)'); return t; }
 
+  /* ---------- 📸 州海报（PNG）：一张 1080×1620 的信息图——KPI / 管线分档 / 煤电倒计时 / 线索 Top 8 / REZ·输电·本季变化 / 行动建议 ----------
+   * 微信里 .md 不渲染，总部和同事更习惯看图；SVG → <img> → canvas 栅格化（与全球地图 📸 快照同路径），失败回退 SVG。不用 emoji，避免栅格化时缺字。 */
+  function buildStateSVG(a) {
+    a = normState(a); const s = ST[a]; if (!s) return '';
+    const sh = SHEETS[a] || {}, d = stateStats(a), ps = PIPE.filter(it => it.state === a);
+    const mwBy = st => ps.filter(i => i.status === st).reduce((x, i) => x + (i.mw || 0), 0);
+    const W = 1080, H = 1620, X = esc, clip = (t, n) => { t = String(t == null ? '' : t); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
+    const FONT = 'PingFang SC, Microsoft YaHei, HarmonyOS Sans SC, Noto Sans CJK SC, Segoe UI, sans-serif';
+    const coal = coalSorted.filter(p => p.state === a && p.status !== 'closed').slice(0, 5), maxCoal = Math.max.apply(null, coal.map(p => p.mw || 0).concat([1]));
+    const top = leads(ps).slice(0, 8);
+    const zones = ZONES_SORTED.filter(z => normState(z.state) === a), lines = LINES.filter(l => l.status !== 'existing' && (l.nodes || []).some(id => NODE[id] && normState(NODE[id].state) === a));
+    const chUp = CHANGES ? (CHANGES.status || []).filter(x => x.state === a && x.to === 'committed') : [], chAdd = CHANGES ? (CHANGES.added || []).filter(x => x.state === a) : [];
+    const P = [];
+    const title = (y, t) => P.push('<text x="60" y="' + y + '" font-size="26" font-weight="800" fill="#e8eefb">' + X(t) + '</text><rect x="60" y="' + (y + 12) + '" width="960" height="2" fill="' + s.color + '" opacity="0.6"/>');
+    P.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" font-family="' + FONT + '">');
+    P.push('<rect width="' + W + '" height="' + H + '" fill="#060b18"/><rect width="' + W + '" height="196" fill="' + s.color + '" opacity="0.16"/><rect x="0" y="194" width="' + W + '" height="3" fill="' + s.color + '"/>');
+    P.push('<text x="60" y="86" font-size="46" font-weight="800" fill="#e8eefb">' + X(s.name) + '<tspan font-size="24" fill="#93a4c4" dx="16">' + a + ' · ' + X(s.en) + '</tspan></text>');
+    P.push('<text x="60" y="138" font-size="24" fill="#93a4c4">' + X(en() ? 'Energy market opportunity brief' : '能源市场机会简报') + ' · ' + todayStr().slice(0, 7) + ' · AEMO ' + X(PIPE_ASOF || '') + (COAL_ASOF ? ' · ' + X(en() ? 'coal ' : '煤电 ') + X(COAL_ASOF) : '') + '</text>');
+    P.push('<text x="1020" y="86" text-anchor="end" font-size="20" fill="#7b8ca6">' + X(en() ? 'Australia Grid & Energy Map' : '澳洲电网与能源动态地图') + '</text>');
+    [[fmtNum(d.n), L_('cProjects'), '#21c7ff'], ['$' + invMag(d.inv), L_('cInv'), '#2ee6a6'], [fmtNum(d.open), L_('cOpen'), '#ffb02e'], [gw(d.coal), L_('cCoal'), '#ff5c7a']].forEach((t, i) => {
+      P.push('<g transform="translate(' + (60 + i * 243) + ',226)"><rect width="222" height="104" rx="14" fill="#101a30" stroke="#2a3a5c"/><text x="20" y="56" font-size="34" font-weight="800" fill="' + t[2] + '">' + X(t[0]) + '</text><text x="20" y="86" font-size="17" fill="#93a4c4">' + X(t[1]) + '</text></g>');
+    });
+    // 管线分档
+    let y = 384; title(y, (en() ? 'AEMO pipeline ' : 'AEMO 管线 ') + fmtNum(ps.length) + (en() ? ' records' : ' 条'));
+    const mx = Math.max(mwBy('committed'), mwBy('anticipated'), mwBy('proposed'), 1);
+    PL_STATUS.forEach((st, i) => { const v = mwBy(st), yy = y + 40 + i * 34; P.push('<text x="60" y="' + (yy + 16) + '" font-size="18" fill="#93a4c4">' + X(plStatusName(st)) + '</text><rect x="190" y="' + yy + '" width="640" height="20" rx="6" fill="#141f38"/><rect x="190" y="' + yy + '" width="' + Math.max(4, Math.round(v / mx * 640)) + '" height="20" rx="6" fill="' + PL_COLOR[st] + '"/><text x="846" y="' + (yy + 16) + '" font-size="18" font-weight="700" fill="#e8eefb">' + X(gw(v)) + '</text>'); });
+    // 煤电倒计时（分区纵坐标按实际行数推进，避免重叠）
+    y = 486 + 62; title(y, L_('coal'));
+    if (!coal.length) P.push('<text x="60" y="' + (y + 44) + '" font-size="18" fill="#7b8ca6">' + X(en() ? 'No operating coal plants' : '无在运煤电') + '</text>');
+    coal.forEach((p, i) => { const cd = countdown(p), yy = y + 40 + i * 38, col = coalColor(p); P.push('<rect x="60" y="' + (yy + 4) + '" width="' + Math.max(4, Math.round((p.mw || 0) / maxCoal * 300)) + '" height="22" rx="5" fill="' + col + '" opacity="0.35"/><text x="68" y="' + (yy + 21) + '" font-size="17" font-weight="700" fill="#e8eefb">' + X(clip(p.name, 16)) + '</text><text x="400" y="' + (yy + 21) + '" font-size="16" fill="#93a4c4">' + X(clip(p.owner || '', 16)) + ' · ' + fmtNum(p.mw || 0) + ' MW</text><text x="1020" y="' + (yy + 21) + '" text-anchor="end" font-size="17" font-weight="800" fill="' + col + '">' + X((p.closeYear || '—') + (p.closeMonth ? '-' + String(p.closeMonth).padStart(2, '0') : '') + ' · ' + cd.txt) + '</text>'); });
+    // 线索 Top 8
+    y = y + 40 + Math.max(1, coal.length) * 38 + 50; title(y, L_('leads').replace('Top 10', 'Top 8').replace('Top 10', 'Top 8'));
+    P.push('<text x="60" y="' + (y + 38) + '" font-size="14" fill="#7b8ca6">' + X(en() ? '#  project · fuel · MW · COD · AEMO · EPC · window · product · score' : '#  项目 · 类型 · 装机 · COD · 状态 · EPC · 采购窗口 · 产品 · 线索分') + '</text>');
+    top.forEach((it, i) => { const sc = leadScore(it), f = fuelOf(it.fuel), yy = y + 52 + i * 44, tr = trackOf(it.id);
+      P.push('<rect x="60" y="' + yy + '" width="960" height="38" rx="8" fill="' + (i % 2 ? '#0c1428' : '#101a30') + '"/><text x="72" y="' + (yy + 25) + '" font-size="16" fill="#7b8ca6">' + (i + 1) + '</text><rect x="96" y="' + (yy + 12) + '" width="12" height="12" rx="2" fill="' + f.color + '" transform="rotate(45 102 ' + (yy + 18) + ')"/>'
+        + '<text x="118" y="' + (yy + 25) + '" font-size="17" font-weight="700" fill="#e8eefb">' + X(clip(it.name, 18)) + '</text><text x="430" y="' + (yy + 25) + '" font-size="15" fill="#93a4c4">' + X(clip((en() ? f.en : f.zh) + ' · ' + (mwFmt(it) || '—') + ' · ' + (it.cod || '—') + ' · ' + plStatusName(it.status) + ' · EPC ' + epcName(sc.epc), 46)) + '</text>'
+        + '<text x="872" y="' + (yy + 25) + '" font-size="14" fill="#93a4c4">' + X(sc.window ? ymFmt(sc.window.from).slice(2) + '~' + ymFmt(sc.window.to).slice(2) : '—') + (tr ? ' · ' + X(trackStName(tr.st || 'todo')) : '') + '</text><rect x="968" y="' + (yy + 7) + '" width="44" height="24" rx="7" fill="' + (sc.score >= 75 ? 'rgba(46,230,166,0.2)' : 'rgba(255,176,46,0.2)') + '"/><text x="990" y="' + (yy + 24) + '" text-anchor="middle" font-size="16" font-weight="800" fill="' + (sc.score >= 75 ? '#bfe9d8' : '#ffd48a') + '">' + sc.score + '</text>'); });
+    // REZ · 输电 · 本季变化
+    y = y + 52 + Math.max(1, top.length) * 44 + 46; title(y, en() ? 'REZ · grid works · this quarter' : 'REZ · 输电工程 · 本季变化');
+    const facts = [
+      (en() ? 'REZ: ' : '可再生能源区：') + zones.length + (en() ? ' zones (' : ' 个（已划定 ') + zones.filter(z => z.status === 'declared').length + (en() ? ' declared) · ' : '）· ') + (zones.slice(0, 4).map(z => (z.ispId ? z.ispId + ' ' : '') + z.name).join('，') || '—'),
+      (en() ? 'Transmission building / planned: ' : '在建 / 规划输电工程：') + lines.length + (en() ? ' · ' : ' 项 · ') + (lines.slice(0, 3).map(l => l.name + '（' + (l.type === 'dc' ? 'HVDC ' : '') + l.kv + ' kV）').join('，') || '—'),
+      CHANGES ? ((en() ? 'This quarter (' : '本季变化（') + (CHANGES.prevAsOf || '') + ' → ' + CHANGES.asOf + (en() ? '): upgraded to committed ' : '）：升级为承诺 ') + chUp.length + (en() ? ' · added ' : ' 条 · 新增 ') + chAdd.length + (en() ? '' : ' 条') + (chUp.length ? ' · ' + chUp.slice(0, 3).map(x => x.name).join('，') : '')) : (en() ? 'No quarterly change data' : '尚无季度变化数据'),
+    ];
+    facts.forEach((t, i) => P.push('<text x="60" y="' + (y + 46 + i * 32) + '" font-size="17" fill="#d6e0f5">' + X(clip(t, 64)) + '</text>'));
+    // 行动建议
+    y = y + 46 + 3 * 32 + 30; title(y, en() ? 'Actions' : '行动建议');
+    const acts = [
+      en() ? 'Prioritise committed projects scoring ≥75 with pre-tender / undisclosed EPC; BESS → step-up skid / E-house, solar & wind → prefab substation + collector switchgear.' : '优先跟进线索分 ≥75 且 EPC 未招标 / 未公开的承诺项目：储能 → 储能升压一体化舱 / E-house；风光 → 预制舱变电站 + 集电线路开关设备。',
+      en() ? 'Awarded EPC → subcontract (substation packages, MV switchgear); coal sites → replacement BESS / gas grid works.' : 'EPC 已授标的项目转为找总包分包（升压站成套、中压柜、预制舱）；煤电退役场址关注替代储能 / 燃气项目的接入改造。',
+      sh.vendor ? clip(String(sh.vendor).split(/[。；]/)[0], 60) : (en() ? 'Procurement window = COD −24 → −9 months; plan visits backwards from it.' : '设备定标期在 COD 前 24→9 个月，按采购窗口倒排拜访计划。'),
+    ];
+    acts.forEach((t, i) => P.push('<text x="60" y="' + (y + 46 + i * 32) + '" font-size="17" fill="#d6e0f5">• ' + X(clip(t, 62)) + '</text>'));
+    P.push('<text x="60" y="' + (H - 40) + '" font-size="14" fill="#7b8ca6">' + X((en() ? 'Source: project library + AEMO Generation Information ' : '来源：项目库 + AEMO Generation Information ') + (PIPE_ASOF || '') + (en() ? ' + state grid sheets · scores = product fit × window × status/EPC · verify on the ground · ' : ' + 州电网档案 · 线索分 = 产品匹配 × 采购窗口 × 状态/EPC · 请以实地核实为准 · ') + pageUrl() + '#state=' + a) + '</text>');
+    P.push('</svg>');
+    return P.join('');
+  }
+  function downloadBlob(blob, name) {
+    try { if (typeof URL === 'undefined' || !URL.createObjectURL || !document.body || !document.body.appendChild) return false; const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); if (a.click) a.click(); setTimeout(() => { try { URL.revokeObjectURL(a.href); if (a.remove) a.remove(); } catch (e) { /* ignore */ } }, 600); return true; } catch (e) { return false; }
+  }
+  function exportStatePoster(a) {
+    const svg = buildStateSVG(a); if (!svg) return '';
+    const name = 'au-' + normState(a) + '-poster-' + todayStr().slice(0, 7);
+    let fell = false;
+    const fallback = () => { if (fell) return; fell = true; if (download(name + '.svg', svg, 'image/svg+xml;charset=utf-8')) toast(L_('posterSvg')); };
+    try {
+      if (typeof Image === 'undefined' || typeof Blob === 'undefined') { fallback(); return svg; }
+      const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const sc = 2, cv = document.createElement('canvas'); cv.width = 1080 * sc; cv.height = 1620 * sc;
+          const ctx = cv.getContext('2d'); ctx.scale(sc, sc); ctx.drawImage(img, 0, 0, 1080, 1620); URL.revokeObjectURL(url);
+          cv.toBlob(b => { if (b && downloadBlob(b, name + '.png')) toast(L_('posterOk')); else fallback(); }, 'image/png');
+        } catch (e) { URL.revokeObjectURL(url); fallback(); }
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); fallback(); };
+      img.src = url;
+    } catch (e) { fallback(); }
+    return svg;
+  }
+
   /* ---------- 项目筛选 / 标记 ---------- */
   function pass(p) {
     return state.cats.has(p.cat)
@@ -1033,6 +1134,7 @@
       + '<div class="lg-row"><i class="dot" style="--c:#ffb02e"></i>' + (en() ? 'pulsing = EPC pre-tender' : '脉冲圈 = EPC 未招标') + '</div>'
       + '<div class="lg-row"><i class="dia" style="--c:#21c7ff"></i>' + L_('lgPipe') + ' · ' + esc(plStatusName('committed')) + '</div>'
       + '<div class="lg-row"><i class="dia hollow" style="--c:#21c7ff"></i>' + esc(plStatusName('proposed')) + '</div>'
+      + '<div class="lg-row"><i class="dia up" style="--c:#21c7ff"></i>' + L_('lgUp') + ' <i class="dia added" style="--c:#21c7ff;margin-left:8px"></i>' + L_('lgAdded') + '</div>'
       + '<div class="lg-row"><i class="zone" style="--c:#2ee6a6"></i>REZ ' + esc(zoneStatusName('declared')) + ' <i class="zone" style="--c:#ffb02e;margin-left:6px"></i>' + esc(zoneStatusName('planned')) + '</div>'
       + '<div class="lg-note">' + L_('legendNote') + '</div>';
     if (el) el.innerHTML = html;
@@ -1048,7 +1150,25 @@
     document.querySelectorAll('#pl-status-chips .chip').forEach(c => { const n = c.querySelector('.ct'); if (n) n.textContent = byPl[c.dataset.pls] || 0; });
     const qbase = PIPE.filter(passPipeBase);
     document.querySelectorAll('#pl-quick-chips .chip').forEach(c => { const q = PL_QUICK.find(x => x.key === c.dataset.plq); const n = c.querySelector('.ct'); if (q && n) n.textContent = qbase.filter(q.fn).length; });
+    // 🗓️ COD 时间轴标签：关闭 = 全部年份；打开 = COD ≤ Y · 无 COD 的 N 条已隐藏（N 按其余筛选算）
+    const cl = $('cod-lab');
+    if (cl) {
+      if (!state.codMax) cl.textContent = L_('codAll');
+      else { const saved = state.codMax; state.codMax = null; const noCod = PIPE.filter(it => passPipeBase(it) && !it.codYear).length; state.codMax = saved; cl.textContent = L_('codLab').replace('{y}', saved).replace('{n}', noCod); }
+    }
   }
+  /* ---------- 🗓️ COD 时间轴 ▶ 播放：从今年起逐年累计显示，当年投运的管线闪白框 + 大字年份 ---------- */
+  let _play = null;
+  function startPlay() {
+    pausePlay();
+    state.codMax = COD_MIN; state.playYear = COD_MIN; syncUI(); render();
+    _play = setInterval(() => {
+      if (state.codMax >= COD_MAX - 1) { pausePlay(); state.codMax = null; syncUI(); render(); return; }   // 播到最后一年回到「全部」
+      state.codMax += 1; state.playYear = state.codMax; syncUI(); render();
+    }, REDUCED_MOTION ? 1600 : 1200);
+    syncUI();
+  }
+  function pausePlay() { if (_play) { clearInterval(_play); _play = null; } state.playYear = null; syncUI(); }
 
   function render() {
     const items = filtered();
@@ -1079,6 +1199,7 @@
     cardEl.querySelectorAll('[data-plid]').forEach(b => b.addEventListener('click', () => showPipe(b.dataset.plid)));
     cardEl.querySelectorAll('[data-zone]').forEach(b => b.addEventListener('click', () => showZone(b.dataset.zone)));
     cardEl.querySelectorAll('[data-brief]').forEach(b => b.addEventListener('click', () => exportStateBrief(b.dataset.brief)));
+    cardEl.querySelectorAll('[data-poster]').forEach(b => b.addEventListener('click', () => exportStatePoster(b.dataset.poster)));
     cardEl.querySelectorAll('[data-tr-save]').forEach(b => b.addEventListener('click', () => { const id = b.dataset.trSave; const v = k => { const e = $(k); return e ? e.value : ''; }; setTrack(id, { st: v('tr-st'), who: v('tr-who'), next: v('tr-next'), note: v('tr-note') }); toast(L_('trackSaved')); render(); showPipe(id, { noFly: true }); }));
     cardEl.querySelectorAll('[data-tr-del]').forEach(b => b.addEventListener('click', () => { const id = b.dataset.trDel; delTrack(id); toast(L_('trackDeleted')); render(); showPipe(id, { noFly: true }); }));
     cardEl.querySelectorAll('[data-more]').forEach(b => b.addEventListener('click', () => { const ul = b.previousElementSibling; if (!ul || !ul.classList) return; const open = ul.classList.toggle('open'); b.textContent = open ? L_('less') : L_('more').replace('{n}', b.dataset.more); }));
@@ -1202,7 +1323,7 @@
     const dnsps = sh && sh.dnsps && sh.dnsps.length ? sh.dnsps.map(x => '<div class="co-row"><span><b>' + esc(x.name) + '</b>' + (x.owner ? ' <small style="display:inline">' + esc(x.owner) + '</small>' : '') + '<small>' + esc(x.area || '') + (x.voltages ? ' · ' + esc(x.voltages) : '') + '</small>' + (x.notes ? '<small>' + esc(x.notes) + '</small>' : '') + '</span></div>').join('') : '';
     const html = head(s.color, '🗺️ ' + (en() ? 'State grid sheet' : '州电网档案'), esc(en() ? s.en : s.name) + ' <small style="color:#7b8ca6;font-weight:500">' + s.abbr + '</small>', esc(en() ? s.name : s.en))
       + '<div class="kv-pills"><div><b>' + fmtNum(d.n) + '</b><span>' + L_('cProjects') + '</span></div><div><b>$' + invMag(d.inv) + '</b><span>' + L_('cInv') + '</span></div><div><b style="color:#ffd48a">' + fmtNum(d.open) + '</b><span>' + L_('cOpen') + '</span></div><div><b style="color:#ff8fa3">' + gw(d.coal) + '</b><span>' + L_('cCoal') + '</span></div></div>'
-      + '<div class="d-actions"><button data-fly="st:' + a + '">' + L_('fly') + '</button><button data-st-filter="' + a + '">' + L_('filterSt') + '</button><button data-brief="' + a + '" title="' + esc(en() ? 'One-page Markdown brief for HQ: KPIs, coal exit, top leads, pre-tender projects, owners, grid works, REZ, this quarter' : '一页 Markdown 简报（向总部汇报）：关键数字、煤电退役、线索 Top 10、EPC 未招标、重点业主、输电工程、REZ、本季变化') + '">' + L_('stBrief') + '</button></div>'
+      + '<div class="d-actions"><button data-fly="st:' + a + '">' + L_('fly') + '</button><button data-st-filter="' + a + '">' + L_('filterSt') + '</button><button data-brief="' + a + '" title="' + esc(en() ? 'One-page Markdown brief for HQ: KPIs, coal exit, top leads, pre-tender projects, owners, grid works, REZ, this quarter' : '一页 Markdown 简报（向总部汇报）：关键数字、煤电退役、线索 Top 10、EPC 未招标、重点业主、输电工程、REZ、本季变化') + '">' + L_('stBrief') + '</button><button data-poster="' + a + '" title="' + esc(en() ? 'One-page PNG infographic (1080×1620): KPIs, pipeline, coal countdown, top leads, REZ / grid / this quarter, actions' : '一页 PNG 信息图（1080×1620，可直接发微信）：关键数字、管线分档、煤电倒计时、线索 Top 8、REZ / 输电 / 本季变化、行动建议') + '">' + L_('stPoster') + '</button></div>'
       + (sh ? (sh.summary ? '<div class="d-strip">' + esc(sh.summary) + '</div>' : '')
         + sec(L_('kGrid'), '<p>' + esc(sh.grid || '') + (sh.operator ? ' · ' + esc(sh.operator) : '') + '</p>')
         + sec(L_('kTnsp'), sh.tnsp ? '<p><b>' + esc(sh.tnsp.name) + '</b>' + (sh.tnsp.owner ? ' · ' + esc(sh.tnsp.owner) : '') + (sh.tnsp.voltages ? ' · ' + esc(sh.tnsp.voltages) : '') + '</p>' + paras(sh.tnsp.notes) : '')
@@ -1298,6 +1419,11 @@
     if (bc) bc.addEventListener('click', showChanges); if (bc2) bc2.addEventListener('click', showChanges);
     if (modalEl) modalEl.addEventListener('click', e => { if (e && e.target === modalEl) closeModal(); });
     const op = $('pl-owner-pill'); if (op) op.addEventListener('click', () => { state.plOwner = null; syncUI(); render(); });
+    // 🗓️ COD 时间轴：拖动 = 手动截止年（拉到最右 = 关闭）；▶ / ⏸ 播放
+    const cr = $('cod-range'), cp = $('cod-play'), crow = $('cod-row');
+    if (crow) crow.title = L_('codTitle');
+    if (cr) cr.addEventListener('input', () => { const y = +cr.value; pausePlay(); state.codMax = y >= COD_MAX ? null : y; syncUI(); render(); });   // 先读值再 pausePlay（它会 syncUI 回写滑块）
+    if (cp) cp.addEventListener('click', () => { if (_play) { pausePlay(); writeHash(); } else startPlay(); });
   }
   /* ---------- 窄屏抽屉（🔍 筛选 / 📊 看板）：遮罩 + 关闭钮 + 把手下滑；开卡 / 开宽面板时自动收起 ---------- */
   function closeDrawers() {
@@ -1320,8 +1446,9 @@
   function resetState() {
     state.states = new Set(); state.cats = new Set(CAT_KEYS); state.statuses = new Set(); state.epc = new Set(); state.epcOnly = false;
     state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.recentOnly = false; state.q = ''; state.kvOff = new Set();
-    state.layers = { grid: true, planned: true, nodes: true, coal: true, projects: true, fill: true, pipe: true, rez: true };
+    state.layers = { grid: true, planned: true, nodes: true, coal: true, projects: true, fill: true, pipe: true, rez: true, changes: true };
     state.plStatus = new Set(['committed', 'anticipated']); state.plFuelOff = new Set(); state.plOwner = null;
+    pausePlay(); state.codMax = null;
     state.plWin = false; state.plHot = false; state.plUp = false; state.plMine = false;
     const q = $('q'); if (q) q.value = '';
   }
@@ -1337,6 +1464,10 @@
     document.querySelectorAll('#pl-status-chips .chip').forEach(c => { const on = state.plStatus.has(c.dataset.pls); c.classList.toggle('on', on); pressed(c, on); });
     document.querySelectorAll('#pl-fuel-chips .chip').forEach(c => { const on = !state.plFuelOff.has(c.dataset.plf); c.classList.toggle('on', on); pressed(c, on); });
     document.querySelectorAll('#pl-quick-chips .chip').forEach(c => { const q = PL_QUICK.find(x => x.key === c.dataset.plq); const on = !!(q && state[q.st]); c.classList.toggle('on', on); pressed(c, on); });
+    const cr = $('cod-range'), cp = $('cod-play'), ct = $('cod-ticker');
+    if (cr) { cr.min = COD_MIN; cr.max = COD_MAX; cr.value = state.codMax || COD_MAX; }
+    if (cp) { cp.textContent = _play ? '⏸' : '▶'; cp.title = _play ? L_('codPause') : L_('codPlay'); if (cp.classList) cp.classList.toggle('on', !!_play); pressed(cp, !!_play); }
+    if (ct) { if (state.playYear) { ct.innerHTML = esc(String(state.playYear)) + '<small>' + L_('codTick') + '</small>'; ct.hidden = false; if (ct.removeAttribute) ct.removeAttribute('hidden'); } else { ct.hidden = true; if (ct.setAttribute) ct.setAttribute('hidden', ''); } }
     const preset = state.recentOnly ? 'recent' : (state.minYear > MIN_YEAR ? 'future' : 'all');
     document.querySelectorAll('#year-presets .chip').forEach(c => { const on = c.dataset.preset === preset; c.classList.toggle('on', on); pressed(c, on); });
     const orow = $('pl-owner-row'), opill = $('pl-owner-pill');
@@ -1365,7 +1496,7 @@
     tt('t-states', 'states', true); tt('t-epc', 'epc', true); tt('t-coal', 'coal', true); tt('t-opps', 'opps', true); tt('t-pipe', 'pipeT', true); tt('t-pipe-r', 'pipeR', true); tt('t-zones', 'zones', true); tt('t-leads', 'leads', true); tt('t-changes', 'chT2', true);
     const q = $('q'); if (q) q.placeholder = L_('search');
     const lg = $('btn-lang'); if (lg) lg.textContent = en() ? '中' : 'EN';
-    document.querySelectorAll('#layer-chips .chip').forEach(c => { c.textContent = L_({ grid: 'lgGrid', planned: 'lgPlanned', nodes: 'lgNodes', coal: 'lgCoal', projects: 'lgProj', fill: 'lgFill', pipe: 'lgPipe', rez: 'lgRez' }[c.dataset.layer]); });
+    document.querySelectorAll('#layer-chips .chip').forEach(c => { c.textContent = L_({ grid: 'lgGrid', planned: 'lgPlanned', nodes: 'lgNodes', coal: 'lgCoal', projects: 'lgProj', fill: 'lgFill', pipe: 'lgPipe', rez: 'lgRez', changes: 'lgChanges' }[c.dataset.layer]); });
     document.querySelectorAll('#year-presets .chip').forEach(c => { c.textContent = L_({ all: 'all', recent: 'recent', future: 'future' }[c.dataset.preset]); });
     buildCats(); buildStatus(); buildEpc(); buildPipeChips(); buildBasemap(); renderStateList(); renderLegend(); syncUI(); render();
     if (state.card) { const c = state.card; if (c.kind === 'project') showDetail(c.id, { noFly: true }); else if (c.kind === 'coal') showCoal(c.id, { noFly: true }); else if (c.kind === 'state') showState(c.id, { noFly: true }); else if (c.kind === 'line') showLine(c.id, { noFly: true }); else if (c.kind === 'pipe') showPipe(c.id, { noFly: true }); else if (c.kind === 'zone') showZone(c.id, { noFly: true }); }
@@ -1389,6 +1520,7 @@
     if (!plsDef) p.set('pls', [...state.plStatus].join('~') || '-');
     if (state.plFuelOff.size) p.set('plf', [...state.plFuelOff].join('~'));
     if (state.plWin) p.set('plw', '1'); if (state.plHot) p.set('plh', '1'); if (state.plUp) p.set('plu', '1'); if (state.plMine) p.set('plm', '1');
+    if (state.codMax) p.set('cod', String(state.codMax));
     if (state.lang === 'en') p.set('lang', 'en');
     if (state.basemap && state.basemap !== BASE_DEFAULT) p.set('bm', state.basemap);
     if (state.plOwner) p.set('own', state.plOwner);
@@ -1414,6 +1546,7 @@
     if (p.has('pls')) state.plStatus = new Set(p.get('pls').split('~').filter(k => PL_STATUS.indexOf(k) >= 0));
     if (p.has('plf')) state.plFuelOff = new Set(p.get('plf').split('~').filter(Boolean));
     if (p.has('plw')) state.plWin = true; if (p.has('plh')) state.plHot = true; if (p.has('plu')) state.plUp = true; if (p.has('plm')) state.plMine = true;
+    if (p.has('cod')) { const y = +p.get('cod'); if (y >= COD_MIN && y < COD_MAX) state.codMax = y; }
     if (p.get('lang') === 'en') state.lang = 'en';
     if (p.has('bm') && BASES.some(b => b.key === p.get('bm'))) state.basemap = p.get('bm');
     if (p.has('own')) state.plOwner = p.get('own') || null;
@@ -1450,5 +1583,6 @@
   window.__AU__ = { state, PROJECTS, LINES, NODE, COAL, STATES, PIPE, ZONES, ZONE_STAT, CHANGES, render, filtered, filteredPipe, stateOf, zoneOf, countdown, showDetail, showCoal, showState, showLine, showPipe, showZone, stateToHash, applyHash, applyLang, resetState, syncUI, kpis, stateStats,
     leadScore, leads, leadsCSV, exportLeadsCSV, epcHintOf, ownerGroup, buildAccounts, buildEpcAccounts, filterOwner, showLeads, showAccounts, showChanges, buildChangesBrief, exportBrief, buildStateBrief, exportStateBrief, openModal, closeModal, openView,
     windowOpen, UPGRADED, PL_QUICK, passPipeBase, normTnsp, renderFresh, applyBase, BASES, closeDrawers, toggleDrawer, clampList,
-    TRACK, TRACK_ST, trackOf, setTrack, delTrack, trackCounts, trackActive, dueIn, exportTrack, importTrackText };
+    TRACK, TRACK_ST, trackOf, setTrack, delTrack, trackCounts, trackActive, dueIn, exportTrack, importTrackText,
+    COD_MIN, COD_MAX, ADDED, startPlay, pausePlay, buildStateSVG, exportStatePoster };
 })();

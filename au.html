@@ -79,6 +79,7 @@
             <button class="chip on" data-layer="fill" aria-pressed="true">🗺️ 州界着色</button>
             <button class="chip on" data-layer="pipe" aria-pressed="true">🧭 AEMO 管线</button>
             <button class="chip on" data-layer="rez" aria-pressed="true">🌞 REZ 区划</button>
+            <button class="chip on" data-layer="changes" aria-pressed="true">📰 本季变化高亮</button>
           </div>
           <div class="kv-row" id="kv-chips" role="group" aria-label="电压等级"></div>
           <!-- 底图：暗色 Esri / OSM / 高德（大陆访客按时区默认高德；au.js 填充） -->
@@ -97,6 +98,12 @@
           <div class="chip-row" id="pl-fuel-chips" style="margin-top:6px"></div>
           <!-- BD 快捷筛选：⏰ 采购窗口进行中 / 🔥 线索分 ≥75 / ⬆️ 本季升级为承诺（au.js 填充，计数 = 当前基础筛选下） -->
           <div class="chip-row" id="pl-quick-chips" style="margin-top:6px" role="group" aria-label="BD 快捷筛选"></div>
+          <!-- 🗓️ COD 时间轴：按预期投运年份累计显示管线，拉到最右 = 全部；▶ 从今年起逐年播放（范围由 au.js 按数据设定） -->
+          <div class="cod-row" id="cod-row">
+            <button class="chip cod-play" id="cod-play" aria-pressed="false" aria-label="播放 COD 时间轴">▶</button>
+            <input type="range" id="cod-range" min="2026" max="2035" step="1" value="2035" aria-label="COD 截止年份">
+            <span class="cod-lab" id="cod-lab">全部年份</span>
+          </div>
           <div class="chip-row" id="pl-owner-row" style="margin-top:6px" hidden><button class="chip on owner-pill" id="pl-owner-pill" aria-pressed="true" title="清除业主筛选"></button></div>
         </div>
         <div class="block">
@@ -126,6 +133,8 @@
       <main class="map-wrap">
         <div id="map" role="region" aria-label="澳洲能源地图"></div>
         <div class="map-legend" id="map-legend"></div>
+        <!-- ▶ COD 时间轴播放时的大字年份 -->
+        <div class="cod-ticker" id="cod-ticker" hidden aria-live="polite"></div>
         <div class="card" id="card" role="region" aria-label="详情卡"></div>
         <button class="fab fab-l" id="fab-filters" aria-label="展开 / 收起筛选" aria-expanded="false">🔍 筛选</button>
         <button class="fab fab-r" id="fab-dash" aria-label="展开 / 收起看板" aria-expanded="false">📊 看板</button>

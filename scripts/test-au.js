@@ -218,6 +218,17 @@ try {
   ok(AU.importTrackText('not json', { silent: true }) === 0, '无效备份返回 0');
   AU.showPipe(AU.PIPE[0].id); AU.render();
 } catch (e) { fails.push('线索跟进抛错：' + (e && e.message)); }
+// 🗓️ COD 时间轴 / 📰 本季变化高亮 / 📸 州海报 SVG
+try {
+  ok(AU.COD_MIN >= 2020 && AU.COD_MAX > AU.COD_MIN, 'COD 时间轴范围有效（' + AU.COD_MIN + '→' + AU.COD_MAX + '）');
+  AU.state.codMax = AU.COD_MIN + 1; const fc = AU.filteredPipe(); ok(fc.length > 0 && fc.every(i => i.codYear && i.codYear <= AU.COD_MIN + 1), 'COD 截止年筛选：只留 COD ≤ 截止年（' + fc.length + ' 条）');
+  ok(/cod=/.test(AU.stateToHash()), 'cod 进 hash'); AU.state.codMax = null;
+  AU.startPlay(); ok(AU.state.codMax === AU.COD_MIN && AU.state.playYear === AU.COD_MIN, 'startPlay 从起始年开始'); AU.pausePlay(); ok(AU.state.playYear === null, 'pausePlay 清除播放年'); AU.state.codMax = null; AU.render();
+  ok(AU.ADDED.size === ((AU.CHANGES && AU.CHANGES.added) || []).length, 'ADDED 集合 = 本季新增条数');
+  const svg = AU.buildStateSVG('NSW'); ok(/^<svg/.test(svg) && svg.indexOf('新南威尔士州') > 0 && svg.indexOf('</svg>') > 0 && svg.length > 4000, 'buildStateSVG(NSW) 生成海报 SVG');
+  ok(AU.buildStateSVG('ACT').indexOf('新南威尔士州') > 0 && AU.buildStateSVG('XX') === '', '海报：ACT 并入 NSW，未知州返回空');
+  ok(typeof AU.exportStatePoster('VIC') === 'string', 'exportStatePoster 在无 Image 环境回退 SVG 不抛错');
+} catch (e) { fails.push('COD 时间轴 / 海报抛错：' + (e && e.message)); }
 try { const csv = AU.leadsCSV(AU.leads().slice(0, 50)); const lines = csv.split('\r\n'); ok(csv.charCodeAt(0) === 0xfeff && lines.length === 51 && /^﻿排名,线索分,产品分/.test(csv) && lines[1].split(',').length >= 25, 'leadsCSV：BOM + 表头 + 50 行'); } catch (e) { fails.push('leadsCSV 抛错：' + (e && e.message)); }
 try { const acc = AU.buildAccounts(PIPE); const neoen = acc.find(a => a.name === 'Neoen'); ok(acc.length > 100 && neoen && neoen.items.length >= 10 && neoen.near > 0 && Object.keys(neoen.states).length >= 2, '业主归并：Neoen ≥10 条、跨 ≥2 州（实际 ' + (neoen && neoen.items.length) + '）'); ok(AU.ownerGroup('ACEN RENEWABLES').key === AU.ownerGroup('ACEN Renewables').key && AU.ownerGroup('Edify Energy Pty Ltd').name === 'Edify Energy', 'ownerGroup 别名 / 大小写归并'); } catch (e) { fails.push('buildAccounts 抛错：' + (e && e.message)); }
 try { const ep = AU.buildEpcAccounts(); ok(ep.length >= 8 && ep.some(a => /GenusPlus/.test(a.name)) && ep.some(a => /UGL/.test(a.name)) && ep.every(a => a.n === a.main.length + a.pipe.length), 'EPC 账户：含 GenusPlus / UGL，计数一致（' + ep.length + ' 家）'); } catch (e) { fails.push('buildEpcAccounts 抛错：' + (e && e.message)); }
