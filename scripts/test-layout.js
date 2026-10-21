@@ -2,7 +2,8 @@
 /* ============================================================
  * 布局守卫（真实浏览器；可选依赖 playwright —— 找不到就打印 skip 并 exit 0）
  * 用法：  node scripts/test-layout.js
- *         PLAYWRIGHT_CHROMIUM=/path/to/chrome node scripts/test-layout.js   # 指定浏览器可执行文件
+ *         PLAYWRIGHT_CHROMIUM=/path/to/chrome node scripts/test-layout.js   # 指定浏览器可执行文件（CI 用跑器自带 Google Chrome；
+ *         ubuntu-latest 26.04 上 playwright install 会拒装 Chromium，所以不下载浏览器）；设了它或 CI=1 时启动失败算真失败
  * ------------------------------------------------------------
  * 用 Node 自带 http 起一个零依赖静态服务器，在 6 种视口打开 au.html 与 index.html，断言：
  *   · 页面没有比视口宽（html / body / .app 的 scrollWidth ≤ innerWidth）——澳洲地图的顶栏 nowrap 内容曾把整页
@@ -47,8 +48,13 @@ function serve() {
   const ok = (c, m) => { if (!c) fails.push(m); };
   let browser;
   try {
-    browser = await pw.chromium.launch(process.env.PLAYWRIGHT_CHROMIUM ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM } : {});
-  } catch (e) { console.log('⚠ Chromium 启动失败，跳过布局守卫：' + (e && e.message)); srv.close(); process.exit(0); }
+    // PLAYWRIGHT_CHROMIUM 指定可执行文件（CI 用跑器自带的 Google Chrome）；chromiumSandbox:false 兼容容器 / 跑器
+    browser = await pw.chromium.launch(Object.assign({ chromiumSandbox: false }, process.env.PLAYWRIGHT_CHROMIUM ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM } : {}));
+  } catch (e) {
+    // 明确指定了浏览器（或在 CI 里）却起不来 = 真失败；本地没装浏览器只是跳过
+    const hard = !!(process.env.PLAYWRIGHT_CHROMIUM || process.env.CI);
+    console.log((hard ? '✘' : '⚠') + ' 浏览器启动失败' + (hard ? '' : '，跳过布局守卫') + '：' + (e && e.message)); srv.close(); process.exit(hard ? 1 : 0);
+  }
   for (const page of PAGES) {
     for (const [w, h, mobile] of VIEWPORTS) {
       const ctx = await browser.newContext({ viewport: { width: w, height: h }, isMobile: mobile, hasTouch: mobile, locale: 'zh-CN', timezoneId: 'Australia/Sydney' });

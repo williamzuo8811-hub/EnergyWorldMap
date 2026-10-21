@@ -83,7 +83,9 @@ jobs:
 
   # 布局守卫（真实 Chromium）：au.html / index.html 在 6 种视口不比视口宽、手机浮钮在视口内、抽屉可关、无 pageerror
   # （澳洲地图顶栏曾把整页撑宽 93–253px 并裁掉右栏与手机浮钮，Node 冒烟测试查不出这类 CSS 回归）。
-  # 要下载 Playwright Chromium（~150 MB），定位为 advisory：失败不挡合并，但 job 显示红叉提醒。
+  # 只在 CI 内 npm 装 playwright 库（不进项目依赖），浏览器用跑器自带的 Google Chrome（与 lighthouse job 同一套，
+  # 不下载 Chromium——ubuntu-latest 已是 26.04，`playwright install --with-deps` 会因 OS 不受支持而失败）。
+  # 定位为 advisory：失败不挡合并，但 job 显示红叉提醒。
   layout:
     runs-on: ubuntu-latest
     continue-on-error: true
@@ -92,7 +94,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: 安装 Playwright Chromium（仅 CI 内，不进项目依赖）
-        run: npm i --no-save playwright@1.56.1 && npx playwright install --with-deps chromium
-      - name: 布局守卫 scripts/test-layout.js
-        run: node scripts/test-layout.js
+      - name: 安装 Playwright 库（仅 CI 内，不进项目依赖；不下载浏览器）
+        run: npm i --no-save playwright@1.56.1
+      - name: 布局守卫 scripts/test-layout.js（用跑器自带 Chrome）
+        run: |
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium-browser || command -v chromium || true)
+          echo "Chrome: ${CHROME:-<none>}"
+          PLAYWRIGHT_CHROMIUM="$CHROME" node scripts/test-layout.js

@@ -97,8 +97,10 @@ verify in a browser — there is no build step.
   `au.html`'s chain and warns above 2.5 MB (it should be `data.js` + `au-projects.js` only — see `build-au-slice.js`).
 - `node scripts/build-au-slice.js --check` — **gate** (same job): `js/au-projects.js` must equal a fresh build from the
   global data chain; re-run without `--check` after editing any `js/data*.js` / `progress.js` and commit the result.
-- `node scripts/test-layout.js` — **advisory `layout` job** (real Chromium via `npm i --no-save playwright`; skips with
-  exit 0 when the module is missing locally; `PLAYWRIGHT_CHROMIUM=/path/to/chrome` picks the binary): serves the repo
+- `node scripts/test-layout.js` — **advisory `layout` job** (`npm i --no-save playwright` for the library only; the
+  browser is the runner's own Google Chrome via `PLAYWRIGHT_CHROMIUM=/path/to/chrome`, because `playwright install` refuses
+  Chromium on `ubuntu-latest` 26.04; skips with exit 0 when the module is missing locally, fails hard when the binary is set
+  or `CI` is): serves the repo
   with Node's `http`, opens `au.html` + `index.html` at 390×844 / 844×390 / 1024×768 / 1280×720 / 1440×900 / 1920×1080,
   aborts tile requests, and asserts no element makes the page wider than the viewport (the AU topbar once pushed the
   grid 93–253 px wide and `overflow:hidden` silently cropped the right panel and the phone's 📊 FAB), the phone FABs /
