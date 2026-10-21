@@ -172,6 +172,7 @@
     layers: { grid: true, planned: true, nodes: true, coal: true, projects: true, fill: true, pipe: true, rez: true },
     plStatus: new Set(['committed', 'anticipated']), plFuelOff: new Set(),   // 🧭 管线：默认只显示承诺 + 预期（拟建按需打开）
     kvOff: new Set(), lang: 'zh',
+    basemap: null,   // 底图 key（dark | osm | amap；null = 按时区默认）
     card: null,   // {kind:'project'|'coal'|'state'|'line', id}
     plOwner: null,   // 🏢 业主筛选（归并键，见 ownerGroup）
     view: null,      // 打开的宽面板：leads | accounts | epc | changes
@@ -220,6 +221,8 @@
     chNote: ['每季度换一份 AEMO Generation Information 表并运行 scripts/import-aemo.js，即自动生成这四类清单（js/au-changes.js）与一页中文简报（data-src/aemo/brief-<asOf>.md）；点行可打开管线卡片（「不再出现」的条目已不在管线里）。', 'Each quarter, drop in the new AEMO Generation Information workbook and run scripts/import-aemo.js: these four lists (js/au-changes.js) and a one-page brief (data-src/aemo/brief-<asOf>.md) regenerate automatically; click a row to open its card ("gone" rows are no longer in the pipeline).'],
     ownerPill: ['🏢 业主', '🏢 Owner'],
     stBrief: ['⤓ 州机会简报', '⤓ State brief'],
+    closeA: ['关闭', 'Close'], shareA: ['复制链接', 'Copy link'], more: ['展开其余 {n} 条 ▾', 'Show {n} more ▾'], less: ['收起 ▴', 'Show less ▴'],
+    basemap: ['底图', 'Base map'], tileFail: ['底图瓦片加载失败：可在「图层 → 底图」切换 OSM / 高德', 'Base-map tiles failed to load — switch the base map under Layers'],
   };
   const L_ = k => (T[k] || [k, k])[state.lang === 'en' ? 1 : 0];
   const en = () => state.lang === 'en';
@@ -259,21 +262,44 @@
   const map = L.map('map', { center: [-27, 134], zoom: 4, minZoom: 3, maxZoom: 17, zoomControl: false, attributionControl: true });
   L.control.zoom({ position: 'topleft' }).addTo(map);   // 左下角留给图例
   if (map.attributionControl && map.attributionControl.setPrefix) map.attributionControl.setPrefix('');
-  const base = L.tileLayer('https://{s}.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+  /* ---------- 底图：暗色 Esri（海外默认）/ OSM / 高德（国内默认；澳洲在 GCJ-02 偏移区之外，无需纠偏）----------
+   * 与 app.js 同一套来源与时区判断：Esri / OSM 在大陆加载慢甚至打不开，按【时区】识别大陆访客默认高德；任何人都可在「图层 → 底图」切换。 */
+  const esriBase = L.tileLayer('https://{s}.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
     { subdomains: ['server', 'services'], maxZoom: 16, attribution: '© Esri · 州界 Natural Earth · 走廊示意' });
-  const ref = L.tileLayer('https://{s}.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+  const esriRef = L.tileLayer('https://{s}.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
     { subdomains: ['server', 'services'], maxZoom: 16 });
-  base.addTo(map); ref.addTo(map);
+  const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap · 州界 Natural Earth · 走廊示意' });
+  const amap = L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}',
+    { subdomains: ['1', '2', '3', '4'], maxZoom: 18, attribution: '© 高德地图 AutoNavi · 州界 Natural Earth · 走廊示意' });
+  const BASES = [
+    { key: 'dark', zh: '🌑 暗色', en: '🌑 Dark', layer: L.layerGroup([esriBase, esriRef]), tile: esriBase },
+    { key: 'osm', zh: '🗺️ OSM', en: '🗺️ OSM', layer: osm, tile: osm },
+    { key: 'amap', zh: '🇨🇳 高德', en: '🇨🇳 AMap', layer: amap, tile: amap },
+  ];
+  function inChina() { try { const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || ''); return /^(Asia\/(Shanghai|Chongqing|Chungking|Urumqi|Harbin)|PRC)$/i.test(tz); } catch (e) { return false; } }
+  const BASE_DEFAULT = inChina() ? 'amap' : 'dark';
+  const baseOf = k => BASES.find(b => b.key === k) || BASES[0];
+  let activeBase = null;
+  function applyBase(key) {
+    const nb = baseOf(key);
+    if (activeBase && activeBase.key === nb.key) return;
+    if (activeBase) map.removeLayer(activeBase.layer);
+    nb.layer.addTo(map); activeBase = nb; state.basemap = nb.key;
+    document.querySelectorAll('#bm-chips .chip').forEach(c => { const on = c.dataset.bm === nb.key; c.classList.toggle('on', on); pressed(c, on); });
+  }
   const toLatLng = c => [c[1], c[0]];
   function flyToBounds(b, opts) { if (REDUCED_MOTION) map.fitBounds(b, Object.assign({}, opts, { animate: false })); else map.flyToBounds(b, opts); }
   function flyTo(ll, z) { if (REDUCED_MOTION) map.setView(ll, z, { animate: false }); else map.flyTo(ll, z, { duration: 1.1 }); }
   const fitAU = () => map.fitBounds(AU_BOUNDS, { padding: [10, 10], animate: false });
   fitAU();
 
-  // 首屏 loader：瓦片到位或超时即淡出
+  // 首屏 loader：瓦片到位或超时即淡出；若 12 秒内一张瓦片都没到而错误不断（海外瓦片被墙 / 断网），提示切底图
   const loader = $('au-loader');
   const hideLoader = () => { if (loader && loader.classList) loader.classList.add('hidden'); };
-  base.on('load', hideLoader); setTimeout(hideLoader, 2800);
+  let _tileOk = 0, _tileErr = 0;
+  BASES.forEach(b => { b.tile.on('load', hideLoader); b.tile.on('tileload', () => { _tileOk++; }); b.tile.on('tileerror', () => { _tileErr++; }); });
+  setTimeout(hideLoader, 2800);
+  setTimeout(() => { if (!_tileOk && _tileErr >= 4) toast(L_('tileFail')); }, 12000);
 
   // 图层容器（叠放次序：州面 < 走廊 < 节点 < 煤电 < 项目）
   const fillLayer = L.layerGroup().addTo(map);
@@ -295,7 +321,9 @@
   cluster.addTo(map);
   // 🧭 管线标记：独立聚合组（菱形），与项目圆点分开聚合
   const plCluster = L.markerClusterGroup({
-    maxClusterRadius: 34, showCoverageOnHover: false, spiderfyOnMaxZoom: true, disableClusteringAtZoom: 9,
+    // 不设 disableClusteringAtZoom：41% 的管线与别的条目坐标完全相同（按所在地 / 接入站放置，最大一叠 17 条），
+    // 保持聚合到最大层级，点同点聚合会直接 spiderfy 展开，否则放大后只有最上面一颗菱形能点
+    maxClusterRadius: 34, showCoverageOnHover: false, spiderfyOnMaxZoom: true,
     iconCreateFunction: function (c) {
       const ms = c.getAllChildMarkers ? c.getAllChildMarkers() : [];
       let mw = 0; const cnt = {}; ms.forEach(m => { mw += m._mw || 0; cnt[m._fuel] = (cnt[m._fuel] || 0) + (m._mw || 0); });
@@ -336,6 +364,7 @@
       + (l.owner ? ' · ' + esc(l.owner) : '') + (l.year ? ' · ' + l.year : '') + (l.lengthKm ? ' · ' + fmtNum(l.lengthKm) + ' km' : '');
   }
   function renderGrid() {
+    if (!memo('grid', [state.layers.grid, state.layers.planned, state.layers.nodes, [...state.kvOff].sort().join('~'), stSig(), state.lang].join('|'))) return;
     lineLayer.clearLayers(); nodeLayer.clearLayers();
     LINES.filter(lineVisible).forEach(l => {
       const b = bandOf(l);
@@ -359,14 +388,26 @@
     }
   }
 
+  /* ---------- 渲染记忆：每个图层记住上次的输入签名，输入没变就不重画（搜索框每个按键只重画项目 / 管线标记）---------- */
+  const _sig = {};
+  const memo = (key, sig) => { if (_sig[key] === sig) return false; _sig[key] = sig; return true; };
+  const stSig = () => [...state.states].sort().join('~');
+  const zoomNow = () => (map.getZoom ? map.getZoom() : 4);
+  // 燃煤标记按缩放分档：全国视角 20px、州视角 24px、放大后 30px；已关停电厂只在 zoom ≥ 6 显示（低层级只添噪音）
+  const coalBand = () => { const z = zoomNow(); return z <= 4 ? 'a' : z <= 5 ? 'b' : 'c'; };
+
   /* ---------- 燃煤电厂 ---------- */
   function renderCoal() {
+    const band = coalBand();
+    if (!memo('coal', [state.layers.coal, stSig(), state.lang, band].join('|'))) return;
     coalLayer.clearLayers();
     if (!state.layers.coal) return;
+    const d = band === 'a' ? 20 : band === 'b' ? 24 : 30, small = band !== 'c';
     COAL.forEach((p, i) => {
       if (state.states.size && !state.states.has(p.state)) return;
+      if (p.status === 'closed' && small) return;
       const cd = countdown(p), col = coalColor(p);
-      const icon = L.divIcon({ className: 'coal-mk', iconSize: [30, 30], iconAnchor: [15, 15], html: '<i class="cm' + (p.status === 'closed' ? ' closed' : '') + '" style="--c:' + col + '">🏭<span>' + (p.status === 'closed' ? (p.closedYear || '') : (p.closeYear || '?')) + '</span></i>' });
+      const icon = L.divIcon({ className: 'coal-mk', iconSize: [d, d], iconAnchor: [d / 2, d / 2], html: '<i class="cm' + (p.status === 'closed' ? ' closed' : '') + (small ? ' sm' : '') + '" style="--c:' + col + '">🏭<span>' + (p.status === 'closed' ? (p.closedYear || '') : (p.closeYear || '?')) + '</span></i>' });
       const m = L.marker(toLatLng(p.coord), { icon, zIndexOffset: 500 });
       m.bindTooltip('<b>' + esc(en() ? p.en : p.name) + '</b><br>' + esc(p.owner || '') + ' · ' + (p.mw ? fmtNum(p.mw) + ' MW' : '') + '<br><span style="color:' + col + '">' + esc(cd.txt) + '</span>' + (p.closeText && p.status !== 'closed' ? ' · ' + esc(p.closeText) : ''), { direction: 'top', offset: [0, -14], className: 'au-tip' });
       m.on('click', () => showCoal(i, { noFly: true }));
@@ -378,8 +419,9 @@
   const zoneVisible = z => state.layers.rez && (state.states.size === 0 || state.states.has(normState(z.state)));
   const zoneLabel = z => (z.ispId ? z.ispId + ' · ' : '') + (en() ? (z.en || z.name) : z.name).replace(/\s*[（(].*?[)）]\s*/g, '').slice(0, 18);
   function renderRez() {
+    const zoom = zoomNow();
+    if (!memo('rez', [state.layers.rez, stSig(), state.lang, zoom >= 5 ? 1 : 0].join('|'))) return;
     rezLayer.clearLayers();
-    const zoom = map.getZoom ? map.getZoom() : 4;
     ZONES_SORTED.slice().reverse().forEach(z => {   // 候选区先画、已划定后画（在上层）
       if (!zoneVisible(z)) return;
       const col = ZONE_COLOR[z.status] || '#8aa4c2';
@@ -391,10 +433,15 @@
       if (zoom >= 5 && z.center) L.marker(toLatLng(z.center), { icon: L.divIcon({ className: 'rez-lab', iconSize: [0, 0], html: '<span style="--c:' + col + '">' + esc(zoneLabel(z)) + '</span>' }), interactive: false }).addTo(rezLayer);
     });
   }
-  map.on('zoomend', () => { if (state.layers.rez) renderRez(); });
+  map.on('zoomend', () => { renderRez(); renderCoal(); });   // 两者都带签名记忆：只在标签 / 尺寸档位真变时重画
 
   /* ---------- 🧭 管线筛选 / 标记 ---------- */
   const plHay = it => (it._hay || (it._hay = [it.en, it.name, it.owner, it.locality, it.connNode, it.tnsp, it.kci, it.rez, it.tech].join(' ').toLowerCase()));
+  // 管线搜索与项目搜索同口径（util.matchProject：多词 AND + 拼音全拼 / 首字母）：把管线字段映射成 matchProject 认得的 name/en/country/owner
+  const plProxy = it => (it._sp || (it._sp = { name: it.name, en: it.en, owner: it.owner,
+    // country 槽位塞进「州中英文名 + 燃料中英文名 + 所在地 / 接入站 / TNSP / KCI / REZ / 技术」，拼音索引也从这里取（搜「xinzhou chuneng」能命中新州储能）
+    country: [ST[it.state] ? ST[it.state].name + ' ' + ST[it.state].short + ' ' + ST[it.state].en : it.state, fuelOf(it.fuel).zh, fuelOf(it.fuel).en, it.locality, it.connNode, it.tnsp, it.kci, it.rez, it.tech].filter(Boolean).join(' ') }));
+  const plMatch = it => matchProject ? matchProject(plProxy(it), state.q, PY) : plHay(it).indexOf(state.q.toLowerCase()) >= 0;
   function passPipe(it) {
     return state.plStatus.has(it.status)
       && !state.plFuelOff.has(it.fuel)
@@ -402,7 +449,7 @@
       && (state.states.size === 0 || state.states.has(it.state))
       // 年份滑块两端为开区间：手柄在最左 / 最右时视为「及更早 / 及以后」，COD 在项目库年份范围之外的管线不会被「全部」误滤掉
       && (!it.codYear || ((it.codYear >= state.minYear || state.minYear <= MIN_YEAR) && (it.codYear <= state.maxYear || state.maxYear >= MAX_YEAR)))
-      && (!state.q || plHay(it).indexOf(state.q.toLowerCase()) >= 0);
+      && (!state.q || plMatch(it));
   }
   const filteredPipe = () => state.layers.pipe ? PIPE.filter(passPipe) : [];
   const plSize = mw => Math.max(8, Math.min(22, 6 + Math.sqrt(Math.max(mw || 0, 1)) * 0.5));
@@ -441,6 +488,7 @@
   }
   function renderZoneList() {
     const el = $('zone-list'), sum = $('zone-sum'); if (!el) return;
+    if (!memo('zoneList', [stSig(), state.lang].join('|'))) return;
     const zs = ZONES_SORTED.filter(z => state.states.size === 0 || state.states.has(normState(z.state)));
     if (sum) sum.textContent = fmtNum(zs.filter(z => z.status === 'declared').length) + ' ' + zoneStatusName('declared') + ' · ' + fmtNum(zs.length) + (en() ? ' total' : ' 个');
     el.innerHTML = zs.map(z => { const st = ZONE_STAT[z.key] || {}; const near = (st.committed || 0) + (st.anticipated || 0); return '<div class="row" data-zone="' + esc(z.key) + '" role="button" tabindex="0"><div class="nm"><span style="color:' + ZONE_COLOR[z.status] + '">■</span> ' + (z.ispId ? '<small style="color:#7b8ca6">' + esc(z.ispId) + '</small> ' : '') + esc(en() ? (z.en || z.name) : z.name) + '</div><div class="cd ' + z.status + '">' + esc(zoneStatusName(z.status)) + '</div><div class="meta">' + esc(stShort(normState(z.state))) + ' · ' + esc(z.body || '') + (z.targetGw ? ' · ' + z.targetGw + ' GW' : '') + ' · ' + L_('zPipe') + ' ' + gw(near) + (st.proposed ? ' (+' + gw(st.proposed) + ' ' + plStatusName('proposed') + ')' : '') + '</div></div>'; }).join('') || '<div class="empty">' + L_('noData') + '</div>';
@@ -563,11 +611,12 @@
 
   /* ---------- 宽面板（🎯 线索榜 / 🏢 账户 / 📰 本季变化）---------- */
   const modalEl = $('modal'), modalBox = $('modal-box');
-  const mhead = (title, sub, actions) => '<div class="m-head"><h2>' + title + '</h2><div class="m-actions">' + (actions || '') + '</div><button class="m-close" aria-label="关闭">×</button>' + (sub ? '<div class="m-sub">' + sub + '</div>' : '') + '</div>';
+  const mhead = (title, sub, actions) => '<div class="m-head"><h2>' + title + '</h2><div class="m-actions">' + (actions || '') + '</div><button class="m-close" aria-label="' + L_('closeA') + '">×</button>' + (sub ? '<div class="m-sub">' + sub + '</div>' : '') + '</div>';
   const navBtns = cur => ['leads', 'accounts', 'changes'].filter(v => v !== cur).map(v => '<button data-view="' + v + '">' + L_(v === 'leads' ? 'leadsBtn' : v === 'accounts' ? 'accBtn' : 'chBtn') + '</button>').join('');
   function openModal(html, view) {
     if (!modalEl || !modalBox) return;
     closeDrawers();
+    if (!state.view) _modalPrev = document.activeElement || null;   // 视图间切换时保留最初的触发按钮
     modalBox.innerHTML = html; modalEl.hidden = false; if (modalEl.removeAttribute) modalEl.removeAttribute('hidden');
     state.view = view; writeHash();
     const cl = modalBox.querySelector('.m-close'); if (cl) { cl.addEventListener('click', closeModal); if (cl.focus) cl.focus(); }
@@ -576,7 +625,21 @@
     modalBox.querySelectorAll('[data-owner]').forEach(b => b.addEventListener('click', e => { if (e && e.stopPropagation) e.stopPropagation(); closeModal(); filterOwner(b.dataset.owner); }));
     modalBox.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => openView(b.dataset.view)));
   }
-  function closeModal() { if (!modalEl) return; modalEl.hidden = true; if (modalEl.setAttribute) modalEl.setAttribute('hidden', ''); if (state.view) { state.view = null; writeHash(); } }
+  function closeModal() {
+    if (!modalEl) return; modalEl.hidden = true; if (modalEl.setAttribute) modalEl.setAttribute('hidden', ''); if (state.view) { state.view = null; writeHash(); }
+    if (_modalPrev && _modalPrev.focus) { try { _modalPrev.focus(); } catch (e) { /* ignore */ } }   // 焦点回到打开弹窗的按钮
+    _modalPrev = null;
+  }
+  // 弹窗焦点圈：Tab 不逃出弹窗（与 app.js 的 countryPanel 同规则）
+  let _modalPrev = null;
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Tab' || !state.view || !modalBox || !modalBox.querySelectorAll) return;
+    const f = modalBox.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'); if (!f.length) return;
+    const first = f[0], last = f[f.length - 1], a = document.activeElement;
+    if (!modalBox.contains || !modalBox.contains(a)) { e.preventDefault(); first.focus(); }
+    else if (e.shiftKey && a === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && a === last) { e.preventDefault(); first.focus(); }
+  });
   function openView(v) { if (v === 'leads') showLeads(); else if (v === 'accounts') showAccounts('owner'); else if (v === 'epc') showAccounts('epc'); else if (v === 'changes') showChanges(); }
   const csvCell = v => { const s = String(v == null ? '' : v); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
   // 表格单元：data-l = 列名；窄屏下 au.css 把每行拆成一张卡、用它当标签（.mtable td::before），12 列表格不必横向滑动
@@ -654,6 +717,7 @@
   /* ---------- 📰 本季变化 ---------- */
   function renderChangesBlock() {
     const el = $('changes-bands'), sum = $('changes-sum'), more = $('btn-changes-more'); if (!el) return;
+    if (!memo('changes', state.lang)) return;
     if (!CHANGES) { el.innerHTML = '<div class="empty" style="grid-column:1/-1">' + L_('chNone') + '</div>'; if (more) more.hidden = true; return; }
     const up = (CHANGES.status || []).filter(x => x.to === 'committed').length, c = CHANGES.counts || {};
     if (sum) sum.textContent = (CHANGES.prevAsOf ? CHANGES.prevAsOf + ' → ' : '') + (CHANGES.asOf || '');
@@ -831,6 +895,7 @@
   }
   function renderCoalList() {
     const el = $('coal-list'), bands = $('coal-bands'), sum = $('coal-sum'); if (!el) return;
+    if (!memo('coalList', [stSig(), state.lang].join('|'))) return;
     const vis = coalSorted.filter(p => state.states.size === 0 || state.states.has(p.state));
     const ops = vis.filter(p => p.status !== 'closed');
     const mwBy = lim => ops.filter(p => p.closeYear && p.closeYear <= lim).reduce((s, p) => s + (p.mw || 0), 0);
@@ -869,6 +934,7 @@
   }
   function renderLineList() {
     const el = $('line-list'); if (!el) return;
+    if (!memo('lineList', [state.layers.grid, state.layers.planned, [...state.kvOff].sort().join('~'), stSig(), state.lang].join('|'))) return;
     const ls = LINES.filter(l => l.status !== 'existing' && lineVisible(l)).sort((a, b) => (a.status === 'building' ? 0 : 1) - (b.status === 'building' ? 0 : 1) || (a.year || 9999) - (b.year || 9999));
     el.innerHTML = ls.map(l => { const b = bandOf(l); return '<div class="row" data-line="' + esc(l.id) + '" role="button" tabindex="0"><div class="nm"><span style="color:' + b.color + '">' + (l.type === 'dc' ? 'HVDC' : l.kv + 'kV') + '</span> ' + esc(en() ? (l.en || l.name) : l.name) + '</div><div class="cd ' + (l.status === 'building' ? 'warm' : 'cool') + '">' + L_(l.status) + (l.year ? ' ' + l.year : '') + '</div><div class="meta">' + esc(l.owner || '') + (l.lengthKm ? ' · ' + fmtNum(l.lengthKm) + ' km' : '') + (l.costAud ? ' · ' + esc(l.costAud) : '') + '</div></div>'; }).join('') || '<div class="empty">' + L_('noData') + '</div>';
     el.querySelectorAll('.row').forEach(r => { r.addEventListener('click', () => showLine(r.dataset.line)); r.addEventListener('keydown', e => { if (e.key === 'Enter') showLine(r.dataset.line); }); });
@@ -927,14 +993,24 @@
     cardEl.querySelectorAll('[data-plid]').forEach(b => b.addEventListener('click', () => showPipe(b.dataset.plid)));
     cardEl.querySelectorAll('[data-zone]').forEach(b => b.addEventListener('click', () => showZone(b.dataset.zone)));
     cardEl.querySelectorAll('[data-brief]').forEach(b => b.addEventListener('click', () => exportStateBrief(b.dataset.brief)));
+    cardEl.querySelectorAll('[data-more]').forEach(b => b.addEventListener('click', () => { const ul = b.previousElementSibling; if (!ul || !ul.classList) return; const open = ul.classList.toggle('open'); b.textContent = open ? L_('less') : L_('more').replace('{n}', b.dataset.more); }));
     writeHash();
   }
   const cell = (k, v) => '<div class="d-cell"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
-  const head = (color, tag, name, alt, extra) => '<div class="d-top"><button class="d-close" id="c-close" aria-label="关闭">×</button><button class="d-share" id="c-share" aria-label="复制链接" title="复制链接">🔗</button>'
+  const head = (color, tag, name, alt, extra) => '<div class="d-top"><button class="d-close" id="c-close" aria-label="' + L_('closeA') + '">×</button><button class="d-share" id="c-share" aria-label="' + L_('shareA') + '" title="' + L_('shareA') + '">🔗</button>'
     + '<span class="d-cat" style="background:' + hexA(color, 0.14) + ';color:' + color + '">' + tag + '</span>' + (extra || '') + '<div class="d-name">' + name + '</div>' + (alt ? '<div class="d-en">' + alt + '</div>' : '') + '</div>';
   const sec = (title, body) => body ? '<div class="d-sec"><h4>' + title + '</h4>' + body + '</div>' : '';
   const srcList = srcs => (srcs && srcs.length) ? '<ul class="src">' + srcs.map(s => /^https?:/.test(s) ? '<li><a href="' + esc(s) + '" target="_blank" rel="noopener">' + esc(s.replace(/^https?:\/\//, '').slice(0, 70)) + '</a></li>' : '<li>' + esc(s) + '</li>').join('') + '</ul>' : '';
   const paras = txt => txt ? String(txt).split(/\n+/).map(x => '<p>' + esc(x) + '</p>').join('') : '';
+  // 长段落（州政策 / 设备商必读 / 煤电退出：单段 700–2,200 字）按句切成要点，默认只展开前 n 条，其余「展开」——卡片里不再是一面文字墙
+  function clampList(txt, n) {
+    if (!txt) return '';
+    const items = String(txt).split(/\n+/).reduce((a, par) => a.concat(par.replace(/([。！？!?])\s*/g, '$1\u0000').split('\u0000')), []).map(s => s.trim()).filter(s => s.length > 1);
+    if (items.length <= 1) return paras(txt);
+    n = n || 3;
+    return '<ul class="d-bul">' + items.map((s, i) => '<li' + (i >= n ? ' class="hid"' : '') + '>' + esc(s) + '</li>').join('') + '</ul>'
+      + (items.length > n ? '<button class="d-more" data-more="' + (items.length - n) + '">' + L_('more').replace('{n}', items.length - n) + '</button>' : '');
+  }
 
   function showDetail(id, opts) {
     const p = PROJECTS.find(x => x.id === id); if (!p) return;
@@ -1036,8 +1112,8 @@
         + sec(L_('kTnsp'), sh.tnsp ? '<p><b>' + esc(sh.tnsp.name) + '</b>' + (sh.tnsp.owner ? ' · ' + esc(sh.tnsp.owner) : '') + (sh.tnsp.voltages ? ' · ' + esc(sh.tnsp.voltages) : '') + '</p>' + paras(sh.tnsp.notes) : '')
         + sec(L_('kDnsp'), dnsps)
         + sec(L_('kRez'), '<p>' + esc(sh.rezBody || '') + '</p>' + ((sh.rezs || []).length ? '<p>' + sh.rezs.map(r => '<span class="tag">' + esc(r) + '</span>').join('') + '</p>' : ''))
-        + sec(L_('kPolicy'), paras(sh.policy)) + sec(L_('kCoalExit'), paras(sh.coalExit) + coalRows)
-        + sec(L_('kProjects'), proj) + sec(L_('kVendor'), paras(sh.vendor))
+        + sec(L_('kPolicy'), clampList(sh.policy, 3)) + sec(L_('kCoalExit'), clampList(sh.coalExit, 2) + coalRows)
+        + sec(L_('kProjects'), proj) + sec(L_('kVendor'), clampList(sh.vendor, 3))
         + sec(L_('kPortals'), srcList(sh.tenderPortals)) + sec(L_('kSources'), srcList(sh.sources))
         : '<div class="d-sec"><p>' + L_('sheetMissing') + '</p></div>' + sec(L_('kCoalExit'), coalRows))
       + (top.length ? sec(L_('opps'), top.map(p => '<div class="co-row"><span><b class="d-link" data-pid="' + p.id + '">' + esc(nm(p)) + '</b><small>' + esc(catShort(p.cat)) + ' · ' + esc(statusName(p.status)) + ' ' + p.year + (p.owner ? ' · ' + esc(p.owner) : '') + '</small></span><span class="amt" style="color:#2ee6a6;font-weight:700;white-space:nowrap">' + usd(p) + '</span></div>').join('')) : '');
@@ -1079,6 +1155,11 @@
       fe.innerHTML = FUELS.filter(f => f.key !== 'coal').map(f => '<button class="chip' + (state.plFuelOff.has(f.key) ? '' : ' on') + '" data-plf="' + f.key + '" aria-pressed="' + (state.plFuelOff.has(f.key) ? 'false' : 'true') + '"><span class="fi" style="--c:' + f.color + '"></span>' + f.icon + ' ' + esc(en() ? f.en : f.zh) + '</button>').join('');
       fe.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => { const k = b.dataset.plf; if (state.plFuelOff.has(k)) state.plFuelOff.delete(k); else state.plFuelOff.add(k); syncUI(); render(); }));
     }
+  }
+  function buildBasemap() {
+    const el = $('bm-chips'); if (!el) return;
+    el.innerHTML = '<span class="bm-lab">' + L_('basemap') + '</span>' + BASES.map(b => '<button class="chip' + (activeBase && activeBase.key === b.key ? ' on' : '') + '" data-bm="' + b.key + '" aria-pressed="' + (activeBase && activeBase.key === b.key ? 'true' : 'false') + '">' + esc(en() ? b.en : b.zh) + '</button>').join('');
+    el.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => { applyBase(b.dataset.bm); writeHash(); }));
   }
   function buildKv() {
     const el = $('kv-chips'); if (!el) return;
@@ -1174,7 +1255,7 @@
     const lg = $('btn-lang'); if (lg) lg.textContent = en() ? '中' : 'EN';
     document.querySelectorAll('#layer-chips .chip').forEach(c => { c.textContent = L_({ grid: 'lgGrid', planned: 'lgPlanned', nodes: 'lgNodes', coal: 'lgCoal', projects: 'lgProj', fill: 'lgFill', pipe: 'lgPipe', rez: 'lgRez' }[c.dataset.layer]); });
     document.querySelectorAll('#year-presets .chip').forEach(c => { c.textContent = L_({ all: 'all', recent: 'recent', future: 'future' }[c.dataset.preset]); });
-    buildCats(); buildStatus(); buildEpc(); buildPipeChips(); renderStateList(); renderLegend(); syncUI(); render();
+    buildCats(); buildStatus(); buildEpc(); buildPipeChips(); buildBasemap(); renderStateList(); renderLegend(); syncUI(); render();
     if (state.card) { const c = state.card; if (c.kind === 'project') showDetail(c.id, { noFly: true }); else if (c.kind === 'coal') showCoal(c.id, { noFly: true }); else if (c.kind === 'state') showState(c.id, { noFly: true }); else if (c.kind === 'line') showLine(c.id, { noFly: true }); else if (c.kind === 'pipe') showPipe(c.id, { noFly: true }); else if (c.kind === 'zone') showZone(c.id, { noFly: true }); }
     if (state.view) openView(state.view);
   }
@@ -1196,6 +1277,7 @@
     if (!plsDef) p.set('pls', [...state.plStatus].join('~') || '-');
     if (state.plFuelOff.size) p.set('plf', [...state.plFuelOff].join('~'));
     if (state.lang === 'en') p.set('lang', 'en');
+    if (state.basemap && state.basemap !== BASE_DEFAULT) p.set('bm', state.basemap);
     if (state.plOwner) p.set('own', state.plOwner);
     if (state.view) p.set('view', state.view);
     if (state.card) p.set(state.card.kind, String(state.card.id));
@@ -1219,6 +1301,7 @@
     if (p.has('pls')) state.plStatus = new Set(p.get('pls').split('~').filter(k => PL_STATUS.indexOf(k) >= 0));
     if (p.has('plf')) state.plFuelOff = new Set(p.get('plf').split('~').filter(Boolean));
     if (p.get('lang') === 'en') state.lang = 'en';
+    if (p.has('bm') && BASES.some(b => b.key === p.get('bm'))) state.basemap = p.get('bm');
     if (p.has('own')) state.plOwner = p.get('own') || null;
     if (p.has('view') && ['leads', 'accounts', 'epc', 'changes'].indexOf(p.get('view')) >= 0) state.view = p.get('view');
     const card = ['project', 'coal', 'state', 'line', 'pipe', 'zone'].find(k => p.has(k));
@@ -1241,6 +1324,7 @@
   _hashLock = true;
   const pendingCard = applyHash();
   _hashLock = false;
+  applyBase(state.basemap || BASE_DEFAULT); buildBasemap();
   if (state.lang === 'en') applyLang(); else { syncUI(); render(); }
   if (state.states.size === 1) flyToState([...state.states][0]);
   if (pendingCard) {

@@ -147,6 +147,16 @@ button { font-family: inherit; }
   border: 2px solid var(--c); box-shadow: 0 0 14px var(--c); cursor: pointer; font-size: 15px; line-height: 1; }
 .coal-mk .cm span { position: absolute; bottom: -9px; left: 50%; transform: translateX(-50%); font-size: 9.5px; font-weight: 800; color: #0a1020; background: var(--c); padding: 1px 5px; border-radius: 6px; white-space: nowrap; }
 .coal-mk .cm.closed { opacity: .55; filter: grayscale(.6); }
+.coal-mk .cm.sm { font-size: 11px; border-radius: 6px; box-shadow: 0 0 8px var(--c); }   /* 全国 / 州视角的小号燃煤标记 */
+.coal-mk .cm.sm span { font-size: 8px; bottom: -7px; padding: 0 4px; }
+/* 底图切换行 */
+.bm-row .bm-lab { font-size: 11px; color: var(--txt-faint); align-self: center; margin-right: 2px; }
+/* 州档案长文要点列表（clampList）：默认只展开前几条 */
+.card .d-bul { margin: 0; padding-left: 16px; }
+.card .d-bul li { font-size: 12.5px; line-height: 1.6; color: #d6e0f5; margin: 0 0 5px; }
+.card .d-bul li.hid { display: none; } .card .d-bul.open li.hid { display: list-item; }
+.card .d-more { margin-top: 2px; padding: 5px 10px; font-size: 11.5px; font-weight: 700; color: var(--accent); background: rgba(33,199,255,0.08); border: 1px solid rgba(33,199,255,0.3); border-radius: 8px; cursor: pointer; }
+.card .d-more:hover { background: rgba(33,199,255,0.18); }
 
 /* 图例 */
 .map-legend { position: absolute; left: 12px; bottom: 34px; z-index: 500; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 9px 11px; font-size: 11px; color: var(--txt-dim); backdrop-filter: blur(8px); box-shadow: var(--shadow); max-width: 240px; }
