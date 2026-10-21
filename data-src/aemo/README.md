@@ -28,4 +28,9 @@ node scripts/test-au.js
 AEMO 不为 WEM 发布逐项目的 "Generation Information" 表；西澳管线按 **2026 WEM ESOO**（2026-06，[页面](https://www.aemo.com.au/energy-systems/electricity/wholesale-electricity-market-wem/wem-forecasting-and-planning/wem-electricity-statement-of-opportunities-wem-esoo)）
 的附录 A2/A3、Data Register（Figure 21 逐设施容量信用）与 Reserve Capacity Information Pack 手工核对：2027-28 容量年新获容量信用的设施记为承诺，
 预期 / 拟建按 ESOO 汇总口径与业主公告推断。`WEM-2026-ESOO-capacity-credits-2027-28.csv` 是从 Data Register 抽出的逐设施容量信用表；
-ESOO 原件（附录 PDF 5 MB、Data Register 23 MB）体积大，不入库，刷新时从上述页面重新下载。
+ESOO 原件（主报告 / 附录 PDF 5 MB、Data Register 23 MB）体积大，不入库，刷新时从上述页面重新下载。
+
+主报告第 3 章（3.2.2 / 3.2.3）表 17、表 18 是正文里唯一的逐项目清单——具名的承诺项目只有 4 座风电（Narrogin 168 MW · Kondinin 130 MW ·
+Parron 484 MW · Alinta Marri 550 MW）与 East Rockingham RRF 29 MW，其余按技术类别汇总（燃气 / 柴油 442 MW、储能 781 MW / 3,828 MWh、
+DSP 41 MW、其他风光 439 MW；预期：光伏 129 MW、储能 891 MW / 4,908 MWh）。`WEM-2026-ESOO-table17-18-committed-anticipated.csv` 抄录了这两张表并标注对应的
+`pl-wa-*` 管线 id；具名项目已逐条进入 `js/au-pipeline.js`（状态与 COD 按 AEMO 口径，场址为所在地示意坐标 `approx:true`）。

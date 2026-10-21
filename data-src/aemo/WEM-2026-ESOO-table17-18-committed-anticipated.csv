@@ -1,0 +1,16 @@
+# AEMO 2026 WEM ESOO main report (2026-06), Section 3.2 Tables 17 & 18: committed / anticipated projects by Capability Class, 2026-27 to 2035-36 (nameplate MW, storage MWh, anticipated full commercial operation date). Named rows are the only per-facility entries in the main report; the rest are AEMO aggregates. Source: https://www.aemo.com.au/energy-systems/electricity/wholesale-electricity-market-wem/wem-forecasting-and-planning/wem-electricity-statement-of-opportunities-wem-esoo
+table,status,capacity_provided_by,capability_class,nameplate_mw,storage_mwh,full_commercial_operation,pipeline_id
+17,committed,2025-27 Peak Demand NCESS – DSP,2,9,,2026-10,
+17,committed,East Rockingham RRF Project Co Pty Ltd,1,29,,2026-10,pl-wa-025
+17,committed,Narrogin Wind Farm,3,168,,2028-09,pl-wa-023
+17,committed,Kondinin Wind Farm,3,130,,2028-12,pl-wa-024
+17,committed,Parron Wind Farm,3,484,,2028-12,pl-wa-022
+17,committed,Alinta Marri Wind Farm,3,550,,2029-12,pl-wa-021
+17,committed,Other Facilities operated by gas and distillate (2026 WEM ESOO FIR + 2026 EOI),1,442,,2026-10 to 2028-10,
+17,committed,ESR Facilities (2026 WEM ESOO FIR + 2026 EOI),2,781,3828,2026-10 to 2029-01,
+17,committed,Other DSP Facilities (2026 WEM ESOO FIR + 2026 EOI),2,41,,2027-10,
+17,committed,Other Facilities operated by solar and wind (2026 WEM ESOO FIR + 2026 EOI),3,439,,2027-10 to 2029-01,
+17,committed,Total,,3072,3828,,
+18,anticipated,Solar Facilities (2026 WEM ESOO FIR + 2026 EOI),3,129,,2029-10,
+18,anticipated,ESR Facilities (2026 WEM ESOO FIR + 2026 EOI),2,891,4908,2028-10 to 2029-10,
+18,anticipated,Total,,1020,4908,,
