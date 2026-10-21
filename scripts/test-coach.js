@@ -287,6 +287,34 @@ try {
   ok(badEn.tone.bad.length > 0 && goodEn.total > badEn.total + 20, '英文跪舔被双语词典捕获且显著低分（' + goodEn.total + ' vs ' + badEn.total + '）');
 } catch (e) { fails.push('英文实战抛错：' + (e && e.stack || e)); }
 
+// —— 英文实战 · 澳洲专项场景（储能开发商 / Western Power 接入工程师）——
+try {
+  const scs = K.CONTENT.english.scenarios || [];
+  ok(scs.length >= 2 && ['au-bess', 'au-wp'].every(k => scs.some(x => x.key === k)), '澳洲英文场景 ≥2（au-bess / au-wp）');
+  const ids = new Set();
+  scs.forEach(sc => {
+    ok(sc.over && sc.over.cust && sc.title && sc.subtitle && Array.isArray(sc.stages) && sc.stages.length >= 5, '场景「' + sc.key + '」有画像 / 标题 / ≥5 关');
+    sc.stages.forEach(st => (st.rounds || []).forEach(r => { ok(r.id && !ids.has(r.id) && r.ask && Array.isArray(r.rubric) && r.rubric.length >= 3 && r.gold && r.coach, '场景「' + sc.key + '」回合字段齐全且 id 唯一：' + r.id); ids.add(r.id); ok(K.ALL_ROUNDS[r.id], '场景回合已入 ALL_ROUNDS 索引：' + r.id); }));
+  });
+  K.startEnglish('au-wp');
+  ok(K.state.deal.kind === 'en' && K.state.deal.enKey === 'au-wp' && /Western Power/.test(K.state.deal.ctx.t.cust) && K.state.deal.steps.length >= 5, 'startEnglish(au-wp)：kind=en · enKey · Western Power 画像 · ≥5 步');
+  K.state.mode = 'en'; K.render();
+  const snap = K.dealSnapshot(); ok(snap && snap.enKey === 'au-wp', '快照带 enKey');
+  K.state.savedDeal = snap; K.resumeDeal();
+  ok(K.state.deal && K.state.deal.enKey === 'au-wp' && /Western Power/.test(K.state.deal.ctx.t.cust), '按 enKey 恢复专项场景画像');
+  const wpRound = K.ALL_ROUNDS['en-wp-object'].round, wpCtx = K.state.deal.ctx;
+  const goodWp = K.scoreFree("That's a valid concern and I've seen it go wrong too. The design will be AS/NZS and IEC native: we redraw to your drawing standards, run a gap analysis against the Technical Rules with an independent Australian reviewer, hold design reviews before build, then prototype inspection, witnessed FAT and commissioning you can attend.", wpRound, wpCtx);
+  const badWp = K.scoreFree('Please trust us, we are the best and cheapest, just approve it, I beg you.', wpRound, wpCtx);
+  ok(goodWp.total >= 55 && goodWp.total > badWp.total + 20, 'Western Power 异议回合：证据式应答 ' + goodWp.total + ' > 跪舔 ' + badWp.total);
+  K.startEnglish('au-bess');
+  ok(K.state.deal.enKey === 'au-bess' && /Ironbark/.test(K.state.deal.ctx.t.cust) && K.state.deal.opp.p.country === '澳大利亚', 'startEnglish(au-bess)：储能开发商画像 + 澳洲商机（' + K.state.deal.opp.p.cat + '）');
+  const bessRound = K.ALL_ROUNDS['en-bess-close'].round;
+  const goodBess = K.scoreFree("Let's trade rather than cut: release an early purchase order for the long-lead transformers and switchgear this week and I can lock a factory slot and pull the first skids forward two months; standardising the blocks across your portfolio moves the price. I won't thin the spec. Can we confirm the technical annex this week?", bessRound, K.state.deal.ctx);
+  ok(goodBess.total >= 60, 'BESS 促成回合：以换代让的应答达标（' + goodBess.total + '）');
+  K.startEnglish(); ok(K.state.deal.enKey === null && /Sunfield/.test(K.state.deal.ctx.t.cust), '无 key → 默认光伏业主场景');
+  K.startEnglish('no-such-key'); ok(K.state.deal.enKey === null, '未知 key → 回落默认场景');
+} catch (e) { fails.push('澳洲英文场景抛错：' + (e && e.stack || e)); }
+
 // —— 经典大单战役（手写 · 绑定真实项目）——
 try {
   ok(Array.isArray(K.CONTENT.signatures) && K.CONTENT.signatures.length >= 4, '经典大单战役 ≥4 个（' + (K.CONTENT.signatures || []).length + '）');

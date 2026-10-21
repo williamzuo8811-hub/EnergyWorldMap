@@ -338,7 +338,12 @@ and `js/coach.js`. `coach.js` rebuilds `PROJECTS` with `util.buildProjects` (no 
   standalone **当地·谈资** reference page (country picker × category). The **英文实战** mode (`COACH_CONTENT.english`,
   `startEnglish`) runs an all-English foreign-customer scenario (an Australian solar-farm owner, 5 funnel rounds) scored by the
   same engine — `COACH_CONTENT.tone.en` is merged into the tone buckets at init (`mergeEnTone`) so English answers are scored
-  bilingually. Modes: 闯关成交 / 经典战役 / 单项特训 / 抗压特训 / 英文实战 / 当地·谈资 / 销售军规 / 话术库 / 产品速查 /
+  bilingually. `COACH_CONTENT.english.scenarios` adds **Australian specialist scenarios** on the same engine — `au-bess` (an
+  Australian BESS developer carving the MV step-up skid / E-house out of the EPC's BoP: schedule, bankability pack, early-PO trade)
+  and `au-wp` (a Western Power connection / asset-standards engineer: Technical Rules, product approval, type tests, AS/NZS-native
+  drawings, hold points) — each `{key, icon, title, titleEn, subtitle, oppCat, over, stages[5], pitch}`; `startEnglish(key)` picks
+  the scenario (no key = the default solar-farm owner), the deal carries `enKey` (snapshot / resume keep it), scenario rounds are
+  indexed in `ALL_ROUNDS` and their pitch groups join the English pitch library. Modes: 闯关成交 / 经典战役 / 单项特训 / 抗压特训 / 英文实战 / 当地·谈资 / 销售军规 / 话术库 / 产品速查 /
   成长档案. Guarded against missing DOM so `scripts/test-coach.js` can load it under a stub.
 
 ### Data globals and merge model
