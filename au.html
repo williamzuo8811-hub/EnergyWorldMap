@@ -50,6 +50,7 @@
         <div class="kpi"><div class="num pipe" id="kpi-pipe">0</div><div class="lab" id="lab-pipe">🧭 承诺+预期管线</div></div>
       </div>
       <div class="top-actions">
+        <span class="tbtn fresh" id="fresh-pill" title="数据截至">📅 AEMO</span>
         <button class="tbtn" id="btn-leads" title="本季度 Top 50 BD 线索（产品匹配 × 采购窗口 × 状态/EPC）">🎯 线索榜</button>
         <button class="tbtn" id="btn-accounts" title="业主作战地图 + EPC / 总承包商账户">🏢 账户</button>
         <button class="tbtn" id="btn-changes" title="AEMO 管线季度差异：新增 / 升级为承诺 / 容量变化 / 不再出现">📰 本季变化</button>
@@ -94,6 +95,8 @@
           <div class="block-title" id="t-pipe">🧭 AEMO 管线 <span class="count" id="pipe-hint">承诺 / 预期 / 拟建</span></div>
           <div class="chip-row" id="pl-status-chips"></div>
           <div class="chip-row" id="pl-fuel-chips" style="margin-top:6px"></div>
+          <!-- BD 快捷筛选：⏰ 采购窗口进行中 / 🔥 线索分 ≥75 / ⬆️ 本季升级为承诺（au.js 填充，计数 = 当前基础筛选下） -->
+          <div class="chip-row" id="pl-quick-chips" style="margin-top:6px" role="group" aria-label="BD 快捷筛选"></div>
           <div class="chip-row" id="pl-owner-row" style="margin-top:6px" hidden><button class="chip on owner-pill" id="pl-owner-pill" aria-pressed="true" title="清除业主筛选"></button></div>
         </div>
         <div class="block">

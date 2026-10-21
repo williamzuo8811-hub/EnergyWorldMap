@@ -198,7 +198,7 @@ const KR = [
 ];
 let kciMap = {};
 try { kciMap = I.parseKci(I.parseWorkbook(workbook1('Q2 2026 KCI', KR))); ok(true, 'parseKci 不抛错'); } catch (e) { fails.push('parseKci 抛错：' + (e && e.message)); }
-ok(kciMap.N00001 && kciMap.N00001.locs[0] === '5km east of Armidale, NSW' && kciMap.N00001.locs.length === 2 && kciMap.N00001.tnsp === 'TransGrid' && kciMap.N00001.sites.length === 2, 'KCI：最新时间戳的位置描述排最前、TNSP、两个场站名；实际 ' + JSON.stringify(kciMap.N00001));
+ok(kciMap.N00001 && kciMap.N00001.locs[0] === '5km east of Armidale, NSW' && kciMap.N00001.locs.length === 2 && kciMap.N00001.tnsp === 'Transgrid' && kciMap.N00001.sites.length === 2, 'KCI：最新时间戳的位置描述排最前、TNSP、两个场站名；实际 ' + JSON.stringify(kciMap.N00001));
 ok(kciMap.Q00011 && kciMap.Q00011.locs.length === 0, 'KCI：n/a 位置描述被丢弃');
 const prev2 = [
   { id: 'pl-tas-001', en: 'Bass Strait Offshore Wind (old name)', aemo: 'Bass Offshore Wind', name: '巴斯海上风电', status: 'proposed', mw: 500, coord: [146.5, -39.8], notes: '旧版备注' },
@@ -208,7 +208,7 @@ const main2 = I.loadMainProjects(path.join(__dirname, '..', 'js'));
 ok(main2.length >= 100 && main2.every(p => Array.isArray(p.coord) && p.en), '主项目库：≥100 个带坐标的澳洲项目（实际 ' + main2.length + '）');
 const { needCoord: nc2, removed: rm2, kept: kp2, geo: geo2 } = I.enrich(items2, prev2, [{ en: 'Wollar', coord: [149.9, -32.3] }], { gaz, kci: kciMap, main: main2 });
 const kk = by2['Kurri Kurri GT'], et = by2['Ettamogah Solar Farm'], bs = by2['Bass Offshore Wind'], sn = by2['Snowy 2.0'];
-ok(kk.coord[0] === 151.6655 && kk.approx === true && kk.locality === '5km east of Armidale, NSW' && kk.tnsp === 'TransGrid', 'KCI 位置描述 → Armidale 坐标 + approx + locality + tnsp；实际 ' + JSON.stringify({ coord: kk.coord, approx: kk.approx, locality: kk.locality, tnsp: kk.tnsp }));
+ok(kk.coord[0] === 151.6655 && kk.approx === true && kk.locality === '5km east of Armidale, NSW' && kk.tnsp === 'Transgrid', 'KCI 位置描述 → Armidale 坐标 + approx + locality + tnsp；实际 ' + JSON.stringify({ coord: kk.coord, approx: kk.approx, locality: kk.locality, tnsp: kk.tnsp }));
 ok(et.coord[0] === 147.0265 && et.approx === true && et.locality === 'Ettamogah' && et.name === 'Ettamogah 光伏电站', '按场站名定位 → Ettamogah + 自动中文名；实际 ' + JSON.stringify({ coord: et.coord, locality: et.locality, name: et.name }));
 ok(bs.id === 'pl-tas-001' && bs.name === '巴斯海上风电' && bs.coord[0] === 146.5 && bs.notes === '旧版备注' && bs.status === 'anticipated', 'aemo 别名匹配上一版（状态变化仍沿用 id / 中文名 / 坐标 / 备注）；实际 ' + JSON.stringify({ id: bs.id, name: bs.name, coord: bs.coord, status: bs.status }));
 const snowyMain = main2.find(p => /^snowy 2\.0/i.test(p.en));

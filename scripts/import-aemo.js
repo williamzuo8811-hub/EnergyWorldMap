@@ -232,6 +232,9 @@ function convertRows(rows, opts) {
 }
 
 /* ---------- KCI（Key Connection Information）汇编表：KCI ID → 位置描述 / TNSP ---------- */
+// TNSP 名称归一：AEMO KCI 表里 TransGrid / Transgrid、ElectraNet / Electranet 混用，统一成公司现行写法，便于按 TNSP 筛选 / 分组
+const TNSP_CANON = [[/^trans ?grid$/i, 'Transgrid'], [/^electra ?net$/i, 'ElectraNet'], [/^power ?link( queensland)?$/i, 'Powerlink'], [/^tas ?networks$/i, 'TasNetworks'], [/^vic ?grid$/i, 'VicGrid'], [/^aemo \(vic(toria)?\)$/i, 'VicGrid'], [/^western ?power$/i, 'Western Power']];
+const normTnsp = v => { const s = String(v || '').trim(); if (!s) return s; const hit = TNSP_CANON.find(([re]) => re.test(s)); return hit ? hit[1] : s; };
 const cleanLoc = v => { const s = unent(v).replace(/\s*[\r\n]+\s*/g, ', ').replace(/\s+/g, ' ').replace(/^[,\s]+|[,\s]+$/g, '').trim(); return (!s || /^(n\/?a|not provided|not applicable|tbc|tba|tbd|confidential|unknown|nil|none|-+|\.)$/i.test(s)) ? '' : s; };
 function parseKci(wb) {
   const out = {};
@@ -247,7 +250,7 @@ function parseKci(wb) {
       const site = String(r[iSite] || '').replace(/\s+/g, ' ').trim(); if (site && o.sites.indexOf(site) < 0) o.sites.push(site);
       const loc = iLoc >= 0 ? cleanLoc(r[iLoc]) : ''; const ts = iTs >= 0 ? (+r[iTs] || 0) : 0;
       if (loc && o.locs.indexOf(loc) < 0) { if (ts >= o.ts) { o.locs.unshift(loc); o.ts = ts; } else o.locs.push(loc); }
-      if (iTnsp >= 0 && r[iTnsp]) o.tnsp = String(r[iTnsp]).trim();
+      if (iTnsp >= 0 && r[iTnsp]) o.tnsp = normTnsp(r[iTnsp]);
     }
   }
   return out;

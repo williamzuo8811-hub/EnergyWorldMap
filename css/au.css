@@ -149,6 +149,12 @@ button { font-family: inherit; }
 .coal-mk .cm.closed { opacity: .55; filter: grayscale(.6); }
 .coal-mk .cm.sm { font-size: 11px; border-radius: 6px; box-shadow: 0 0 8px var(--c); }   /* 全国 / 州视角的小号燃煤标记 */
 .coal-mk .cm.sm span { font-size: 8px; bottom: -7px; padding: 0 4px; }
+/* 顶栏「数据截至」胶囊 + BD 快捷筛选芯片 */
+.tbtn.fresh { cursor: default; font-weight: 600; font-variant-numeric: tabular-nums; }
+.tbtn.fresh.stale { color: #ffd48a; border-color: rgba(255,176,46,0.55); background: rgba(255,176,46,0.10); }
+.chip.pq-win.on { background: rgba(255,176,46,0.14); border-color: rgba(255,176,46,0.55); color: #ffd48a; }
+.chip.pq-hot.on { background: rgba(255,92,122,0.14); border-color: rgba(255,92,122,0.5); color: #ffb3c1; }
+.chip.pq-up.on { background: rgba(46,230,166,0.14); border-color: rgba(46,230,166,0.55); color: #bfe9d8; }
 /* 底图切换行 */
 .bm-row .bm-lab { font-size: 11px; color: var(--txt-faint); align-self: center; margin-right: 2px; }
 /* 州档案长文要点列表（clampList）：默认只展开前几条 */

@@ -125,8 +125,12 @@
   function zoneOf(coord) { if (!coord) return null; for (const z of ZONES_SORTED) if (inRing(coord, z.polygon)) return z.key; return null; }
   const normEn = s => String(s || '').toLowerCase().replace(/\(.*?\)/g, ' ').replace(/\b(the|project|stage|phase|bess|battery energy storage system|battery|wind farm|solar farm|power station|energy storage|farm|hybrid|ltd|pty)\b/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
   const PROJ_BY_EN = {}; PROJECTS.forEach(p => { const k = normEn(p.en); if (k && !PROJ_BY_EN[k]) PROJ_BY_EN[k] = p; });
+  // TNSP 名称归一（与 scripts/import-aemo.js 的 normTnsp 同表）：老数据里 TransGrid / Transgrid、ElectraNet / Electranet 混用
+  const TNSP_CANON = [[/^trans ?grid$/i, 'Transgrid'], [/^electra ?net$/i, 'ElectraNet'], [/^power ?link( queensland)?$/i, 'Powerlink'], [/^tas ?networks$/i, 'TasNetworks'], [/^vic ?grid$/i, 'VicGrid'], [/^western ?power$/i, 'Western Power']];
+  const normTnsp = v => { const s = String(v || '').trim(); const hit = s && TNSP_CANON.find(([re]) => re.test(s)); return hit ? hit[1] : s; };
   PIPE.forEach((it, i) => {
     if (!it.id) it.id = 'pl-' + i;
+    if (it.tnsp) it.tnsp = normTnsp(it.tnsp);
     it.codYear = it.cod ? parseInt(String(it.cod).slice(0, 4), 10) : null;
     if (!it.state) it.state = stateOf(it.coord);
     it.zone = zoneOf(it.coord);
@@ -171,6 +175,7 @@
     minYear: MIN_YEAR, maxYear: MAX_YEAR, recentOnly: false, q: '',
     layers: { grid: true, planned: true, nodes: true, coal: true, projects: true, fill: true, pipe: true, rez: true },
     plStatus: new Set(['committed', 'anticipated']), plFuelOff: new Set(),   // 🧭 管线：默认只显示承诺 + 预期（拟建按需打开）
+    plWin: false, plHot: false, plUp: false,   // 🧭 快捷筛选：⏰ 采购窗口进行中 / 🔥 线索分 ≥75 / ⬆️ 本季升级为承诺
     kvOff: new Set(), lang: 'zh',
     basemap: null,   // 底图 key（dark | osm | amap；null = 按时区默认）
     card: null,   // {kind:'project'|'coal'|'state'|'line', id}
@@ -209,7 +214,7 @@
     leads: ['🎯 本季度线索 Top 10', '🎯 Top 10 leads this quarter'], leadsT: ['🎯 BD 线索榜 · 本季度 Top 50', '🎯 BD leads · Top 50 this quarter'], leadsBtn: ['🎯 线索榜', '🎯 Leads'],
     leadsMore: ['查看 Top 50 / 导出 CSV ▸', 'Top 50 / export CSV ▸'], leadsHint: ['线索分 = 产品匹配 × 采购窗口 × 状态/EPC（0–100），范围跟随当前筛选', 'score = product fit × procurement window × status/EPC (0–100), scope = current filter'],
     leadsCsv: ['⤓ 导出 CSV（分单）', '⤓ Export CSV'], lScore: ['线索分', 'Score'], lProduct: ['产品匹配', 'Product fit'], lWindow: ['采购窗口', 'Procurement window'], lEpc: ['EPC', 'EPC'], lCoach: ['🎓 陪练', '🎓 Coach'], lCard: ['📍 详情', '📍 Card'],
-    leadsNote: ['评分：产品匹配 ≤40（储能 → 储能升压一体化舱 / E-house；风光 → 预制舱变电站 + 集电线路开关设备；燃气调峰 → 中压开关柜；规模加成）+ 采购窗口 ≤35（距 COD 12–30 个月最高 ≈ 设备定标期；窗口 = COD 前 24→9 个月）+ 状态/EPC ≤30（承诺且 EPC 未招标 / 未公开最高，已授标转为分包机会，拟建最低）。EPC 状态来自主项目库字段或备注文本推断，请以实地核实为准。', 'Score: product fit ≤40 (BESS → step-up skid / E-house; solar & wind → prefab substation + collector switchgear; gas peakers → MV switchgear; size bonus) + procurement window ≤35 (12–30 months before COD scores highest; window = COD −24 → −9 months) + status/EPC ≤30 (committed with pre-tender / undisclosed EPC highest; awarded = subcontract chance; proposed lowest). EPC status is inferred from the project library or notes — verify on the ground.'],
+    leadsNote: ['评分：产品匹配 ≤40（储能 → 储能升压一体化舱 / E-house；风光 → 预制舱变电站 + 集电线路开关设备；燃气调峰 → 中压开关柜；规模加成；示意坐标 −2）+ 采购窗口 ≤35（距 COD 12–30 个月最高 ≈ 设备定标期；窗口 = COD 前 24→9 个月）+ 状态/EPC ≤30（承诺：未招标 30 / 未公开 27 / 无数据 24 / 已授标 16 → 分包机会；预期：23 / 21 / 18 / 12；拟建 6；本季升级为承诺 +4）。「未公开」= 已核实尚未授标，「无数据」= 尚未查证；EPC 状态来自主项目库字段或备注文本推断，请以实地核实为准。', 'Score: product fit ≤40 (BESS → step-up skid / E-house; solar & wind → prefab substation + collector switchgear; gas peakers → MV switchgear; size bonus; approximate site −2) + procurement window ≤35 (12–30 months before COD scores highest; window = COD −24 → −9 months) + status/EPC ≤30 (committed: pre-tender 30 / undisclosed 27 / no data 24 / awarded 16 = subcontract chance; anticipated 23 / 21 / 18 / 12; proposed 6; upgraded to committed this quarter +4). "Undisclosed" = verified not yet awarded, "no data" = not yet researched; EPC status is inferred from the project library or notes — verify on the ground.'],
     accBtn: ['🏢 账户', '🏢 Accounts'], accT: ['🏢 业主 / EPC 账户视图', '🏢 Owner / EPC account view'], accHint: ['按业主归并全部管线（承诺 / 预期 / 拟建），看每家在各州有几个项目、各在什么阶段；EPC 页列出澳洲主流总承包商及其承接项目', 'Pipeline grouped by owner (all statuses): projects per state and stage; the EPC tab lists mainstream contractors and their projects'],
     accOwner: ['业主作战地图', 'Owner map'], accEpc: ['EPC / 总承包商', 'EPC contractors'],
     accNote: ['业主按别名表 + 法人后缀归一（Pty Ltd / Australia / Holdings …），SPV 项目公司可能单列；点「地图筛选」把管线与项目筛到该业主并飞到其项目分布。', 'Owners merged by alias table + legal-suffix stripping; SPVs may stay separate. "Map" filters the pipeline to that owner and flies to its footprint.'],
@@ -222,6 +227,10 @@
     ownerPill: ['🏢 业主', '🏢 Owner'],
     stBrief: ['⤓ 州机会简报', '⤓ State brief'],
     closeA: ['关闭', 'Close'], shareA: ['复制链接', 'Copy link'], more: ['展开其余 {n} 条 ▾', 'Show {n} more ▾'], less: ['收起 ▴', 'Show less ▴'],
+    quickWin: ['⏰ 采购窗口进行中', '⏰ Window open now'], quickHot: ['🔥 线索分 ≥75', '🔥 Score ≥75'], quickUp: ['⬆️ 本季升级为承诺', '⬆️ Upgraded this quarter'],
+    quickHint: ['本月落在 COD 前 24→9 个月之间 = 设备定标期', 'this month falls 24→9 months before COD = equipment award period'],
+    upTag: ['⬆️ 本季升级为承诺', '⬆️ Upgraded to committed this quarter'],
+    fresh: ['数据截至', 'Data as of'], freshStale: ['已 {n} 个月未更新，AEMO 每季度发布新表，请运行 scripts/import-aemo.js', '{n} months old — AEMO publishes quarterly; run scripts/import-aemo.js'],
     basemap: ['底图', 'Base map'], tileFail: ['底图瓦片加载失败：可在「图层 → 底图」切换 OSM / 高德', 'Base-map tiles failed to load — switch the base map under Layers'],
   };
   const L_ = k => (T[k] || [k, k])[state.lang === 'en' ? 1 : 0];
@@ -442,7 +451,8 @@
     // country 槽位塞进「州中英文名 + 燃料中英文名 + 所在地 / 接入站 / TNSP / KCI / REZ / 技术」，拼音索引也从这里取（搜「xinzhou chuneng」能命中新州储能）
     country: [ST[it.state] ? ST[it.state].name + ' ' + ST[it.state].short + ' ' + ST[it.state].en : it.state, fuelOf(it.fuel).zh, fuelOf(it.fuel).en, it.locality, it.connNode, it.tnsp, it.kci, it.rez, it.tech].filter(Boolean).join(' ') }));
   const plMatch = it => matchProject ? matchProject(plProxy(it), state.q, PY) : plHay(it).indexOf(state.q.toLowerCase()) >= 0;
-  function passPipe(it) {
+  // 基础筛选（状态 / 燃料 / 业主 / 州 / 年份 / 搜索）；快捷筛选（⏰ 窗口期 / 🔥 高分 / ⬆️ 本季升级）单列，便于给快捷芯片算「还剩几条」
+  function passPipeBase(it) {
     return state.plStatus.has(it.status)
       && !state.plFuelOff.has(it.fuel)
       && (!state.plOwner || ownerKeyOf(it) === state.plOwner)
@@ -451,6 +461,13 @@
       && (!it.codYear || ((it.codYear >= state.minYear || state.minYear <= MIN_YEAR) && (it.codYear <= state.maxYear || state.maxYear >= MAX_YEAR)))
       && (!state.q || plMatch(it));
   }
+  const PL_QUICK = [
+    { key: 'win', st: 'plWin', t: 'quickWin', fn: it => windowOpen(it) },   // 惰性引用：windowOpen 在下文评分段定义
+    { key: 'hot', st: 'plHot', t: 'quickHot', fn: it => leadScore(it).score >= 75 },
+    { key: 'up', st: 'plUp', t: 'quickUp', fn: it => UPGRADED.has(it.id) },
+  ];
+  const passQuick = it => PL_QUICK.every(q => !state[q.st] || q.fn(it));
+  const passPipe = it => passPipeBase(it) && passQuick(it);
   const filteredPipe = () => state.layers.pipe ? PIPE.filter(passPipe) : [];
   const plSize = mw => Math.max(8, Math.min(22, 6 + Math.sqrt(Math.max(mw || 0, 1)) * 0.5));
   const mwFmt = it => (it.mw ? fmtNum(it.mw) + ' MW' : '') + (it.mwh ? ' / ' + fmtNum(it.mwh) + ' MWh' : '');
@@ -528,6 +545,11 @@
   const ymFmt = o => o.y + '-' + String(o.m).padStart(2, '0');
   // 设备采购窗口 ≈ COD 前 24 → 9 个月
   const procWindow = it => { const c = codParts(it); return c ? { from: ymAdd(c.y, c.m, -24), to: ymAdd(c.y, c.m, -9), cod: c } : null; };
+  // 采购窗口此刻是否打开（本月落在 COD 前 24→9 个月之间）—— 「⏰ 采购窗口进行中」快捷筛选
+  const ymNow = () => NOW.getFullYear() * 12 + NOW.getMonth() + 1;
+  const windowOpen = it => { const w = procWindow(it); if (!w) return false; const n = ymNow(); return n >= w.from.y * 12 + w.from.m && n <= w.to.y * 12 + w.to.m; };
+  // 本季升级为承诺（FID / 开工）的管线 id —— 来自 js/au-changes.js；评分 +4、「⬆️ 本季升级为承诺」快捷筛选、卡片标签
+  const UPGRADED = new Set(((CHANGES && CHANGES.status) || []).filter(x => x.to === 'committed').map(x => x.id));
   function windowScore(it) {
     const c = codParts(it); if (!c) return { pts: 12, why: 'COD 未知' };
     const mt = (c.y - NOW.getFullYear()) * 12 + (c.m - 1 - NOW.getMonth());
@@ -538,20 +560,25 @@
     if (mt <= 60) return { pts: 16, why: '3.5–5 年，早期布局' };
     return { pts: 8, why: '>5 年' };
   }
+  // 状态 / EPC 分：区分「未公开」（已核实、尚未授标 = 真窗口）与「无数据」（没查过）；本季升级为承诺 +4（FID 信号），上限 30
   function statusScore(it) {
     const e = epcHintOf(it);
-    if (it.status === 'committed') return e === '已授标' ? { pts: 16, why: '承诺 · EPC 已授标 → 分包机会' } : e === '未招标' ? { pts: 30, why: '承诺 · EPC 未招标' } : { pts: 27, why: '承诺 · EPC 未公开' };
-    if (it.status === 'anticipated') return e === '已授标' ? { pts: 12, why: '预期 · EPC 已授标' } : { pts: 21, why: '预期 · EPC 未公开' };
-    if (it.status === 'existing') return { pts: 0, why: '已投运' };
-    return { pts: 6, why: '拟建' };
+    let r;
+    if (it.status === 'committed') r = e === '已授标' ? { pts: 16, why: '承诺 · EPC 已授标 → 分包机会' } : e === '未招标' ? { pts: 30, why: '承诺 · EPC 未招标' } : e === '未公开' ? { pts: 27, why: '承诺 · EPC 未公开（已核、未授标）' } : { pts: 24, why: '承诺 · EPC 无数据（待核）' };
+    else if (it.status === 'anticipated') r = e === '已授标' ? { pts: 12, why: '预期 · EPC 已授标' } : e === '未招标' ? { pts: 23, why: '预期 · EPC 未招标' } : e === '未公开' ? { pts: 21, why: '预期 · EPC 未公开' } : { pts: 18, why: '预期 · EPC 无数据（待核）' };
+    else if (it.status === 'existing') r = { pts: 0, why: '已投运' };
+    else r = { pts: 6, why: '拟建' };
+    if (it.id && UPGRADED.has(it.id) && r.pts < 30) r = { pts: Math.min(30, r.pts + 4), why: r.why + ' · 本季升级为承诺 +4' };
+    return r;
   }
   function leadScore(it) {
     if (it._lead) return it._lead;
     const f = PRODUCT_FIT[it.fuel] || PRODUCT_FIT.other;
     const size = Math.max(0, Math.min(8, Math.round((Math.log10(Math.max(it.mw || 10, 10)) - 1) * 4)));
-    const prod = Math.min(40, f.pts + size + (it.mix ? 2 : 0));
+    // 示意坐标 −2：同分时让场址已核实的项目排前面（坐标按所在地 / 接入站放置的，拜访前还得先找场址）
+    const prod = Math.max(0, Math.min(40, f.pts + size + (it.mix ? 2 : 0) - (it.approx ? 2 : 0)));
     const w = windowScore(it), st = statusScore(it);
-    return (it._lead = { score: Math.min(100, prod + w.pts + st.pts), prod, win: w.pts, st: st.pts, winWhy: w.why, stWhy: st.why, product: f, epc: epcHintOf(it), window: procWindow(it) });
+    return (it._lead = { score: Math.min(100, prod + w.pts + st.pts), prod, win: w.pts, st: st.pts, winWhy: w.why, stWhy: st.why, product: f, epc: epcHintOf(it), window: procWindow(it), winOpen: windowOpen(it), up: !!(it.id && UPGRADED.has(it.id)) });
   }
   const scoreCls = s => s >= 75 ? 's3' : s >= 55 ? 's2' : 's1';
   // 线索榜：默认跟随当前筛选（州 / 状态 / 燃料 / 年份 / 搜索 / 业主），与管线图层开关无关
@@ -962,6 +989,8 @@
     document.querySelectorAll('#epc-chips .chip').forEach(c => { const n = c.querySelector('.ct'); if (n) n.textContent = byEpc[c.dataset.epc] || 0; });
     const byPl = {}; PIPE.forEach(it => { if (!state.plFuelOff.has(it.fuel) && (state.states.size === 0 || state.states.has(it.state))) byPl[it.status] = (byPl[it.status] || 0) + 1; });
     document.querySelectorAll('#pl-status-chips .chip').forEach(c => { const n = c.querySelector('.ct'); if (n) n.textContent = byPl[c.dataset.pls] || 0; });
+    const qbase = PIPE.filter(passPipeBase);
+    document.querySelectorAll('#pl-quick-chips .chip').forEach(c => { const q = PL_QUICK.find(x => x.key === c.dataset.plq); const n = c.querySelector('.ct'); if (q && n) n.textContent = qbase.filter(q.fn).length; });
   }
 
   function render() {
@@ -1055,7 +1084,7 @@
   function showPipe(id, opts) {
     const it = PIPE_BY_ID[id]; if (!it) return;
     const f = fuelOf(it.fuel), z = it.zone ? ZONE[it.zone] : null, pj = it.projId ? PROJ_BY_ID[it.projId] : null;
-    const html = head(f.color, f.icon + ' ' + esc(en() ? f.en : f.zh) + ' · ' + esc(stShort(it.state)), esc(en() ? it.en : it.name), esc(en() ? it.name : it.en), '<span class="tag ' + it.status + '">' + esc(plStatusName(it.status)) + '</span>')
+    const html = head(f.color, f.icon + ' ' + esc(en() ? f.en : f.zh) + ' · ' + esc(stShort(it.state)), esc(en() ? it.en : it.name), esc(en() ? it.name : it.en), '<span class="tag ' + it.status + '">' + esc(plStatusName(it.status)) + '</span>' + (UPGRADED.has(it.id) ? ' <span class="tag cool">' + L_('upTag') + '</span>' : '') + (windowOpen(it) ? ' <span class="tag warm">' + L_('quickWin') + '</span>' : ''))
       + '<div class="d-grid">' + cell(L_('pMw'), esc(mwFmt(it) || '—') + (it.siteMw ? ' · ' + L_('pSiteMw') + ' ' + fmtNum(it.siteMw) + ' MW' : '')) + cell(L_('pCod'), esc(it.cod || '—')) + cell(L_('pOwner'), esc(it.owner || '—')) + cell(L_('pAemo'), esc(plStatusName(it.status)) + (it.region ? ' · ' + esc(it.region) : '') + (it.kci ? ' · KCI ' + esc(it.kci) : ''))
       + cell(L_('pConn'), esc([it.connNode, it.tnsp].filter(Boolean).join(' · ') || '—')) + cell(L_('pRez'), z ? '<span class="d-link" data-zone="' + esc(z.key) + '">' + esc(en() ? (z.en || z.name) : z.name) + ' ▸</span>' : esc(it.rez || '—')) + '</div>'
       + (function () { const s = leadScore(it); return '<div class="d-strip" style="border-color:rgba(46,230,166,0.4);background:rgba(46,230,166,0.07)"><span class="dp-tag" style="color:#bfe9d8">🎯 ' + L_('lScore') + ' ' + s.score + '</span>' + esc(en() ? s.product.en : s.product.zh) + ' · ' + L_('lWindow') + ' ' + (s.window ? ymFmt(s.window.from) + ' ~ ' + ymFmt(s.window.to) : '—') + ' · EPC ' + esc(epcName(s.epc)) + '</div>'; })()
@@ -1146,7 +1175,11 @@
     const ob = $('btn-epc-open'); if (ob) ob.addEventListener('click', () => { state.epcOnly = !state.epcOnly; syncUI(); render(); });
   }
   function buildPipeChips() {
-    const se = $('pl-status-chips'), fe = $('pl-fuel-chips');
+    const se = $('pl-status-chips'), fe = $('pl-fuel-chips'), qe = $('pl-quick-chips');
+    if (qe) {
+      qe.innerHTML = PL_QUICK.map(q => '<button class="chip pq-' + q.key + (state[q.st] ? ' on' : '') + '" data-plq="' + q.key + '" aria-pressed="' + (state[q.st] ? 'true' : 'false') + '" title="' + esc(q.key === 'win' ? L_('quickHint') : '') + '">' + L_(q.t) + '<span class="ct">0</span></button>').join('');
+      qe.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => { const q = PL_QUICK.find(x => x.key === b.dataset.plq); if (!q) return; state[q.st] = !state[q.st]; syncUI(); render(); }));
+    }
     if (se) {
       se.innerHTML = PL_STATUS.map(st => '<button class="chip pls-' + st + (state.plStatus.has(st) ? ' on' : '') + '" data-pls="' + st + '" aria-pressed="' + (state.plStatus.has(st) ? 'true' : 'false') + '"><span class="fi" style="--c:' + PL_COLOR[st] + '"></span>' + esc(plStatusName(st)) + '<span class="ct">0</span></button>').join('');
       se.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => { const k = b.dataset.pls; if (state.plStatus.has(k)) state.plStatus.delete(k); else state.plStatus.add(k); syncUI(); render(); }));
@@ -1222,6 +1255,7 @@
     state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.recentOnly = false; state.q = ''; state.kvOff = new Set();
     state.layers = { grid: true, planned: true, nodes: true, coal: true, projects: true, fill: true, pipe: true, rez: true };
     state.plStatus = new Set(['committed', 'anticipated']); state.plFuelOff = new Set(); state.plOwner = null;
+    state.plWin = false; state.plHot = false; state.plUp = false;
     const q = $('q'); if (q) q.value = '';
   }
   // 唯一的「state → 控件视觉」同步点（重置 / 应用 hash / 切语言后都走这里）
@@ -1235,14 +1269,25 @@
     document.querySelectorAll('#layer-chips .chip').forEach(c => { const on = !!state.layers[c.dataset.layer]; c.classList.toggle('on', on); pressed(c, on); });
     document.querySelectorAll('#pl-status-chips .chip').forEach(c => { const on = state.plStatus.has(c.dataset.pls); c.classList.toggle('on', on); pressed(c, on); });
     document.querySelectorAll('#pl-fuel-chips .chip').forEach(c => { const on = !state.plFuelOff.has(c.dataset.plf); c.classList.toggle('on', on); pressed(c, on); });
+    document.querySelectorAll('#pl-quick-chips .chip').forEach(c => { const q = PL_QUICK.find(x => x.key === c.dataset.plq); const on = !!(q && state[q.st]); c.classList.toggle('on', on); pressed(c, on); });
     const preset = state.recentOnly ? 'recent' : (state.minYear > MIN_YEAR ? 'future' : 'all');
     document.querySelectorAll('#year-presets .chip').forEach(c => { const on = c.dataset.preset === preset; c.classList.toggle('on', on); pressed(c, on); });
     const orow = $('pl-owner-row'), opill = $('pl-owner-pill');
     if (orow) { orow.hidden = !state.plOwner; if (state.plOwner && orow.removeAttribute) orow.removeAttribute('hidden'); else if (!state.plOwner && orow.setAttribute) orow.setAttribute('hidden', ''); }
     if (opill && state.plOwner) { const g = buildAccounts(PIPE.filter(it => ownerKeyOf(it) === state.plOwner))[0]; opill.textContent = L_('ownerPill') + ' ' + (g ? g.name : state.plOwner) + ' ✕'; }
   }
+  // 顶栏「数据截至」胶囊：AEMO 管线表季度版本 + 煤电关停表；管线落后 >4 个月变黄（AEMO 每季度发新表）
+  const ageMonths = ym => { const m = String(ym || '').match(/^(\d{4})-(\d{2})$/); return m ? (NOW.getFullYear() - +m[1]) * 12 + (NOW.getMonth() + 1 - +m[2]) : null; };
+  function renderFresh() {
+    const el = $('fresh-pill'); if (!el) return;
+    const age = ageMonths(PIPE_ASOF), stale = age != null && age > 4;
+    el.textContent = (stale ? '⚠ ' : '📅 ') + 'AEMO ' + (PIPE_ASOF || '—');
+    el.title = L_('fresh') + '：AEMO Generation Information ' + (PIPE_ASOF || '—') + (age != null ? '（' + (stale ? L_('freshStale').replace('{n}', age) : (en() ? age + ' months ago' : age + ' 个月前')) + '）' : '') + (COAL_ASOF ? ' · ' + (en() ? 'coal closures ' : '煤电关停表 ') + COAL_ASOF : '') + ' · ' + (en() ? 'project library ' : '项目库 ') + (META.lastUpdated || '—');
+    if (el.classList) el.classList.toggle('stale', !!stale);
+  }
   function applyLang() {
     const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
+    renderFresh();
     set('t-title', L_('title')); set('t-sub', L_('sub')); set('lab-proj', L_('proj')); set('lab-inv', L_('inv')); set('lab-open', L_('open')); set('lab-open-inv', L_('openInv')); set('lab-coal', L_('coalKpi'));
     set('states-hint', L_('statesHint')); set('t-layers', L_('layers')); set('epc-hint', L_('epcHint')); set('btn-epc-open', L_('epcOpen')); set('t-cats', L_('cats')); set('t-status', L_('status')); set('t-year', L_('year'));
     set('btn-reset', L_('reset')); set('btn-world', L_('world')); set('t-mix', L_('mix')); set('t-lines', L_('lines')); set('fab-filters', L_('filters')); set('fab-dash', L_('dash'));
@@ -1276,6 +1321,7 @@
     const plsDef = state.plStatus.size === 2 && state.plStatus.has('committed') && state.plStatus.has('anticipated');
     if (!plsDef) p.set('pls', [...state.plStatus].join('~') || '-');
     if (state.plFuelOff.size) p.set('plf', [...state.plFuelOff].join('~'));
+    if (state.plWin) p.set('plw', '1'); if (state.plHot) p.set('plh', '1'); if (state.plUp) p.set('plu', '1');
     if (state.lang === 'en') p.set('lang', 'en');
     if (state.basemap && state.basemap !== BASE_DEFAULT) p.set('bm', state.basemap);
     if (state.plOwner) p.set('own', state.plOwner);
@@ -1300,6 +1346,7 @@
     if (p.has('kvoff')) state.kvOff = new Set(p.get('kvoff').split('~').filter(Boolean));
     if (p.has('pls')) state.plStatus = new Set(p.get('pls').split('~').filter(k => PL_STATUS.indexOf(k) >= 0));
     if (p.has('plf')) state.plFuelOff = new Set(p.get('plf').split('~').filter(Boolean));
+    if (p.has('plw')) state.plWin = true; if (p.has('plh')) state.plHot = true; if (p.has('plu')) state.plUp = true;
     if (p.get('lang') === 'en') state.lang = 'en';
     if (p.has('bm') && BASES.some(b => b.key === p.get('bm'))) state.basemap = p.get('bm');
     if (p.has('own')) state.plOwner = p.get('own') || null;
@@ -1324,7 +1371,7 @@
   _hashLock = true;
   const pendingCard = applyHash();
   _hashLock = false;
-  applyBase(state.basemap || BASE_DEFAULT); buildBasemap();
+  applyBase(state.basemap || BASE_DEFAULT); buildBasemap(); renderFresh();
   if (state.lang === 'en') applyLang(); else { syncUI(); render(); }
   if (state.states.size === 1) flyToState([...state.states][0]);
   if (pendingCard) {
@@ -1334,5 +1381,6 @@
   if (state.view && state.lang !== 'en') openView(state.view);   // EN 时 applyLang() 已按 state.view 打开
 
   window.__AU__ = { state, PROJECTS, LINES, NODE, COAL, STATES, PIPE, ZONES, ZONE_STAT, CHANGES, render, filtered, filteredPipe, stateOf, zoneOf, countdown, showDetail, showCoal, showState, showLine, showPipe, showZone, stateToHash, applyHash, applyLang, resetState, syncUI, kpis, stateStats,
-    leadScore, leads, leadsCSV, exportLeadsCSV, epcHintOf, ownerGroup, buildAccounts, buildEpcAccounts, filterOwner, showLeads, showAccounts, showChanges, buildChangesBrief, exportBrief, buildStateBrief, exportStateBrief, openModal, closeModal, openView };
+    leadScore, leads, leadsCSV, exportLeadsCSV, epcHintOf, ownerGroup, buildAccounts, buildEpcAccounts, filterOwner, showLeads, showAccounts, showChanges, buildChangesBrief, exportBrief, buildStateBrief, exportStateBrief, openModal, closeModal, openView,
+    windowOpen, UPGRADED, PL_QUICK, passPipeBase, normTnsp, renderFresh, applyBase, BASES, closeDrawers, toggleDrawer, clampList };
 })();
