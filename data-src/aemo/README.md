@@ -22,7 +22,17 @@ node scripts/test-au.js
 导入器会打印新增 / 状态变化 / 容量变化 / 不再出现 / 需补坐标清单，并沿用上一版的坐标、中文名与备注；同时写出
 `js/au-changes.js`（`window.AU_CHANGES`，澳洲地图 📰 本季变化面板的数据：added / status(from→to) / mw / gone / needCoord）和一页中文简报
 `data-src/aemo/brief-<asOf>.md`（本目录保留每季一份；`--prev-asof` 可指定上一版的季度标签，`--no-changes` / `--no-brief` 关闭）。
-当前：`brief-2026-07.md` = 2026-04 → 2026-07 的差异（新增 47 · 状态变化 33 · 容量变化 45 · 不再出现 46 · 需补坐标 6）。
+当前：`brief-2026-07.md` = 2026-04 → 2026-07 的差异（新增 55 · 状态变化 33 · 容量变化 45 · 不再出现 46 · 需补坐标 1；新增里含手工补入的
+西澳承诺风电 5 条与 NWIS/Pilbara 8 条）。
+
+## KCI 2026 Q3 / NWIS
+
+- **KCI 2026 Q3 尚未导入**：aemo.com.au 在 Claude 云容器里不可达，Q3 汇编表需本地下载后放到本目录，再运行
+  `node scripts/import-aemo.js data-src/aemo/NEM-Generation-Information-2026-07.xlsx --kci data-src/aemo/KCI-Datafile-Compiled-NEM-2026Q3.xlsx --asof 2026-07 --prev-asof 2026-04`
+  （只更新位置描述 / TNSP，坐标、中文名与备注从上一版记忆；仍在州质心的只剩 pl-qld-115 Elai Genesis BESS）。
+- **NWIS（Pilbara）**：AEMO 不发布 NWIS 逐项目表，`region: "NWIS"` 条目按业主公告、EPA 转介与州政府 Pilbara Energy Transition 资料手工维护
+  （Fortescue PEC 光储、Jinbi、Cloudbreak 光伏、Baru Marnda、Woodside Solar、Perdaman Helios、Ngarluma / Banjima 原住民项目、力拓沿海光储、
+  Horizon Power Karratha 86 MW 替代电源招标）；AREH（15 GW，ICE 主导，bp 2025 退出）不作管线条目，见 REZ 图层与输电节点。
 改名的场站在上一版条目加 `aemo:"<AEMO Site Name>"` 后重跑即可保留。西澳（WEM）另有 "WEM Generation Information"，
 导入时加 `--wem`。
 
