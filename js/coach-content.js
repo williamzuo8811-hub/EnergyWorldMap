@@ -1569,5 +1569,163 @@ window.COACH_CONTENT = (function () {
     ],
   };
 
+  // 英文实战 · 澳洲专项场景（呼应澳洲地图 🎯 线索榜：储能开发商 / Western Power 接入工程师）。每个场景 5 关，走同一套英文评分引擎。
+  english.scenarios = [
+    {
+      key: 'au-bess', icon: '🔋', title: '澳洲储能开发商 · BESS Developer', titleEn: 'Australian BESS developer', oppCat: 'storage',
+      subtitle: 'CIS 中标的 250 MW / 1,000 MWh 四小时储能，开发总监在算 $/MWh 和月份：把 MV 升压一体化舱 / E-house 从 EPC 的 BoP 里"切出来"。',
+      over: { co: 'Australia', cust: 'Ironbark Energy Storage (Developer)', role: 'Development Director, 4-hour BESS portfolio (NSW)', cat: 'Battery Storage', product: 'BESS Step-up Skid (33 kV switchgear + transformer + E-House)', scenario: 'CIS-backed 250 MW / 1,000 MWh grid-scale battery — MV/HV balance of plant', pain: 'FID-to-COD schedule, Transgrid connection (GPS / R1), BoP cost, lender bankability, local content', persona: 'A commercially sharp Australian developer — thinks in $/MWh and months, juggles lenders, EPC and the TNSP; respects suppliers who de-risk the schedule and hates vague claims.', status: '在建', approach: 'Sell schedule certainty and fewer interfaces; prove bankability with type tests and references; de-risk with a first-article block.' },
+      stages: [
+        { key: 'open', name: 'Opening', icon: '🤝', goal: 'Earn a block-level review by selling schedule certainty, not price.',
+          brief: 'The developer\'s EPC is already pricing the balance of plant. Make the case for carving out the MV skids.',
+          rounds: [{
+            id: 'en-bess-open',
+            ask: '【Developer】"Our EPC is already pricing the balance of plant. Why would I carve the MV step-up skids and the E-house out for you?"',
+            hint: ['Lead with schedule and interface risk, not price', 'Tie it to their BESS blocks / step-up design', 'Ask for a small next step: a 30-minute single-line review of one block'],
+            rubric: [
+              { id: 'value', label: 'Schedule / interface value', w: 3, kw: ['schedule', 'weeks', 'interface', 'integrated', 'factory', 'tested', 'risk', 'on time', 'cod', 'energis', 'energiz', 'critical path'] },
+              { id: 'relevance', label: 'Relevant to their BESS design', w: 2, kw: ['bess', 'battery', 'skid', 'step-up', 'e-house', 'block', 'inverter', 'pcs', '33 kv', 'mv', 'transformer'] },
+              { id: 'next', label: 'Small next step', w: 2, kw: ['minutes', 'review', 'single-line', 'call', 'session', 'next step', 'show you', 'fit', 'one block'] },
+            ],
+            gold: "Fair — and I wouldn't carve it out unless it saves you time and risk. We deliver the MV step-up skid as one factory-tested unit: transformer, 33 kV switchgear, protection and the E-house, pre-wired to your PCS blocks. That takes one interface off your EPC's plate and typically pulls the MV works forward by six to eight weeks — which matters when your CIS milestones hang on COD. Could we do a 30-minute review of one block's single-line? If it doesn't shorten your critical path, I'll tell you.",
+            coach: 'A developer buys schedule certainty and fewer interfaces. Quantify weeks, name the interface you remove, ask for a block-level review.' }] },
+        { key: 'discover', name: 'Discovery', icon: '🔍', goal: 'Get the design facts a real number needs: PCS, voltage, POC, GPS, site, scope.',
+          brief: 'The developer opens the door. Ask before you price.',
+          rounds: [{
+            id: 'en-bess-disc',
+            ask: '【Developer】"OK. What do you need from us to put a real number together?"',
+            hint: ['Open questions, listen first', 'Probe: PCS vendor & block size, MV voltage, point of connection & TNSP, GPS stage, site ratings, delivery window, scope split', 'Confirm understanding before proposing'],
+            rubric: [
+              { id: 'openq', label: 'Open questions', w: 3, kw: ['?', 'what', 'which', 'how', 'when', 'where', 'could you', 'tell me', 'walk me'] },
+              { id: 'probe', label: 'Probe the key design facts', w: 3, kw: ['pcs', 'inverter', 'block', '33 kv', 'voltage', 'connection', 'transgrid', 'gps', 'r1', 'site', 'bushfire', 'cyclone', 'delivery', 'cod', 'epc', 'scope', 'protection', 'scada', 'fire'] },
+              { id: 'listen', label: 'Listen, fit-first', w: 2, kw: ['understand', 'first', 'before', 'your', 'fit', 'make sure', 'real number'] },
+            ],
+            gold: "Let me understand the design first so the number is real. Which PCS vendor and block size are you using, and what's the MV collection voltage — 33 kV? Where is the point of connection and who owns it — Transgrid at 330 kV? Where are you in the GPS process, R1 done? On site: bushfire attack level, dust or cyclone ratings, and the window your EPC needs the skids on hardstand. And how do you want to split scope — we supply and commission, or we take the MV balance of plant turnkey?",
+            coach: 'Discovery for BESS: PCS/block size, MV voltage, POC & TNSP, GPS stage, site ratings, delivery window, scope split.' }] },
+        { key: 'value', name: 'Value', icon: '💡', goal: 'Differentiate on integration, standard blocks and proof — without attacking the brands.',
+          brief: 'The developer says the EPC can buy Siemens or ABB switchgear locally.',
+          rounds: [{
+            id: 'en-bess-value',
+            ask: '【Developer】"Our EPC can buy switchgear from Siemens or ABB locally. What\'s actually different about you?"',
+            hint: ['Integration: one tested skid, one supplier, one FAT', 'Standard blocks → weeks not months, predictable price', 'Proof: type tests, Australian BESS references, site visit; brands can sit inside your skid'],
+            rubric: [
+              { id: 'diff', label: 'Clear differentiation', w: 3, kw: ['integrated', 'skid', 'factory', 'type-tested', 'type test', 'as/nzs', '62271', 'arc', 'iac', 'one supplier', 'single', 'standard block', 'modular', 'one fat'] },
+              { id: 'benefit', label: 'Customer benefit', w: 3, kw: ['save', 'weeks', 'schedule', 'cost', '$', 'lower', 'fewer', 'interface', 'on time', 'risk', 'reduce', 'predictable'] },
+              { id: 'proof', label: 'Proof / references', w: 2, kw: ['reference', 'australia', 'delivered', 'certif', 'test report', 'case', 'site visit', 'track record', 'operating'] },
+            ],
+            gold: "Three differences. One, we integrate — transformer, AS/NZS 62271-200 switchgear with IAC arc-fault classification, protection and the E-house arrive as one tested skid, so your EPC manages one supplier and one FAT instead of four. Two, standard blocks: we've built the same 33 kV step-up block for Australian BESS projects, so lead time is weeks, not months, and the price is predictable. Three, proof — type-test reports from accredited labs and a site visit to an operating Australian battery we supplied. And if your lenders prefer a brand breaker, it can sit inside our skid; the value is the integration and the schedule.",
+            coach: 'Differentiate on integration + standard blocks + proof. Don\'t attack the brands — offer them inside your skid if needed.' }] },
+        { key: 'object', name: 'Objection', icon: '🛡️', goal: 'Turn the "Chinese OEM = bankability risk" objection into an evidence pack and a first article.',
+          brief: 'The lenders\' technical adviser is the real audience here.',
+          rounds: [{
+            id: 'en-bess-object',
+            ask: '【Developer】"Our lenders\' technical adviser will flag a Chinese OEM as a bankability risk. How do you get past that?"',
+            hint: ['Acknowledge — lenders have to ask', 'Give the LTA evidence: type tests from accredited labs, AS/NZS + IEC, references, warranty + local service', 'De-risk: first-article block, witnessed FAT, monitored performance, then roll out'],
+            rubric: [
+              { id: 'face', label: 'Acknowledge the concern', w: 2, kw: ['fair', 'understand', 'reasonable', 'your concern', 'right', 'lenders', 'adviser', 'bankab', 'have to ask'] },
+              { id: 'proof', label: 'Evidence for the LTA', w: 3, kw: ['type test', 'type-test', 'certified', 'iec', 'as/nzs', 'accredited', 'kema', 'cesi', 'nata', 'reference', 'track record', 'warranty', 'insurance', 'local', 'office', 'brisbane', 'spares', 'pack'] },
+              { id: 'derisk', label: 'De-risk with a first article', w: 3, kw: ['pilot', 'first block', 'first article', 'spare', 'service', 'sla', 'step', 'monitor', 'lta', 'witness', 'fat', 'commission', 'roll out'] },
+            ],
+            gold: "That's a fair concern — lenders' advisers have to ask it. So we make it easy for the LTA: a bankability pack with full type-test reports from accredited labs, AS/NZS and IEC compliance, our Australian references and warranty terms backed by local service out of Brisbane with a spares plan. And we de-risk the scope itself: one block first as the first article, witnessed FAT, on-site commissioning, performance monitored, then the remaining blocks roll out. The LTA gets evidence, you keep the schedule, and nobody bets the project on a promise.",
+            coach: 'Bankability objection: acknowledge, hand the LTA evidence (type tests, references, warranty + local service), then de-risk with a first article.' }] },
+        { key: 'close', name: 'Close', icon: '✍️', goal: 'Trade schedule for an early PO and price for standardisation; hold the spec; date the next step.',
+          brief: 'The developer wants 15% off and the first skids two months earlier.',
+          rounds: [{
+            id: 'en-bess-close',
+            ask: '【Developer】"We\'re close. But I need 15% off and the first skids two months earlier — or the EPC keeps the scope."',
+            hint: ['Trade, don\'t cave: early PO for long-lead items buys the two months', 'Price moves with standardised blocks / portfolio framework', 'Hold the switchgear spec; confirm the technical annex this week'],
+            rubric: [
+              { id: 'trade', label: 'Trade, not give', w: 3, kw: ['if', 'in return', 'trade', 'framework', 'next project', 'portfolio', 'volume', 'lock', 'standard', 'commit'] },
+              { id: 'accel', label: 'Concrete acceleration lever', w: 3, kw: ['long-lead', 'early', 'purchase order', 'po', 'parallel', 'slot', 'priority', 'factory', 'weeks', 'prefab', 'pull', 'release'] },
+              { id: 'commit', label: 'Hold the spec + dated next step', w: 2, kw: ['confirm', 'this week', 'contract', 'plan', 'milestone', 'annex', 'next step', 'technical', 'won\'t', 'spec'] },
+            ],
+            gold: "Let's make it work by trading, not just cutting. On time: release an early purchase order for the long-lead items — transformers and switchgear — this week and I can lock a factory slot and bring the first skids forward by about two months. On price: I can get part of the way by standardising the blocks across your portfolio and reusing the design on the next project — give me that framework and the number moves. What I won't do is thin the switchgear spec to hit 15%; that's where lenders and the TNSP bite later. Can we confirm the technical annex and the early-release scope this week?",
+            coach: 'Close: trade schedule for an early PO, trade price for standardisation / portfolio, hold the spec, end with a dated next step.' }] },
+      ],
+      pitch: [
+        { stage: 'BESS · Opening', lines: ["We deliver the MV step-up skid as one factory-tested unit — transformer, 33 kV switchgear, protection and E-house — and typically pull the MV works forward by six to eight weeks.", "Could we do a 30-minute review of one block's single-line? If it doesn't shorten your critical path, I'll tell you."] },
+        { stage: 'BESS · Bankability', lines: ["We make it easy for the lenders' adviser: a bankability pack — accredited type tests, AS/NZS and IEC compliance, Australian references, warranty backed by local service.", "One block first as the first article, witnessed FAT, monitored performance — then the rest roll out."] },
+        { stage: 'BESS · Close', lines: ["Release an early PO for the long-lead items this week and I can lock a factory slot and bring the first skids forward by two months.", "What I won't do is thin the switchgear spec to hit a number — that's where lenders and the TNSP bite later."] },
+      ],
+    },
+    {
+      key: 'au-wp', icon: '🔌', title: 'Western Power 接入工程师 · Connection Engineer', titleEn: 'Western Power connection engineer', oppCat: 'grid',
+      subtitle: '西澳 SWIS 的"守门人"：不采购、只审批。预制舱变电站 / 中压开关柜要上网，得过 Technical Rules、产品核准、型式试验与见证 FAT。',
+      over: { co: 'Australia', cust: 'Western Power (Network Operator, WA)', role: 'Network Connections / Asset Standards Engineer', cat: 'Grid Connection', product: 'Prefabricated MV/HV Substation + type-tested MV Switchgear', scenario: 'Getting a customer-owned 33 kV switchroom and step-up substation accepted for connection on the SWIS (Technical Rules + product approval)', pain: 'Technical Rules and Western Power network-standard compliance, product approval, type tests, protection / SCADA / metering interface, earthing and arc-flash safety, complete documentation', persona: 'A careful utility engineer — not a buyer, a gatekeeper. Evidence-driven, allergic to marketing, values complete documentation and suppliers who actually understand the Technical Rules.', status: '规划', approach: 'Respect the role; ask about the process; bring evidence (type tests, standards mapping, references); propose a stepwise acceptance plan with hold points.' },
+      stages: [
+        { key: 'open', name: 'Opening', icon: '🤝', goal: 'Respect the gatekeeper, state the purpose (early compliance), ask about the process.',
+          brief: 'The engineer makes it clear they don\'t buy anything.',
+          rounds: [{
+            id: 'en-wp-open',
+            ask: '【Engineer】"Let\'s be clear: I don\'t buy anything. I approve what connects to our network. Why am I on this call?"',
+            hint: ['Respect the role — you are here to de-risk the connection, not to sell', 'Purpose: early alignment on Technical Rules and product approval, avoid rework at energisation', 'Ask them to walk you through the process and what documentation they expect'],
+            rubric: [
+              { id: 'respect', label: 'Respect the role, no pitch', w: 3, kw: ['understand', 'appreciate', 'not here to sell', 'not to sell', 'your role', 'approve', 'gatekeep', 'respect', 'exactly why'] },
+              { id: 'purpose', label: 'Purpose = early compliance', w: 3, kw: ['technical rules', 'standard', 'approval', 'compliance', 'early', 'align', 'avoid', 'rework', 'connection', 'requirement', 'energis', 'energiz'] },
+              { id: 'ask', label: 'Ask about the process', w: 2, kw: ['process', 'checklist', 'what', 'which', 'could you', 'documentation', 'pack', 'submit', 'how', 'walk me'] },
+            ],
+            gold: "Understood — and that's exactly why I asked for this call: not to sell, but to get the technical alignment right early. We're supplying a prefabricated substation and MV switchgear for a generator connecting to the SWIS, and I'd rather design to your Technical Rules and network standards now than discover a gap at energisation. Could you walk me through the product approval and connection review process, and what documentation you expect at each step? I'll bring the evidence, not a brochure.",
+            coach: 'With a utility engineer: respect the role, state the purpose (early compliance), ask about the process. No pitch.' }] },
+        { key: 'discover', name: 'Discovery', icon: '🔍', goal: 'Map the requirements: rules & standards, approval process, type tests, protection / SCADA / metering, earthing, FAT witness.',
+          brief: 'The engineer agrees to explain. Ask the questions a real submission needs.',
+          rounds: [{
+            id: 'en-wp-disc',
+            ask: '【Engineer】"Fine. What do you need to know about our requirements?"',
+            hint: ['Open questions', 'Probe: Technical Rules clauses, network standards, product approval, type tests (62271-200 IAC, 61439), protection & settings review, SCADA (DNP3 / IEC 61850), metering, earthing (AS 2067), fault level, FAT witness', 'Confirm before you design'],
+            rubric: [
+              { id: 'openq', label: 'Open questions', w: 3, kw: ['?', 'what', 'which', 'how', 'could you', 'where', 'who', 'tell me', 'do you'] },
+              { id: 'probe', label: 'Probe the technical requirements', w: 3, kw: ['technical rules', 'network standard', 'product approval', 'approved', 'type test', '62271', '61439', 'protection', 'relay', '61850', 'scada', 'dnp3', 'earthing', '2067', 'fault level', 'metering', 'fat', 'witness', 'arc flash', 'commission'] },
+              { id: 'listen', label: 'Confirm before designing', w: 2, kw: ['understand', 'first', 'before', 'make sure', 'confirm', 'your', 'build the submission', 'design to'] },
+            ],
+            gold: "Let me make sure I design to the right things. Which Technical Rules clauses and Western Power network standards apply to a customer-owned 33 kV switchroom and step-up transformer at this connection? Is there a product approval or approved-materials process before the connection application, and which type tests do you expect — AS/NZS 62271-200 with IAC arc classification, AS/NZS 61439? On protection and control: your settings review, the SCADA interface — DNP3 or IEC 61850 — and metering. Earthing to AS 2067 and the fault levels at the point of connection. And do you witness FAT and site commissioning? Once I have that, we'll build the submission pack around it.",
+            coach: 'Technical discovery: rules & standards, approval process, type tests, protection / SCADA / metering, earthing & fault level, FAT witness.' }] },
+        { key: 'value', name: 'Value', icon: '💡', goal: 'Value for a gatekeeper = evidence + engineering presence + first-time energisation.',
+          brief: 'The engineer has seen a hundred brochures.',
+          rounds: [{
+            id: 'en-wp-value',
+            ask: '【Engineer】"Plenty of OEMs tell me they comply. Most send me a brochure. What\'s different about you?"',
+            hint: ['Evidence: clause-by-clause mapping against the Technical Rules, accredited type-test reports, honest gaps', 'Engineering: protection & arc-flash studies to their templates, design reviews in person, witnessed FAT', 'Outcome: energised first time, no surprises'],
+            rubric: [
+              { id: 'evidence', label: 'Evidence, not claims', w: 3, kw: ['type-test', 'type test', 'report', 'accredited', 'lab', 'kema', 'cesi', 'nata', 'certificate', 'mapping', 'clause', 'gap analysis', 'documentation', 'drawing', 'honest'] },
+              { id: 'engineering', label: 'Engineering presence', w: 3, kw: ['engineer', 'protection', 'study', 'studies', 'coordination', 'arc flash', 'arc-flash', 'earthing', 'design review', 'fat', 'witness', 'local', 'perth', 'brisbane', 'australia', 'attend'] },
+              { id: 'outcome', label: 'Outcome they care about', w: 2, kw: ['fewer', 'rework', 'first time', 'energis', 'energiz', 'safe', 'reliab', 'no surprise', 'on time', 'same as yours'] },
+            ],
+            gold: "No brochure — evidence. We'll give you a clause-by-clause mapping of the design against the Technical Rules and your network standards, with gaps stated honestly, plus full type-test reports from accredited labs for the switchgear and the E-house. Our engineers prepare the protection coordination and arc-flash studies to your templates and attend design reviews here, not from a factory overseas; you can witness FAT and site commissioning. The outcome we're after is the same as yours: energised first time, safely, with no surprises after the connection goes live.",
+            coach: 'For the gatekeeper, value = evidence + engineering presence + first-time energisation. Never argue about price.' }] },
+        { key: 'object', name: 'Objection', icon: '🛡️', goal: 'Handle "your drawings are to Chinese standards" with AS/NZS-native design, independent review and hold points.',
+          brief: 'The engineer has been burned before.',
+          rounds: [{
+            id: 'en-wp-object',
+            ask: '【Engineer】"Your reference drawings are to Chinese standards. Our Technical Rules are prescriptive. I\'ve seen this go wrong."',
+            hint: ['Acknowledge — it is a valid concern', 'AS/NZS- and IEC-native design: redraw to their drawing standards, gap analysis with an independent Australian reviewer, design reviews before build', 'Hold points: prototype inspection, witnessed FAT, attended commissioning; bad news first'],
+            rubric: [
+              { id: 'face', label: 'Acknowledge', w: 2, kw: ['fair', 'understand', 'seen', 'right', 'prescriptive', 'valid', 'agree', 'go wrong'] },
+              { id: 'fix', label: 'AS/NZS-native + independent review', w: 3, kw: ['as/nzs', 'iec', 'redraw', 'native', 'gap analysis', 'third-party', 'independent', 'review', 'mapping', 'australian engineer', 'design review', 'rpeq', 'drawing standard', 're-engineer'] },
+              { id: 'derisk', label: 'Hold points', w: 3, kw: ['first', 'prototype', 'inspection', 'fat', 'witness', 'hold point', 'step', 'pilot', 'monitor', 'before', 'no shortcut', 'hear it from us'] },
+            ],
+            gold: "That's a valid concern and I've seen it go wrong too — usually when a supplier translates drawings instead of re-engineering them. For this connection the design will be AS/NZS and IEC native: we redraw to your drawing standards, run a gap analysis against the Technical Rules with an independent Australian reviewer, and hold design reviews with you before anything is built. Then hold points — prototype inspection, witnessed FAT, and site commissioning you can attend. If any clause can't be met, you'll hear it from us first, not at energisation.",
+            coach: 'Standards objection: acknowledge, commit to AS/NZS-native design + independent review, then hold points. No defensiveness.' }] },
+        { key: 'close', name: 'Close', icon: '✍️', goal: 'Close on a dated, stepwise acceptance plan — and ask for the checklist and a named contact.',
+          brief: 'The engineer asks what exactly you are proposing.',
+          rounds: [{
+            id: 'en-wp-close',
+            ask: '【Engineer】"If you want this product accepted on our network, what exactly are you proposing?"',
+            hint: ['A step-by-step plan with dates: submission pack → technical review + prototype inspection → witnessed FAT → first installation with hold points', 'Ask for their checklist / template and a named contact', 'Commit to a date for the pack'],
+            rubric: [
+              { id: 'plan', label: 'Stepwise, dated plan', w: 3, kw: ['step', 'plan', 'first', 'then', 'submission', 'pack', 'type test', 'prototype', 'fat', 'commission', 'timeline', 'week', 'month', 'milestone', 'hold point'] },
+              { id: 'ask', label: 'Ask for checklist + contact', w: 3, kw: ['checklist', 'contact', 'named', 'who', 'confirm', 'which', 'template', 'review', 'feedback', 'meeting', 'shape it'] },
+              { id: 'commit', label: 'Commit to a date', w: 2, kw: ['commit', 'we will', 'i\'ll send', 'by', 'deliver', 'send', 'date', 'next', 'follow up', 'end of next week'] },
+            ],
+            gold: "A step-by-step acceptance plan, and I'd like your checklist to shape it. Step one, within two weeks: the submission pack — standards mapping, type-test reports, reference drawings and the protection concept. Step two: a technical review with your connections and standards engineers plus a prototype inspection. Step three: witnessed FAT, then the first installation with hold points and commissioning you attend, with performance monitoring in the first year. Could you confirm the right template and a named contact for the review? I'll send the pack by the end of next week.",
+            coach: 'Close with a dated, stepwise plan and ask for the checklist + a named contact. The win is a process, not a PO.' }] },
+      ],
+      pitch: [
+        { stage: 'Western Power · Opening', lines: ["Not to sell — to get the technical alignment right early. I'd rather design to your Technical Rules now than discover a gap at energisation.", "Could you walk me through the product approval and connection review process, and what documentation you expect at each step?"] },
+        { stage: 'Western Power · Evidence', lines: ["No brochure — a clause-by-clause mapping against the Technical Rules, with gaps stated honestly, plus accredited type-test reports.", "The design will be AS/NZS and IEC native: redrawn to your standards, gap analysis with an independent Australian reviewer, design reviews before anything is built."] },
+        { stage: 'Western Power · Plan', lines: ["Step one, within two weeks: the submission pack. Step two: technical review and prototype inspection. Step three: witnessed FAT and a first installation with hold points.", "Could you confirm the right template and a named contact? I'll send the pack by the end of next week."] },
+      ],
+    },
+  ];
+
   return { company, products, tone, levels, stages, signatures, pressure, culture, standards, catTopics, method, cases, overseasCases, reactions, curveballs, english, pitchLib, tips };
 })();

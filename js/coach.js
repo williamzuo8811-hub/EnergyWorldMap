@@ -466,6 +466,7 @@
   if (PRESSURE_STAGE) (PRESSURE_STAGE.rounds || []).forEach(r => { if (r.id) ALL_ROUNDS[r.id] = { round: r, stage: PRESSURE_STAGE }; });
   (C.signatures || []).forEach(sig => (sig.stages || []).forEach(st => (st.rounds || []).forEach(r => { if (r.id && !ALL_ROUNDS[r.id]) ALL_ROUNDS[r.id] = { round: r, stage: st }; })));
   (C.english && C.english.stages || []).forEach(st => (st.rounds || []).forEach(r => { if (r.id) ALL_ROUNDS[r.id] = { round: r, stage: st }; }));
+  (C.english && C.english.scenarios || []).forEach(sc => (sc.stages || []).forEach(st => (st.rounds || []).forEach(r => { if (r.id) ALL_ROUNDS[r.id] = { round: r, stage: st }; })));
 
   // 6 维能力随开放题作答以指数滑动平均更新（映射七类加分桶）
   function updateSkills(a, step) {
@@ -560,13 +561,17 @@
     prog.dealsRun = (prog.dealsRun || 0) + 1; saveProgress();
   }
   // 英文实战：外方客户场景，全英文台词 + 英文黄金话术
-  function foreignOpp() {
-    return OPPS.filter(o => o.p.country === '澳大利亚' && o.p.cat === 'renewable')[0] || OPPS.filter(o => o.p.region !== '东亚')[0] || OPPS[0];
+  function foreignOpp(cat) {
+    const au = c => OPPS.filter(o => o.p.country === '澳大利亚' && o.p.cat === c)[0];
+    return (cat && au(cat)) || au('renewable') || OPPS.filter(o => o.p.region !== '东亚')[0] || OPPS[0];
   }
-  function startEnglish() {
+  const enScenario = key => key ? ((C.english && C.english.scenarios) || []).filter(x => x.key === key)[0] || null : null;
+  // 英文实战：默认场景（澳洲光伏业主）或 C.english.scenarios 里的专项场景（key：'au-bess' 储能开发商 / 'au-wp' Western Power 接入工程师 …）
+  function startEnglish(key) {
     const eng = C.english; if (!eng) return;
-    const opp = foreignOpp(), ctx = buildContext(opp, eng.over);
-    state.deal = { opp: opp, ctx: ctx, steps: stepsOf(eng.stages || []), step: 0, results: [], single: false, kind: 'en', meter: newMeter() };
+    const sc = enScenario(key);
+    const opp = foreignOpp(sc && sc.oppCat), ctx = buildContext(opp, sc ? sc.over : eng.over);
+    state.deal = { opp: opp, ctx: ctx, steps: stepsOf((sc ? sc.stages : eng.stages) || []), step: 0, results: [], single: false, kind: 'en', enKey: sc ? sc.key : null, meter: newMeter() };
     state.answered = null; state.revealHint = false; state.revealLocal = false;
     prog.dealsRun = (prog.dealsRun || 0) + 1; saveProgress();
   }
@@ -576,7 +581,7 @@
     const d = state.deal; if (!d || !d.steps || d.step >= d.steps.length) return null;
     if (!d.steps.every(s => s.round && s.round.id)) return null; // 回合必须可按 id 重建
     return {
-      kind: d.kind, oppId: d.opp.p.id, sigKey: d.sig ? d.sig.key : null, single: !!d.single,
+      kind: d.kind, oppId: d.opp.p.id, sigKey: d.sig ? d.sig.key : null, single: !!d.single, enKey: d.enKey || null,
       steps: d.steps.map(s => ({ rid: s.round.id, sIdx: s.sIdx, curve: !!s.curve })),
       step: d.step, results: d.results || [], meter: d.meter || null, recent: state.recent || [], grovel: !!d._grovel,
     };
@@ -588,11 +593,12 @@
     const s = state.savedDeal; if (!s) return;
     const opp = OPP_BY_ID[s.oppId] || OPPS[0];
     const sig = s.sigKey ? (C.signatures || []).filter(x => x.key === s.sigKey)[0] : null;
-    const over = sig ? sig.over : (s.kind === 'en' ? (C.english && C.english.over) : null);
+    const enSc = s.kind === 'en' ? enScenario(s.enKey) : null;
+    const over = sig ? sig.over : (s.kind === 'en' ? (enSc ? enSc.over : (C.english && C.english.over)) : null);
     const kw = sig ? sig.kw : null;
     const steps = (s.steps || []).map(st => { const e = ALL_ROUNDS[st.rid]; return e ? { stage: e.stage, round: e.round, sIdx: st.sIdx, curve: st.curve } : null; }).filter(Boolean);
     if (!steps.length) { clearDeal(); render(); return; }
-    state.deal = { opp: opp, ctx: buildContext(opp, over, kw), steps: steps, step: Math.min(s.step || 0, steps.length), results: s.results || [], single: !!s.single, kind: s.kind, sig: sig, meter: s.meter || null, _grovel: !!s.grovel };
+    state.deal = { opp: opp, ctx: buildContext(opp, over, kw), steps: steps, step: Math.min(s.step || 0, steps.length), results: s.results || [], single: !!s.single, kind: s.kind, sig: sig, enKey: enSc ? enSc.key : null, meter: s.meter || null, _grovel: !!s.grovel };
     state.recent = s.recent || []; state.answered = null; state.revealHint = false; state.revealLocal = false;
     state.mode = s.kind === 'exam' ? 'profile' : s.kind === 'en' ? 'en' : s.kind === 'signature' ? 'signature' : s.kind === 'pressure' ? 'pressure' : s.kind === 'drill' ? 'drill' : 'deal';
     state.savedDeal = null; render();
@@ -768,15 +774,21 @@
     const d = state.deal;
     if (d && d.kind === 'en') { if (d.step >= d.steps.length) return renderSummary(); return renderStep(); }
     const eng = C.english || {};
-    const pitch = (eng.pitch || []).map(g =>
+    const pitchGroups = (eng.pitch || []).concat.apply(eng.pitch || [], (eng.scenarios || []).map(sc => sc.pitch || []));
+    const pitch = pitchGroups.map(g =>
       '<div class="lib-group"><div class="lib-stage">' + esc(g.stage) + '</div>' +
       (g.lines || []).map(li => '<div class="lib-line"><span>' + esc(li) + '</span><button class="btn-copy" data-act="copy" data-txt="' + esc(li) + '">Copy</button></div>').join('') +
       '</div>').join('');
+    const scen = (eng.scenarios || []).map(sc =>
+      '<div class="pressure-hero en-scn"><div class="ph-best">' + esc(sc.icon || '🌐') + ' ' + esc(sc.title || sc.key) + ' · ' + ((sc.stages || []).length) + ' 关全英文</div>' +
+      '<p class="deck-tip" style="margin:6px 0 10px">' + esc(sc.subtitle || '') + '</p>' +
+      '<button class="btn-primary" data-act="en-start" data-en="' + esc(sc.key) + '">▶ Start · ' + esc(sc.titleEn || sc.key) + '</button></div>').join('');
     setHTML('deck',
       '<div class="deck-head"><h2>🌐 英文实战 · English Sparring</h2>' +
       '<p class="deck-tip">' + esc(eng.intro || '') + '</p></div>' +
-      '<div class="pressure-hero"><div class="ph-best">外方客户场景 · 5 关全英文（开场→需求→价值→异议→促成）</div>' +
+      '<div class="pressure-hero"><div class="ph-best">☀️ 澳洲光伏业主 · 5 关全英文（开场→需求→价值→异议→促成）</div>' +
       '<button class="btn-primary" data-act="en-start">▶ Start English Deal</button></div>' +
+      scen +
       '<div class="psec"><h3>English Pitch Library</h3><div class="lib-wrap">' + pitch + '</div></div>');
   }
 
@@ -1243,7 +1255,7 @@
     else if (act === 'drill') { const st = C.stages.filter(s => s.key === t.getAttribute('data-key'))[0]; if (st) { startDeal(randomOpp(true), st); render(); } }
     else if (act === 'sig') { const s = (C.signatures || []).filter(x => x.key === t.getAttribute('data-key'))[0]; if (s) { startSignature(s); render(); } }
     else if (act === 'pressure-start') { if (PRESSURE_STAGE) { startDeal(randomOpp(true), PRESSURE_STAGE); render(); } }
-    else if (act === 'en-start') { startEnglish(); render(); }
+    else if (act === 'en-start') { startEnglish(t.getAttribute('data-en') || null); render(); }
     else if (act === 'submit') { doSubmit(); }
     else if (act === 'choose') { doChoose(+t.getAttribute('data-i')); }
     else if (act === 'hint') { state.revealHint = !state.revealHint; render(); }
@@ -1346,9 +1358,20 @@
     ['ai-base', 'ai-key', 'ai-model'].forEach((id, k) => { const e = $(id); if (e) e.value = [cfg.base, cfg.key, cfg.model][k]; });
   }
 
+  // 深链接：coach.html#project=<id>（澳洲地图 🎯 线索榜 / 管线卡片的「🎓 陪练」按钮，或全球地图详情卡）→ 直接用该项目开一局闯关
+  function applyDeepLink() {
+    try {
+      const h = String((typeof location !== 'undefined' && location.hash) || '').replace(/^#/, '');
+      const m = h.match(/(?:^|&)project=(\d+)/); if (!m) return false;
+      const opp = OPP_BY_ID[+m[1]]; if (!opp) return false;
+      startDeal(opp); state.mode = 'deal'; return true;
+    } catch (e) { return false; }
+  }
+
   function init() {
     bindStatic();
     loadSavedDeal();
+    applyDeepLink();
     render();
     // 首屏加载态淡出
     const ld = $('coach-loader'); if (ld && ld.classList) { try { setTimeout(() => ld.classList.add('gone'), 100); } catch (e) { ld.classList.add('gone'); } }
@@ -1367,7 +1390,7 @@
     updateSkills: updateSkills, startExam: startExam, startMistake: startMistake, ALL_ROUNDS: ALL_ROUNDS, prog: function () { return prog; },
     startEnglish: startEnglish, dealSnapshot: dealSnapshot, saveDeal: saveDeal, loadSavedDeal: loadSavedDeal, resumeDeal: resumeDeal, clearDeal: clearDeal,
     buildShareSVG: buildShareSVG, exportShareCard: exportShareCard,
-    migrateProgress: migrateProgress, PROG_VER: PROG_VER,
+    migrateProgress: migrateProgress, PROG_VER: PROG_VER, applyDeepLink: applyDeepLink,
   };
 
   if (typeof document !== 'undefined' && document.addEventListener) {

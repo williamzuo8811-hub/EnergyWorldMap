@@ -73,10 +73,14 @@ verify in a browser — there is no build step.
   KCI parsing, gazetteer geocoding (`geocode`), 中文名 generation (`zhName`), coordinate memory + `aemo` aliases, node /
   centroid fallback, other-market retention and CSV parsing.
 - `node scripts/test-au.js` — after editing `js/au.js` or any `js/au-*.js` / `lib/au-states.js`. Loads util + the
-  data chain + the AU layers + `au.js` under a minimal DOM/Leaflet stub and asserts the IIFE init, `window.__AU__`, ≥98%
+  data chain + the AU layers (incl. `js/au-changes.js`) + `au.js` under a minimal DOM/Leaflet stub and asserts the IIFE init, `window.__AU__`, ≥98%
   of Australian projects resolve to a state (`stateOf`), `render()` / the four cards / `stateToHash()` / `applyLang()` run
-  without throwing, and the AU data integrity rules above.
-- `node scripts/test-coach.js` — after editing `js/coach.js` or `js/coach-content.js`. Loads util + data +
+  without throwing, the AU data integrity rules above, plus the **BD layer**: `leadScore` ∈ [0,100] for every pipeline item and
+  the ordering rule (committed · EPC undisclosed > committed · awarded > proposed), `leads()` sorted, `leadsCSV` (BOM + 50 rows),
+  `epcHintOf` text inference, owner merging (`ownerGroup` / `buildAccounts`: Neoen ≥10 items across ≥2 states), `buildEpcAccounts`
+  (GenusPlus / UGL present), the three wide panels + `view` hash round-trip, `filterOwner`, and the `AU_CHANGES` structure (every
+  added / status / mw id resolves in `AU_PIPELINE`, `gone` ids do not, counts match).
+- `node scripts/test-coach.js` — after editing `js/coach.js` or `js/coach-content.js` (also asserts the `#project=<id>` deep link). Loads util + data +
   `clients-meta.js` + `coach-content.js` + `coach.js` under a minimal DOM stub and asserts the IIFE init,
   `window.__COACH__` exposure, the opportunity-pool assembly (from `PROJECTS` × `CLIENT_META`), persona /
   context derivation, the **offline deterministic scorer** (`scoreFree` rubric coverage + tone dictionary —
@@ -163,7 +167,11 @@ loads the usual `js/data*.js` + `progress.js` + `pinyin-map.js` + `util.js` chai
   `status existing|building|planned`, `owner/year/lengthKm/costAud/notes/sources`). Corridors are **schematic
   hub-to-hub polylines, not surveyed routes** (Geoscience Australia's line dataset is not reachable offline); the legend
   says so. Styled by kV band (500/330/275/220/≤132 + HVDC), dashed for planned, animated dash for building; the kV chips
-  (`state.kvOff`) and the 🚧 layer toggle filter them; clicking opens a line card (`showLine`).
+  (`state.kvOff`) and the 🚧 layer toggle filter them; clicking opens a line card (`showLine`). The **Pilbara / NWIS** part
+  (Karratha · Dampier · Cape Lambert · Millstream · Pannawonica · Tom Price · Paraburdoo · Yandi · West Angelas · Newman ·
+  Port Hedland · Goldsworthy, plus the planned Maitland SIA common-user hub) is traced from Horizon Power's Pilbara network
+  diagram + 2021 system description and the ACCC Pilbara ISOCo determination (owner per corridor: Horizon 132/66 kV, Rio Tinto
+  220/132 kV private, BHP 132/66 kV, APA/Alinta 220 kV, Fortescue PEC) — see `data-src/aemo/README.md` for the document links.
 - **`js/au-coal.js`** (`window.AU_COAL = {asOf, plants}`): every coal station (operating + closed-since-2016 for
   context) with `closeYear/closeMonth/closeText/basis/replacement/sources`. `countdown(p)` turns that into the
   **退役倒计时** (剩 N 年 M 个月; hot ≤3 y / warm ≤8 y / cool) that drives the 🏭 markers (badge = closure year),
@@ -183,10 +191,13 @@ loads the usual `js/data*.js` + `progress.js` + `pinyin-map.js` + `util.js` chai
   (`approx:true` = placed on the locality / postcode / connection node / state centroid), `locality` (KCI Site Location
   Description or the gazetteer hit), `connNode`, `tnsp` (from KCI), `rez`, `kci` (AEMO KCI ID), `projId` (link to the main
   dataset by normalised English name, computed at load if absent). The current file is the **AEMO NEM Generation Information
-  July 2026 release** (~900 sites: committed ~50 · anticipated ~90 · proposed ~750, plus ~20 hand-curated WA items that the NEM
+  July 2026 release** (~910 sites: committed ~60 · anticipated ~90 · proposed ~760, plus ~33 hand-curated WA items that the NEM
   workbook does not cover — AEMO publishes no per-project list for the WEM, so the WA/SWIS items are reconciled by hand against the
-  **2026 WEM ESOO** (facilities newly assigned 2027-28 Capacity Credits = committed; see `data-src/aemo/README.md`) — `asOf: '2026-07'`); ~130 items keep hand-written 中文 notes from the earlier research pass, and
-  ~90 formerly centroid-parked sites carry web-researched approximate coordinates. The source workbooks (NEM GI 2026-07, KCI 2026Q2,
+  **2026 WEM ESOO** (facilities newly assigned 2027-28 Capacity Credits = committed, plus the main report's Chapter 3 Table 17 named list — Narrogin / Kondinin / Parron / Alinta Marri wind + East Rockingham RRF, transcribed to `data-src/aemo/WEM-2026-ESOO-table17-18-committed-anticipated.csv`; see `data-src/aemo/README.md`) — `asOf: '2026-07'`; the **NWIS / Pilbara** side (`region: 'NWIS'`, no AEMO list either) is curated from
+  owner announcements / EPA referrals / WA Pilbara Energy Transition material: Fortescue PEC solar + BESS, Jinbi, Cloudbreak solar, Baru Marnda,
+  Woodside Solar, Perdaman Helios, Ngarluma / Banjima First-Nations projects, Rio Tinto coastal solar, Horizon Power's Karratha 86 MW
+  replacement tender); ~130 items keep hand-written 中文 notes from the earlier research pass, and
+  ~95 formerly centroid-parked sites carry web-researched approximate coordinates (one, Elai Genesis BESS QLD, still sits on the state centroid). The source workbooks (NEM GI 2026-07, KCI 2026Q2,
   Generating Unit Expected Closure Year 2026-07) are kept under **`data-src/aemo/`** (not loaded by the page; see its README)
   so the quarterly diff is reproducible; the closure-year workbook is cross-referenced in `js/au-coal.js` notes.
   Rendered as **diamond markers** in their own cluster group
@@ -208,7 +219,11 @@ loads the usual `js/data*.js` + `progress.js` + `pinyin-map.js` + `util.js` chai
   `AU_GRID` node → offshore-wind zone / state centroid (listed as 需补坐标); auto-generates 中文名 ("地名 + 光伏电站 / 风电场 /
   储能电站 / 光储项目 … + 期数") for new sites; keeps the other market's items untouched (WA when importing NEM, east coast when
   `--wem`); prints the quarter-on-quarter diff (added / status moved / capacity changed / gone / 需补坐标).
-  `scripts/test-import-aemo.js` builds mini xlsx workbooks (old + 2026 layout + KCI) in memory and asserts the whole path.
+  Every import also writes **`js/au-changes.js`** (`window.AU_CHANGES = {asOf, prevAsOf, source, generated, counts, added[], status[]
+  (from → to), mw[] (≥5 MW), gone[], needCoord[]}` — slim copies of the affected items, generated by `buildChanges` / `writeChanges`;
+  `--changes <path>` / `--no-changes`, `--prev-asof YYYY-MM` when the previous file's `asOf` isn't right) and a **one-page Chinese
+  Markdown brief** `data-src/aemo/brief-<asOf>.md` (`buildBrief`; `--brief <path>` / `--no-brief`) — the quarterly BD change list.
+  `scripts/test-import-aemo.js` builds mini xlsx workbooks (old + 2026 layout + KCI) in memory and asserts the whole path, incl. `buildChanges` / `buildBrief`.
 - **`js/au-rez.js`** (`window.AU_REZ = {zones}`): **🌞 Renewable Energy Zones** — `status declared|planned|candidate`
   (formally declared with an access scheme / in a state plan / AEMO ISP candidate only), `ispId`, `body`, `targetGw`,
   `timeline/transmission/access/notes` and an **approximate `polygon`** (4–12 vertices traced from published zone maps —
@@ -216,11 +231,45 @@ loads the usual `js/data*.js` + `progress.js` + `pinyin-map.js` + `util.js` chai
   (ray-cast, declared > planned > candidate) tags every pipeline item and project with its zone at load, feeding
   `ZONE_STAT` (MW by status + project count per zone), the right-panel REZ list, the zone card (`showZone`: KPIs,
   timeline, transmission, access, pipeline + projects inside) and the state card's zone chips.
+- **🎯 BD lead board** (`leadScore` / `leads` / `showLeads` / `leadsCSV` in `au.js`): turns the pipeline into "who to call this
+  quarter". Score 0–100 = **product fit** ≤40 (`PRODUCT_FIT` by fuel: battery → 储能升压一体化舱 / E-house 32, solar & wind →
+  预制舱变电站 + 集电线路开关设备 28, gas → 中压开关柜 24, … + log-size bonus ≤8, +2 hybrid `mix`) + **procurement window** ≤35
+  (`windowScore`: months to COD — 12–30 months = 定标期 35, 9–15 → 24, ≤6 → 4, 2.5–3.5 y → 28, 3.5–5 y → 16, unknown COD 12; the
+  displayed window = COD −24 → −9 months) + **status / EPC** ≤30 (`statusScore`: committed & EPC 未招标 30 / 未公开 27 / 已授标 16
+  → 分包机会; anticipated 21 / 12; proposed 6). EPC status per pipeline item comes from `epcHintOf`: the linked main project's
+  `epcStatus` when `projId` resolves, else regex inference over `notes` (待核 / 未公开 → 未公开; "EPC 为 X" / 开工令 / `util.epcCosOf`
+  hit → 已授标; else 无数据). The right panel shows **Top 10** (`renderLeads`, scope = `passPipe` so it follows the current state /
+  status / fuel / year / search / owner filters but not the layer toggle); the `🎯 线索榜` toolbar button opens a wide modal
+  (`#modal`, `openModal` / `closeModal`, hash `view=leads`) with the **Top 50** table (rank · state · fuel · MW · COD · AEMO status ·
+  EPC · 采购窗口 · product · score with a breakdown `title`), `📍 详情` → `showPipe`, `🎓 陪练` → `coach.html#project=<projId>`
+  (the coach's `applyDeepLink` starts a deal on that project) and `⤓ 导出 CSV` (`leadsCSV`: BOM-prefixed, 25 columns incl. the
+  score parts, window, product, coords and a deep link — for splitting leads among colleagues). The pipe card carries a 🎯 strip
+  with the score / product / window / EPC.
+- **🏢 Account view** (`showAccounts('owner'|'epc')`, hash `view=accounts|epc`): **owner 作战地图** groups all pipeline items by
+  `ownerGroup` (an `OWNER_ALIAS` regex table for the majors — Neoen / Akaysha / AGL / Origin / ACEN / EDPR / X-Elio / Iberdrola /
+  Atmos … — then `ownerKey` legal-suffix stripping; SPVs may stay separate) → per owner: project count, committed / anticipated /
+  proposed MW, per-state counts, flagship project, best lead score; `📍 地图筛选` sets `state.plOwner` (a new pipeline filter
+  dimension, hash `own=<key>`, cleared by the `#pl-owner-pill` chip / reset) and flies to that owner's footprint. The **EPC tab**
+  (`buildEpcAccounts`) lists contractors recognised by `util.epcCosOf` (the `EPC_COS` table now lives in `js/util.js`, shared with
+  the world map's 🔧 EPC league; AU additions: Monford / Beon / Equans / Ventia / Metlen / Global Power Services …) over the main
+  projects' `epc` field **and** the pipeline `notes` free text, with project chips → cards.
+- **📰 本季变化** (`renderChangesBlock` / `showChanges` / `buildChangesBrief` / `exportBrief`, hash `view=changes`): reads
+  `window.AU_CHANGES` (`js/au-changes.js`, written by the importer — see above; the panel degrades to a hint when absent) and shows
+  the right-panel 4-band summary (新增 / 升级为承诺 / 容量变化 / 不再出现) plus a modal with the five lists (rows → `showPipe` while
+  the item still exists; 升级为承诺 highlighted as the FID signal; 需补坐标 chips), `⤓ 导出简报 (.md)` / `📋 复制简报` building the
+  same one-page Chinese brief client-side (plus the current Top 10 leads).
+- **📄 State opportunity brief** (`buildStateBrief(abbr)` / `exportStateBrief`, the `⤓ 州机会简报` button on the state card): a one-page
+  Chinese Markdown report for HQ assembled from everything the page knows about one state — sheet summary, 关键数字 (projects /
+  investment / pre-tender count, pipeline MW by status, coal online and ≤2030 / ≤2035 retirements, REZ + grid works counts), 电网与政策
+  (grid / TNSP / DNSPs / policy / coal exit), the coal retirement table, that state's **Top 10 leads** (via `leads` + `leadScore`),
+  EPC 未招标 projects by investment, top owners (`buildAccounts` on the state's pipeline), building / planned corridors touching the
+  state, REZ zones with MW, the quarter's changes for that state (from `AU_CHANGES`), key grid projects, vendor notes, tender portals,
+  行动建议 and sources; downloads as `au-<ABBR>-brief-<YYYY-MM>.md`. ACT folds into NSW like everywhere else.
 - **EPC window**: the left panel has EPC-status chips (`state.epc`, incl. 无数据) and a `🔧 只看 EPC 未招标` toggle
   (`state.epcOnly`, same `epcStatus === '未招标'` rule as `app.js`); pre-tender markers pulse orange and the right-panel
   **EPC 未招标机会榜** ranks them by `inv`. Investment KPIs apply the `cat==='client'` exclusion rule.
 - State rows filter (`state.states`, fly-to-bounds from the polygons) and open the sheet; hash carries
-  `st/coff/stt/epc/epcw/yr/recent/q/loff/kvoff/pls/plf/lang` plus one open card (`project=<id>` / `coal=<idx>` / `state=<abbr>` /
+  `st/coff/stt/epc/epcw/yr/recent/q/loff/kvoff/pls/plf/own/view/lang` plus one open card (`project=<id>` / `coal=<idx>` / `state=<abbr>` /
   `line=<id>` / `pipe=<id>` / `zone=<key>`); `applyUIFromState`-style sync lives in `syncUI`; EN toggle relabels UI (data prose stays Chinese).
 
 ### Sales-pitch sparring (`coach.html` + `js/coach.js` + `js/coach-content.js`)
@@ -288,13 +337,20 @@ and `js/coach.js`. `coach.js` rebuilds `PROJECTS` with `util.buildProjects` (no 
   win/lose); each answer triggers a banded **客户即时反应** (`COACH_CONTENT.reactions`); and a random **黑天鹅 curveball**
   (`COACH_CONTENT.curveballs` — competitor cut / FX / owner-change / schedule / compliance / quality-rumor) may be spliced
   mid-deal via `maybeInjectCurveball` (skipped on 'easy' so beginners aren't pressured).
+  **Deep link**: `coach.html#project=<id>` (`applyDeepLink`, run once in `init`) starts a 闯关 deal on that project — used by the
+  Australia map's 🎯 线索榜 / pipe card `🎓 陪练` buttons.
   An **optional AI free-spar** mode (off by default, BYO OpenAI-compatible key stored only in the browser) lets the user
   free-chat with an AI customer; the deterministic core works with **zero network**. `localPack(p)` resolves a project's
   country→region culture/standards (+ category 谈资) and is surfaced both as a collapsible box inside each deal step and as a
   standalone **当地·谈资** reference page (country picker × category). The **英文实战** mode (`COACH_CONTENT.english`,
   `startEnglish`) runs an all-English foreign-customer scenario (an Australian solar-farm owner, 5 funnel rounds) scored by the
   same engine — `COACH_CONTENT.tone.en` is merged into the tone buckets at init (`mergeEnTone`) so English answers are scored
-  bilingually. Modes: 闯关成交 / 经典战役 / 单项特训 / 抗压特训 / 英文实战 / 当地·谈资 / 销售军规 / 话术库 / 产品速查 /
+  bilingually. `COACH_CONTENT.english.scenarios` adds **Australian specialist scenarios** on the same engine — `au-bess` (an
+  Australian BESS developer carving the MV step-up skid / E-house out of the EPC's BoP: schedule, bankability pack, early-PO trade)
+  and `au-wp` (a Western Power connection / asset-standards engineer: Technical Rules, product approval, type tests, AS/NZS-native
+  drawings, hold points) — each `{key, icon, title, titleEn, subtitle, oppCat, over, stages[5], pitch}`; `startEnglish(key)` picks
+  the scenario (no key = the default solar-farm owner), the deal carries `enKey` (snapshot / resume keep it), scenario rounds are
+  indexed in `ALL_ROUNDS` and their pitch groups join the English pitch library. Modes: 闯关成交 / 经典战役 / 单项特训 / 抗压特训 / 英文实战 / 当地·谈资 / 销售军规 / 话术库 / 产品速查 /
   成长档案. Guarded against missing DOM so `scripts/test-coach.js` can load it under a stub.
 
 ### Data globals and merge model
@@ -469,7 +525,8 @@ searchable country picker and an `⊕ 加入对比` shortcut on the single-count
 league** (`showLeague`) groups by `normalizeOwner` (in `js/util.js`), which strips legal-entity suffixes
 so "中国电建" and "中国电建集团" aggregate as one owner. The **🔧 EPC league** (`showEpcLeague`, the `🔧 EPC榜`
 map-tools button) aggregates by EPC/contractor parsed from the structured `epc` field (`EPC_COS` ordered
-regex table → canonical names; suppliers like battery/turbine vendors deliberately excluded); rows expand
+regex table → canonical names, exported from `js/util.js` together with `epcCosOf(text)` so `au.js` reuses it; pure suppliers
+deliberately excluded, integrators that act as EPC in Australia — Vestas / Tesla / Fluence — kept); rows expand
 to the contractor's project list (click → fly + detail card). `epc`/`epcStatus`（已授标/未招标/未公开/不适用,
 see `data.js` header）currently cover all Australian projects; the detail card renders them as a dedicated
 strip (`.d-epc`, pre-award highlighted orange), and `p.epc` is part of the search haystack (`projectHay`).

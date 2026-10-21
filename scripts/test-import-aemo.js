@@ -96,6 +96,14 @@ if (parsed) {
   const ids = items.map(i => i.id); ok(new Set(ids).size === ids.length && ids.every(x => /^pl-[a-z]{2,3}-\d{3}$/.test(x)), '新 id 形如 pl-nsw-002 且唯一：' + ids.join(','));
   const d = I.diff(prev, items);
   ok(d.added.length === 3 && d.status.length === 0, 'diff：新增 3、状态变化 0');
+  const ch = I.buildChanges(prev, items, { asOf: '2026-07', prevAsOf: '2026-04', source: 'test', needCoord: needCoord });
+  ok(ch.counts.added === 3 && ch.counts.gone === 0 && ch.counts.needCoord === 3 && ch.added.every(x => x.id && x.en && x.state && x.fuel) && Array.isArray(ch.status) && Array.isArray(ch.mw), 'buildChanges：计数 + 精简条目字段');
+  const brief = I.buildBrief(ch);
+  ok(/季度变化简报 2026-04 → 2026-07/.test(brief) && brief.indexOf('Bulli Creek') > 0 && /需补坐标/.test(brief), 'buildBrief：标题 / 新增项目 / 需补坐标段');
+  const prevOps = [{ id: 'a', en: 'A BESS', name: 'A', state: 'NSW', fuel: 'battery', mw: 100, status: 'anticipated' }, { id: 'b', en: 'B Solar', name: 'B', state: 'VIC', fuel: 'solar', mw: 50, status: 'committed' }];
+  const nowOps = [{ id: 'a', en: 'A BESS', name: 'A', state: 'NSW', fuel: 'battery', mw: 120, status: 'committed', cod: '2028-06' }];
+  const ch2 = I.buildChanges(prevOps, nowOps, { asOf: '2026-07' });
+  ok(ch2.status.length === 1 && ch2.status[0].from === 'anticipated' && ch2.status[0].to === 'committed' && ch2.mw.length === 0 && ch2.gone.length === 1 && ch2.gone[0].id === 'b', 'buildChanges：状态变化优先于容量变化，消失条目来自上一版');
 }
 
 /* ---------- CSV ---------- */
@@ -211,4 +219,4 @@ ok(geo2.kci === 1 && geo2.name === 1 && geo2.centroid === 1 && geo2.memory === 1
 const ids2 = items2.map(i => i.id); ok(new Set(ids2).size === ids2.length, '2026 版 id 唯一：' + ids2.join(','));
 
 if (fails.length) { console.error('✘ test-import-aemo 失败：\n - ' + fails.join('\n - ')); process.exit(1); }
-console.log('✔ test-import-aemo 通过：xlsx 解析 / 状态过滤 / 多机组合并 / 燃料·COD 归一 / 坐标记忆 / CSV / 2026 版表头 / KCI / 地名定位 / 中文名');
+console.log('✔ test-import-aemo 通过：xlsx 解析 / 状态过滤 / 多机组合并 / 燃料·COD 归一 / 坐标记忆 / CSV / 2026 版表头 / KCI / 地名定位 / 中文名 / 季度变化 + 简报');

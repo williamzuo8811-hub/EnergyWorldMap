@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="lib/leaflet.css">
   <link rel="stylesheet" href="lib/MarkerCluster.css">
   <link rel="stylesheet" href="lib/MarkerCluster.Default.css">
-  <link rel="stylesheet" href="css/au.css?v=2">
+  <link rel="stylesheet" href="css/au.css?v=3">
 </head>
 <body>
   <!-- 首屏加载态：底图瓦片到位（或超时）后淡出 -->
@@ -36,7 +36,7 @@
         <div class="logo">🇦🇺</div>
         <div class="brand-text">
           <h1 id="t-title">澳洲电网与能源动态地图</h1>
-          <div class="sub" id="t-sub">输电骨架 · 州与电网公司 · 燃煤退役倒计时 · EPC 窗口期 · AEMO 管线 · REZ</div>
+          <div class="sub" id="t-sub">输电骨架 · 州与电网公司 · 燃煤退役倒计时 · EPC 窗口期 · AEMO 管线 · REZ · 🎯 BD 线索榜</div>
         </div>
       </div>
       <div class="kpis" id="kpis">
@@ -48,6 +48,9 @@
         <div class="kpi"><div class="num pipe" id="kpi-pipe">0</div><div class="lab" id="lab-pipe">🧭 承诺+预期管线</div></div>
       </div>
       <div class="top-actions">
+        <button class="tbtn" id="btn-leads" title="本季度 Top 50 BD 线索（产品匹配 × 采购窗口 × 状态/EPC）">🎯 线索榜</button>
+        <button class="tbtn" id="btn-accounts" title="业主作战地图 + EPC / 总承包商账户">🏢 账户</button>
+        <button class="tbtn" id="btn-changes" title="AEMO 管线季度差异：新增 / 升级为承诺 / 容量变化 / 不再出现">📰 本季变化</button>
         <button class="tbtn" id="btn-lang" aria-label="中文 / English" title="中文 / English">EN</button>
         <button class="tbtn" id="btn-share" aria-label="复制当前视图链接" title="复制当前视图链接">🔗</button>
         <a class="tbtn" id="btn-world" href="index.html" aria-label="返回全球地图">🗺️ 全球地图</a>
@@ -84,6 +87,7 @@
           <div class="block-title" id="t-pipe">🧭 AEMO 管线 <span class="count" id="pipe-hint">承诺 / 预期 / 拟建</span></div>
           <div class="chip-row" id="pl-status-chips"></div>
           <div class="chip-row" id="pl-fuel-chips" style="margin-top:6px"></div>
+          <div class="chip-row" id="pl-owner-row" style="margin-top:6px" hidden><button class="chip on owner-pill" id="pl-owner-pill" aria-pressed="true" title="清除业主筛选"></button></div>
         </div>
         <div class="block">
           <div class="block-title" id="t-cats">能源品类</div>
@@ -105,7 +109,7 @@
           <div class="search"><span class="ico">🔍</span><input id="q" type="search" placeholder="搜项目 / 业主 / EPC / 拼音…" aria-label="搜索项目"></div>
           <button class="btn-reset" id="btn-reset">↺ 重置全部筛选</button>
         </div>
-        <div class="credit">数据：AEMO Generation Information（2026-07）+ KCI · AEMO ISP · TNSP/DNSP 规划报告 · 业主公告 · 自建项目库 · 州界 Natural Earth · 地名 Australian Postcodes（走廊为示意，非测绘线路；管线示意坐标按所在地 / 接入站放置）</div>
+        <div class="credit">数据：AEMO Generation Information（2026-07，季度差异见 📰 本季变化）+ KCI · AEMO ISP · TNSP/DNSP 规划报告 · 业主公告 · 自建项目库 · 州界 Natural Earth · 地名 Australian Postcodes（走廊为示意，非测绘线路；管线示意坐标按所在地 / 接入站放置）</div>
       </aside>
 
       <!-- 中：地图 -->
@@ -120,6 +124,11 @@
 
       <!-- 右：看板 -->
       <aside class="panel right" id="right-panel" aria-label="看板">
+        <div class="block">
+          <div class="block-title" id="t-leads">🎯 本季度线索 Top 10 <span class="count" id="leads-sum"></span></div>
+          <div class="opp-list" id="lead-list"></div>
+          <button class="btn-more" id="btn-leads-more">查看 Top 50 / 导出 CSV ▸</button>
+        </div>
         <div class="block">
           <div class="block-title" id="t-coal">⏳ 燃煤退役倒计时 <span class="count" id="coal-sum"></span></div>
           <div class="coal-bands" id="coal-bands"></div>
@@ -136,6 +145,11 @@
           <div class="opp-list" id="pipe-list" style="margin-top:8px"></div>
         </div>
         <div class="block">
+          <div class="block-title" id="t-changes">📰 本季变化 <span class="count" id="changes-sum"></span></div>
+          <div class="coal-bands ch" id="changes-bands"></div>
+          <button class="btn-more" id="btn-changes-more">查看明细 / 导出简报 ▸</button>
+        </div>
+        <div class="block">
           <div class="block-title" id="t-zones">🌞 可再生能源区 REZ <span class="count" id="zone-sum"></span></div>
           <div class="line-list" id="zone-list"></div>
         </div>
@@ -150,6 +164,9 @@
       </aside>
     </div>
   </div>
+
+  <!-- 宽面板：🎯 线索榜 / 🏢 账户 / 📰 本季变化（au.js 填充；Esc / 点遮罩关闭）-->
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="面板" hidden><div class="modal-box" id="modal-box"></div></div>
 
   <!-- 库（Leaflet + 聚合）-->
   <script defer src="lib/leaflet.js"></script>
@@ -192,7 +209,8 @@
   <script defer src="js/au-coal.js"></script>
   <script defer src="js/au-pipeline.js"></script>
   <script defer src="js/au-rez.js"></script>
-  <script defer src="js/au.js?v=3"></script>
+  <script defer src="js/au-changes.js"></script>
+  <script defer src="js/au.js?v=4"></script>
   <!-- PWA：注册 Service Worker（离线 + 重访秒开）。失败静默。 -->
   <script>
     if ('serviceWorker' in navigator) {

@@ -6,6 +6,7 @@
  *   node scripts/import-aemo.js <NEM Generation Information.xlsx|.csv> [--kci <KCI 汇编.xlsx>] [--sheet "<工作表名>"]
  *                               [--wem] [--asof 2026-04] [--include-existing] [--dry] [--out js/au-pipeline.js]
  *                               [--gazetteer scripts/data/au-localities.csv | --no-gazetteer] [--no-main] [--prev <上一版 au-pipeline.js>]
+ *                               [--changes js/au-changes.js | --no-changes] [--brief data-src/aemo/brief-<asOf>.md | --no-brief] [--prev-asof YYYY-MM]
  *   AEMO 页面：https://aemo.com.au/energy-systems/electricity/national-electricity-market-nem/nem-forecasting-and-planning/forecasting-and-planning-data/generation-information
  *   （季度更新的 Excel；WEM 的 "WEM Generation Information" 用 --wem，region 记为 SWIS；
  *     --kci 读 AEMO 的 Key Connection Information 汇编表，按 "AEMO KCI ID" / 场站名带入 "Site Location Description" 与 TNSP）
@@ -27,7 +28,8 @@
  *     （1.8 万个澳洲地名质心）→ 邮编质心 → connNode 命中 js/au-grid.js 的枢纽站 → 州质心，并在末尾列出「需补坐标」清单；
  *   · 中文名：上一版 / 主项目库有则沿用，否则按「地名 + 类型（光伏电站 / 风电场 / 储能电站 / 光储项目 …）+ 期数」自动生成；
  *   · 不在本表范围的州（导 NEM 时的 WA / NT，导 WEM 时的东部各州）原样保留上一版条目；
- *   · 打印上一版 → 本版的差异（新增 / 移除 / 状态变化 / 容量变化），这就是每季度的 BD 变化清单。
+ *   · 打印上一版 → 本版的差异（新增 / 移除 / 状态变化 / 容量变化），这就是每季度的 BD 变化清单；同时写出
+ *     js/au-changes.js（window.AU_CHANGES：au.html 📰 本季变化面板的数据）和一页中文简报 data-src/aemo/brief-<asOf>.md。
  * 校验：node scripts/test-import-aemo.js（用内存生成的迷你 xlsx 跑一遍解析 + 转换 + 定位）。
  * ============================================================ */
 'use strict';
@@ -321,6 +323,9 @@ function loadMainProjects(dir) {
 function loadPrev(file) {
   try { const w = {}; const src = fs.readFileSync(file, 'utf8'); new Function('window', src)(w); return (w.AU_PIPELINE && w.AU_PIPELINE.items) || []; } catch (e) { return []; }
 }
+function loadPrevAsOf(file) {
+  try { const w = {}; new Function('window', fs.readFileSync(file, 'utf8'))(w); return (w.AU_PIPELINE && w.AU_PIPELINE.asOf) || ''; } catch (e) { return ''; }
+}
 function loadNodes(file) {
   try { const w = {}; const src = fs.readFileSync(file, 'utf8'); new Function('window', src)(w); return (w.AU_GRID && w.AU_GRID.nodes) || []; } catch (e) { return []; }
 }
@@ -404,6 +409,77 @@ function diff(prev, items) {
   return out;
 }
 
+/* ---------- 季度变化清单（js/au-changes.js）+ 一页中文简报 ---------- */
+const CH_ORDER = { committed: 0, anticipated: 1, proposed: 2, existing: 3 };
+const FUEL_ZH = { solar: '光伏', wind: '陆上风电', offshore_wind: '海上风电', battery: '电池储能', pumped_hydro: '抽水蓄能', hydro: '水电', gas: '燃气', hydrogen: '氢能', coal: '燃煤', other: '其他' };
+const PLS_ZH = { committed: '承诺', anticipated: '预期', proposed: '拟建', existing: '已投运' };
+const slim = it => { const o = { id: it.id, en: it.en, name: it.name, state: it.state, fuel: it.fuel, mw: it.mw, status: it.status }; if (it.mwh) o.mwh = it.mwh; if (it.cod) o.cod = it.cod; if (it.owner) o.owner = it.owner; return o; };
+// prev → items 的差异打包成 window.AU_CHANGES 的形状（au.html 面板 + 简报共用；条目是管线的精简副本，id 可回查 AU_PIPELINE）
+function buildChanges(prev, items, meta) {
+  meta = meta || {};
+  const d = diff(prev, items);
+  const cur = new Set(items.map(x => x.id));
+  const removed = meta.removed || prev.filter(p => !cur.has(p.id));
+  const byPri = (a, b) => (CH_ORDER[a.status] - CH_ORDER[b.status]) || (b.mw || 0) - (a.mw || 0);
+  return {
+    asOf: meta.asOf || '', prevAsOf: meta.prevAsOf || '', source: meta.source || '', generated: (meta.generated || new Date().toISOString()).slice(0, 10),
+    counts: { prev: prev.length, now: items.length, added: d.added.length, status: d.status.length, mw: d.mw.length, gone: removed.length, needCoord: (meta.needCoord || []).length },
+    added: d.added.slice().sort(byPri).map(slim),
+    status: d.status.map(([p, it]) => Object.assign(slim(it), { from: p.status, to: it.status })).sort((a, b) => (CH_ORDER[a.to] - CH_ORDER[b.to]) || (b.mw || 0) - (a.mw || 0)),
+    mw: d.mw.map(([p, it]) => Object.assign(slim(it), { from: p.mw, to: it.mw })).sort((a, b) => Math.abs(b.to - b.from) - Math.abs(a.to - a.from)),
+    gone: removed.slice().sort(byPri).map(slim),
+    needCoord: (meta.needCoord || []).map(it => it.id),
+  };
+}
+function writeChanges(file, ch) {
+  const arr = a => a.length ? '[\n' + a.map(o => '    ' + JSON.stringify(o)).join(',\n') + '\n  ]' : '[]';
+  const out = `// 澳洲管线季度变化（window.AU_CHANGES）—— au.html 📰 本季变化面板 + ⤓ 简报导出。由 scripts/import-aemo.js 每次导入时生成（勿手改）：
+//   上一版（prevAsOf）→ 本版（asOf）的差异：added 新增 · status 状态变化（from → to；升级为承诺 = FID / 开工，BD 关键信号）·
+//   mw 容量变化（≥5 MW）· gone 不再出现（投运 / 撤回 / 改名）· needCoord 仍放在州质心、需补坐标的 id。
+//   条目为管线的精简副本（id 可在 AU_PIPELINE 里回查；gone 条目已不在管线里）。非项目数据，不受 validate-data.js 约束；scripts/test-au.js 校验结构。
+window.AU_CHANGES = {
+  asOf: ${JSON.stringify(ch.asOf)},
+  prevAsOf: ${JSON.stringify(ch.prevAsOf)},
+  source: ${JSON.stringify(ch.source)},
+  generated: ${JSON.stringify(ch.generated)},
+  counts: ${JSON.stringify(ch.counts)},
+  added: ${arr(ch.added)},
+  status: ${arr(ch.status)},
+  mw: ${arr(ch.mw)},
+  gone: ${arr(ch.gone)},
+  needCoord: ${JSON.stringify(ch.needCoord)},
+};
+`;
+  fs.writeFileSync(file, out);
+}
+// 一页中文简报（Markdown）：摘要 → 升级为承诺 → 新增 → 容量变化 → 不再出现 → 需补坐标 → BD 提示
+function buildBrief(ch) {
+  const mwOf = a => Math.round(a.reduce((s, x) => s + (x.mw || 0), 0)).toLocaleString('en-US');
+  const cell = v => String(v == null ? '' : v).replace(/\|/g, '／');
+  const row = x => `| ${cell(x.name || x.en)} | ${cell(x.state)} | ${FUEL_ZH[x.fuel] || x.fuel} | ${x.mw || ''}${x.mwh ? ' / ' + x.mwh + ' MWh' : ''} | ${PLS_ZH[x.status] || x.status} | ${x.cod || '—'} | ${cell(x.owner)} |`;
+  const table = rows => rows.length ? '| 项目 | 州 | 类型 | MW | AEMO 状态 | COD | 业主 |\n|---|---|---|---|---|---|---|\n' + rows.map(row).join('\n') : '（无）';
+  const upgraded = ch.status.filter(x => x.to === 'committed');
+  const other = ch.status.filter(x => x.to !== 'committed');
+  const byState = a => { const m = {}; a.forEach(x => { m[x.state] = (m[x.state] || 0) + 1; }); return Object.keys(m).sort((p, q) => m[q] - m[p]).map(k => `${k} ${m[k]}`).join(' · ') || '—'; };
+  const L = [];
+  L.push(`# 澳洲 AEMO 管线季度变化简报 ${ch.prevAsOf || '上一版'} → ${ch.asOf}`, '');
+  L.push(`来源：${ch.source || 'AEMO Generation Information'}（生成 ${ch.generated}）。口径：AEMO 承诺 / 预期 / 拟建，容量为交流铭牌 MW；条目可在澳洲地图 au.html 的 📰 本季变化面板里点开。`, '');
+  L.push('## 摘要', '');
+  L.push(`- 管线 ${ch.counts.prev} → ${ch.counts.now} 条：**新增 ${ch.counts.added} 条**（${mwOf(ch.added)} MW）· **状态变化 ${ch.counts.status} 条**（升级为承诺 ${upgraded.length} 条 / ${mwOf(upgraded)} MW）· 容量变化 ${ch.counts.mw} 条 · 不再出现 ${ch.counts.gone} 条（${mwOf(ch.gone)} MW，投运 / 撤回 / 改名）· 需补坐标 ${ch.counts.needCoord} 条`);
+  L.push(`- 新增按州：${byState(ch.added)}；升级为承诺按州：${byState(upgraded)}`, '');
+  L.push('## 1. 升级为承诺（FID / 开工 —— 设备采购窗口已开）', '', table(upgraded), '');
+  if (other.length) L.push('其他状态变化：' + other.map(x => `${x.name || x.en}（${PLS_ZH[x.from] || x.from} → ${PLS_ZH[x.to] || x.to}）`).join('；'), '');
+  L.push('## 2. 新增项目（承诺 / 预期在前，按容量排序）', '', table(ch.added.slice(0, 40)), ch.added.length > 40 ? `\n… 另有 ${ch.added.length - 40} 条新增（拟建为主），见 au.html 面板。` : '', '');
+  L.push('## 3. 容量变化（≥5 MW）', '', ch.mw.length ? ch.mw.map(x => `- ${x.name || x.en}（${x.state} · ${FUEL_ZH[x.fuel] || x.fuel}）：${x.from} → ${x.to} MW`).join('\n') : '（无）', '');
+  L.push('## 4. 不再出现（已投运 / 撤回 / 改名，需逐条核对）', '', table(ch.gone), '');
+  L.push('## 5. 需补坐标（仍放在州质心）', '', ch.needCoord.length ? ch.needCoord.join('、') : '（无）', '');
+  L.push('## BD 提示', '');
+  L.push('- 升级为承诺的项目 = FID 已过、总包 / BoP 正在定标：储能 → 储能升压一体化舱 / E-house；风光 → 预制舱变电站 + 集电线路开关设备；燃气调峰 → 中压开关柜。');
+  L.push('- 优先跟进 COD 落在 2027–2029 且 EPC 未公开的新增承诺 / 预期项目（线索分见 au.html 🎯 线索榜）；已授标的转为找 EPC 分包与升压站成套机会。');
+  L.push('- 「不再出现」里的承诺项目多为已投运，可转入客情经营（备件 / 扩容）；拟建项目消失多为撤回或改名，改名请在上一版条目加 aemo 别名后重跑导入。');
+  return L.join('\n') + '\n';
+}
+
 /* ---------- 输出 ---------- */
 function writeOut(file, items, asOf, source) {
   const ORDER = { committed: 0, anticipated: 1, proposed: 2, existing: 3 };
@@ -433,16 +509,17 @@ ${ordered.map(o => '    ' + JSON.stringify(o) + ',').join('\n')}
 /* ---------- CLI ---------- */
 function main() {
   const argv = process.argv.slice(2);
-  const opt = { wem: false, includeExisting: false, dry: false, out: path.join(__dirname, '..', 'js', 'au-pipeline.js'), prev: null, asof: null, sheet: null, kci: null, gazetteer: path.join(__dirname, 'data', 'au-localities.csv'), main: true };
+  const opt = { wem: false, includeExisting: false, dry: false, out: path.join(__dirname, '..', 'js', 'au-pipeline.js'), prev: null, asof: null, prevAsof: null, sheet: null, kci: null, gazetteer: path.join(__dirname, 'data', 'au-localities.csv'), main: true, changes: path.join(__dirname, '..', 'js', 'au-changes.js'), brief: null };
   const files = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--wem') opt.wem = true; else if (a === '--include-existing') opt.includeExisting = true; else if (a === '--dry') opt.dry = true;
     else if (a === '--out') opt.out = argv[++i]; else if (a === '--prev') opt.prev = argv[++i]; else if (a === '--asof') opt.asof = argv[++i]; else if (a === '--sheet') opt.sheet = argv[++i];
     else if (a === '--kci') opt.kci = argv[++i]; else if (a === '--gazetteer') opt.gazetteer = argv[++i]; else if (a === '--no-gazetteer') opt.gazetteer = null; else if (a === '--no-main') opt.main = false;
+    else if (a === '--changes') opt.changes = argv[++i]; else if (a === '--no-changes') opt.changes = null; else if (a === '--brief') opt.brief = argv[++i]; else if (a === '--no-brief') opt.brief = false; else if (a === '--prev-asof') opt.prevAsof = argv[++i];
     else files.push(a);
   }
-  if (!files.length) { console.error('用法：node scripts/import-aemo.js <AEMO Generation Information.xlsx|.csv> [--kci <KCI.xlsx>] [--sheet 名] [--wem] [--asof YYYY-MM] [--include-existing] [--dry] [--out 路径] [--prev 上一版路径] [--gazetteer csv|--no-gazetteer] [--no-main]'); process.exit(1); }
+  if (!files.length) { console.error('用法：node scripts/import-aemo.js <AEMO Generation Information.xlsx|.csv> [--kci <KCI.xlsx>] [--sheet 名] [--wem] [--asof YYYY-MM] [--include-existing] [--dry] [--out 路径] [--prev 上一版路径] [--gazetteer csv|--no-gazetteer] [--no-main] [--changes js/au-changes.js|--no-changes] [--brief 路径|--no-brief] [--prev-asof YYYY-MM]'); process.exit(1); }
   const src = files[0];
   if (!fs.existsSync(src)) { console.error('文件不存在：' + src); process.exit(1); }
   let rows;
@@ -458,6 +535,7 @@ function main() {
   }
   const items = convertRows(rows, opt);
   const prev = loadPrev(opt.prev || opt.out);
+  const prevAsOf = opt.prevAsof || loadPrevAsOf(opt.prev || opt.out);
   const nodes = loadNodes(path.join(__dirname, '..', 'js', 'au-grid.js'));
   const kci = opt.kci ? loadKci(opt.kci) : {};
   if (opt.kci) console.log('KCI：' + Object.keys(kci).length + ' 个 KCI ID，' + Object.values(kci).filter(k => k.locs.length).length + ' 个带位置描述');
@@ -478,9 +556,21 @@ function main() {
   removed.forEach(p => console.log(`  − ${p.en}（${p.status}）— 本版未出现（投运 / 撤回 / 改名？改名请在上一版条目加 aemo:"<AEMO Site Name>" 后重跑）`));
   if (needCoord.length) console.log(`需补坐标（暂放接入站或州质心，approx:true）：\n  ` + needCoord.map(it => it.id + ' ' + it.en + (it.connNode ? ' @' + it.connNode : '') + (it.locality ? ' 「' + it.locality + '」' : '')).join('\n  '));
   if (opt.dry) { console.log('--dry：不写文件'); return; }
-  writeOut(opt.out, items, asOf, (opt.wem ? 'AEMO WEM Generation Information' : 'AEMO NEM Generation Information') + ' · ' + path.basename(src) + (opt.kci ? ' + KCI ' + path.basename(opt.kci) : '') + (gaz ? ' · 地名定位 scripts/data/au-localities.csv' : ''));
+  const source = (opt.wem ? 'AEMO WEM Generation Information' : 'AEMO NEM Generation Information') + ' · ' + path.basename(src) + (opt.kci ? ' + KCI ' + path.basename(opt.kci) : '') + (gaz ? ' · 地名定位 scripts/data/au-localities.csv' : '');
+  writeOut(opt.out, items, asOf, source);
   console.log('写出 ' + opt.out);
+  if (opt.changes) {
+    const ch = buildChanges(prev, items, { asOf, prevAsOf, source, removed, needCoord });
+    writeChanges(opt.changes, ch);
+    console.log('写出 ' + opt.changes + '（本季变化：新增 ' + ch.counts.added + ' · 状态 ' + ch.counts.status + ' · 容量 ' + ch.counts.mw + ' · 消失 ' + ch.counts.gone + '）');
+    if (opt.brief !== false) {
+      const bf = opt.brief || path.join(__dirname, '..', 'data-src', 'aemo', 'brief-' + asOf + '.md');
+      try { fs.mkdirSync(path.dirname(bf), { recursive: true }); } catch (e) { /* exists */ }
+      fs.writeFileSync(bf, buildBrief(ch));
+      console.log('写出 ' + bf);
+    }
+  }
 }
 
-module.exports = { unzip, parseWorkbook, parseCSV, findHeader, mapColumns, convertRows, normStatus, normFuel, normCod, normKey, cleanOwner, parseKci, loadKci, parseGazetteer, loadGazetteer, geocode, stripTypeWords, zhName, loadMainProjects, enrich, diff, writeOut };
+module.exports = { unzip, parseWorkbook, parseCSV, findHeader, mapColumns, convertRows, normStatus, normFuel, normCod, normKey, cleanOwner, parseKci, loadKci, parseGazetteer, loadGazetteer, geocode, stripTypeWords, zhName, loadMainProjects, enrich, diff, writeOut, buildChanges, writeChanges, buildBrief, loadPrevAsOf };
 if (require.main === module) main();
