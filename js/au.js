@@ -175,7 +175,7 @@
     minYear: MIN_YEAR, maxYear: MAX_YEAR, recentOnly: false, q: '',
     layers: { grid: true, planned: true, nodes: true, coal: true, projects: true, fill: true, pipe: true, rez: true },
     plStatus: new Set(['committed', 'anticipated']), plFuelOff: new Set(),   // 🧭 管线：默认只显示承诺 + 预期（拟建按需打开）
-    plWin: false, plHot: false, plUp: false,   // 🧭 快捷筛选：⏰ 采购窗口进行中 / 🔥 线索分 ≥75 / ⬆️ 本季升级为承诺
+    plWin: false, plHot: false, plUp: false, plMine: false,   // 🧭 快捷筛选：⏰ 采购窗口进行中 / 🔥 线索分 ≥75 / ⬆️ 本季升级为承诺 / 📋 我的线索
     kvOff: new Set(), lang: 'zh',
     basemap: null,   // 底图 key（dark | osm | amap；null = 按时区默认）
     card: null,   // {kind:'project'|'coal'|'state'|'line', id}
@@ -230,6 +230,11 @@
     quickWin: ['⏰ 采购窗口进行中', '⏰ Window open now'], quickHot: ['🔥 线索分 ≥75', '🔥 Score ≥75'], quickUp: ['⬆️ 本季升级为承诺', '⬆️ Upgraded this quarter'],
     quickHint: ['本月落在 COD 前 24→9 个月之间 = 设备定标期', 'this month falls 24→9 months before COD = equipment award period'],
     upTag: ['⬆️ 本季升级为承诺', '⬆️ Upgraded to committed this quarter'],
+    track: ['跟进', 'Follow-up'], trackNone: ['尚未记录 · 填好保存即存在本机浏览器', 'Not tracked yet · saved in this browser'], trackLocal: ['仅存本机浏览器，可在线索榜 ⤓ 备份 / ⤒ 恢复', 'Stored in this browser only; back up / restore from the leads board'],
+    trackSave: ['💾 保存跟进', '💾 Save'], trackDel: ['🗑 删除记录', '🗑 Delete'], trackWho: ['负责人', 'Owner'], trackNext: ['下次动作日期', 'Next action date'], trackNote: ['备注：联系人 / 需求 / 下一步', 'Notes: contact / needs / next step'],
+    trackSaved: ['📋 跟进已保存（本机）', '📋 Follow-up saved (local)'], trackDeleted: ['已删除跟进记录', 'Follow-up deleted'], unassigned: ['— 跟进状态', '— status'],
+    quickMine: ['📋 我的线索', '📋 My leads'], trackSum: ['📋 跟进中 {n} · ⏰ 7 天内到期 {d}', '📋 Tracking {n} · ⏰ due within 7 days {d}'],
+    trkExp: ['⤓ 备份跟进 (JSON)', '⤓ Back up follow-ups'], trkImp: ['⤒ 恢复跟进', '⤒ Restore'], trkImpOk: ['已合并 {n} 条跟进记录', 'Merged {n} follow-ups'], trkImpBad: ['文件不是有效的跟进备份', 'Not a valid follow-up backup'], trkImpAsk: ['合并 {n} 条跟进记录到本机？（同一项目以较新记录为准）', 'Merge {n} follow-ups into this browser? (newer record wins per project)'],
     fresh: ['数据截至', 'Data as of'], freshStale: ['已 {n} 个月未更新，AEMO 每季度发布新表，请运行 scripts/import-aemo.js', '{n} months old — AEMO publishes quarterly; run scripts/import-aemo.js'],
     basemap: ['底图', 'Base map'], tileFail: ['底图瓦片加载失败：可在「图层 → 底图」切换 OSM / 高德', 'Base-map tiles failed to load — switch the base map under Layers'],
   };
@@ -465,6 +470,7 @@
     { key: 'win', st: 'plWin', t: 'quickWin', fn: it => windowOpen(it) },   // 惰性引用：windowOpen 在下文评分段定义
     { key: 'hot', st: 'plHot', t: 'quickHot', fn: it => leadScore(it).score >= 75 },
     { key: 'up', st: 'plUp', t: 'quickUp', fn: it => UPGRADED.has(it.id) },
+    { key: 'mine', st: 'plMine', t: 'quickMine', fn: it => trackActive(it.id) },   // 📋 有本机跟进记录（不跟进除外）
   ];
   const passQuick = it => PL_QUICK.every(q => !state[q.st] || q.fn(it));
   const passPipe = it => passPipeBase(it) && passQuick(it);
@@ -681,6 +687,44 @@
   }
   const pageUrl = () => (typeof location !== 'undefined' && location.href ? location.href.split('#')[0] : 'au.html');
 
+  /* ---------- 📋 线索跟进（本地轻量 CRM）----------
+   * 每条管线可记 跟进状态 / 负责人 / 下次动作日期 / 备注，存本机 localStorage（au.leads.v1；隐私模式 / Node 退化为内存），
+   * 线索榜可 JSON 备份 / 恢复（跨设备迁移、同事合并，同一项目以较新记录为准），CSV 导出带跟进列；
+   * 「📋 我的线索」快捷筛选 + 右栏「跟进中 N · 7 天内到期 M」提醒。 */
+  const TRACK_KEY = 'au.leads.v1', TRACK_VER = 1;
+  const TRACK_ST = [['todo', '待联系', 'To contact'], ['contacted', '已联系', 'Contacted'], ['quoted', '已报价', 'Quoted'], ['won', '赢单', 'Won'], ['lost', '丢单', 'Lost'], ['skip', '不跟进', 'Skip']];
+  const TRACK_OPEN = new Set(['todo', 'contacted', 'quoted']);
+  const trackStName = k => { const r = TRACK_ST.find(x => x[0] === k); return r ? (en() ? r[2] : r[1]) : (k || ''); };
+  const hasLS = () => { try { return typeof localStorage !== 'undefined' && !!localStorage; } catch (e) { return false; } };
+  function loadTrack() { try { if (hasLS()) { const o = JSON.parse(localStorage.getItem(TRACK_KEY) || 'null'); if (o && o.items && typeof o.items === 'object') return o.items; } } catch (e) { /* 损坏 / 隐私模式 */ } return {}; }
+  const TRACK = loadTrack();
+  function saveTrack() { try { if (hasLS()) localStorage.setItem(TRACK_KEY, JSON.stringify({ ver: TRACK_VER, items: TRACK })); } catch (e) { /* 配额 / 隐私模式：仅内存 */ } }
+  const cleanRec = r => { const o = {}; ['st', 'who', 'next', 'note'].forEach(k => { const v = String((r && r[k]) || '').trim(); if (v) o[k] = v.slice(0, k === 'note' ? 600 : 80); }); if (o.st && !TRACK_ST.some(x => x[0] === o.st)) delete o.st; if (o.next && !/^\d{4}-\d{2}-\d{2}$/.test(o.next)) delete o.next; return o; };
+  const trackOf = id => TRACK[id] || null;
+  function setTrack(id, rec) { const o = cleanRec(rec); if (!Object.keys(o).length) delete TRACK[id]; else { o.t = new Date().toISOString().slice(0, 10); TRACK[id] = o; } saveTrack(); return TRACK[id] || null; }
+  function delTrack(id) { delete TRACK[id]; saveTrack(); }
+  const todayStr = () => NOW.toISOString().slice(0, 10);
+  // 到期：有下次动作日期、状态仍在推进（待联系 / 已联系 / 已报价）且日期 ≤ 今天 + days（过期也算）
+  const dueIn = (rec, days) => { if (!rec || !rec.next || (rec.st && !TRACK_OPEN.has(rec.st))) return false; const d = new Date(rec.next + 'T00:00:00'); return !isNaN(d) && d <= new Date(NOW.getTime() + days * 864e5); };
+  const trackActive = id => { const r = TRACK[id]; return !!r && r.st !== 'skip'; };
+  function trackCounts() { let n = 0, due = 0; Object.keys(TRACK).forEach(id => { if (!PIPE_BY_ID[id]) return; if (trackActive(id)) n++; if (dueIn(TRACK[id], 7)) due++; }); return { n, due }; }
+  function trackCell(it) {
+    const r = trackOf(it.id); if (!r) return '<span class="mini">—</span>';
+    return (r.st ? '<span class="tag tr-' + r.st + '">' + esc(trackStName(r.st)) + '</span>' : '')
+      + ((r.next || r.who) ? '<div class="mini">' + (r.next ? (dueIn(r, 7) ? '<b style="color:#ffb3c1">⏰ ' + esc(r.next) + '</b>' : '⏰ ' + esc(r.next)) : '') + (r.who ? (r.next ? ' · ' : '') + esc(r.who) : '') + '</div>' : '');
+  }
+  function exportTrack() { const t = JSON.stringify({ ver: TRACK_VER, exported: todayStr(), source: pageUrl(), items: TRACK }, null, 1); if (download('au-leads-track-' + todayStr() + '.json', t, 'application/json')) toast(en() ? 'Follow-ups backed up (JSON)' : '已备份跟进记录 (JSON)'); return t; }
+  function importTrackText(text, opts) {
+    let o = null; try { o = JSON.parse(text); } catch (e) { o = null; }
+    const items = o && o.items && typeof o.items === 'object' ? o.items : null;
+    if (!items) { toast(L_('trkImpBad')); return 0; }
+    const ids = Object.keys(items).filter(id => items[id] && typeof items[id] === 'object');
+    if (!(opts && opts.silent) && typeof confirm === 'function' && !confirm(L_('trkImpAsk').replace('{n}', ids.length))) return 0;
+    let n = 0;
+    ids.forEach(id => { const inc = cleanRec(items[id]); if (!Object.keys(inc).length) return; const cur = TRACK[id]; if (cur && cur.t && items[id].t && String(items[id].t) < String(cur.t)) return; inc.t = String(items[id].t || todayStr()).slice(0, 10); TRACK[id] = inc; n++; });
+    saveTrack(); toast(L_('trkImpOk').replace('{n}', n)); render(); return n;
+  }
+
   /* ---------- 🎯 线索榜 ---------- */
   function leadRow(it, i) {
     const s = leadScore(it), f = fuelOf(it.fuel), pj = it.projId ? PROJ_BY_ID[it.projId] : null;
@@ -689,6 +733,7 @@
       + td(L_('pCountry'), esc(stShort(it.state)), 'nw') + td(L_('pFuel'), '<span style="color:' + f.color + '">' + f.icon + '</span> ' + esc(en() ? f.en : f.zh), 'nw') + td(L_('pMw'), esc(mwFmt(it) || '—'), 'num') + td('COD', esc(it.cod || '—'), 'nw')
       + td(L_('pAemo'), '<span class="tag ' + it.status + '">' + esc(plStatusName(it.status)) + '</span>') + td(L_('lEpc'), '<span class="tag' + (s.epc === '未招标' || s.epc === '未公开' ? ' open' : '') + '">' + esc(epcName(s.epc)) + '</span>') + td(L_('lWindow'), esc(w), 'num') + td(L_('lProduct'), esc(en() ? s.product.en : s.product.zh))
       + td(L_('lScore'), '<span class="sc ' + scoreCls(s.score) + '" title="' + esc((en() ? 'product ' : '产品 ') + s.prod + ' + ' + (en() ? 'window ' : '窗口 ') + s.win + '（' + (s.winWhy || '') + '）+ ' + (en() ? 'status/EPC ' : '状态/EPC ') + s.st + '（' + (s.stWhy || '') + '）') + '">' + s.score + '</span>', 'num')
+      + td(L_('track'), trackCell(it))
       + td('', '<button data-plid="' + esc(it.id) + '">' + L_('lCard') + '</button>' + (pj ? '<a href="coach.html#project=' + pj.id + '" target="_blank" rel="noopener" title="' + esc(en() ? 'Open this project in the sales coach' : '用这个项目开一局销售陪练') + '">' + L_('lCoach') + '</a>' : ''), 'act') + '</tr>';
   }
   function showLeads() {
@@ -697,17 +742,22 @@
     const n = st => top.filter(i => i.status === st).length, openN = top.filter(i => { const e = leadScore(i).epc; return e === '未招标' || e === '未公开'; }).length;
     const byProd = {}; top.forEach(it => { const k = en() ? leadScore(it).product.en : leadScore(it).product.zh; byProd[k] = (byProd[k] || 0) + 1; });
     const prodTop = Object.keys(byProd).sort((a, b) => byProd[b] - byProd[a]).slice(0, 3).map(k => esc(k) + ' <b style="display:inline;font-size:12px">' + byProd[k] + '</b>').join(' · ');
-    const html = mhead(L_('leadsT'), L_('leadsHint') + ' · ' + fmtNum(all.length) + (en() ? ' candidates' : ' 条候选') + (PIPE_ASOF ? ' · AEMO ' + PIPE_ASOF : ''), '<button id="m-csv">' + L_('leadsCsv') + '</button>' + navBtns('leads'))
+    const tc = trackCounts();
+    const html = mhead(L_('leadsT'), L_('leadsHint') + ' · ' + fmtNum(all.length) + (en() ? ' candidates' : ' 条候选') + (PIPE_ASOF ? ' · AEMO ' + PIPE_ASOF : '') + (tc.n ? ' · ' + L_('trackSum').replace('{n}', tc.n).replace('{d}', tc.due) : ''),
+      '<button id="m-csv">' + L_('leadsCsv') + '</button><button id="m-trk-exp" title="' + esc(L_('trackLocal')) + '">' + L_('trkExp') + '</button><button id="m-trk-imp">' + L_('trkImp') + '</button><input type="file" id="m-trk-file" accept=".json,application/json" hidden>' + navBtns('leads'))
       + '<div class="m-body"><div class="m-kpis"><div><b>' + fmtNum(top.length) + '</b><span>Top 50 · ' + gw(mw) + '</span></div><div><b style="color:#bfe9d8">' + n('committed') + '</b><span>' + esc(plStatusName('committed')) + '</span></div><div><b style="color:#ffd48a">' + n('anticipated') + '</b><span>' + esc(plStatusName('anticipated')) + '</span></div><div><b style="color:#ffd48a">' + openN + '</b><span>' + (en() ? 'EPC pre-tender / undisclosed' : 'EPC 未招标 / 未公开') + '</span></div><div style="grid-column:span 2"><b style="font-size:13px">' + (prodTop || '—') + '</b><span>' + L_('lProduct') + '</span></div></div>'
-      + '<div class="tbl-wrap"><table class="mtable"><thead><tr><th>#</th><th>' + (en() ? 'Project' : '项目') + '</th><th>' + L_('pCountry') + '</th><th>' + L_('pFuel') + '</th><th class="num">' + L_('pMw') + '</th><th>COD</th><th>' + L_('pAemo') + '</th><th>' + L_('lEpc') + '</th><th class="num">' + L_('lWindow') + '</th><th>' + L_('lProduct') + '</th><th class="num">' + L_('lScore') + '</th><th></th></tr></thead><tbody>' + top.map(leadRow).join('') + '</tbody></table></div>'
+      + '<div class="tbl-wrap"><table class="mtable"><thead><tr><th>#</th><th>' + (en() ? 'Project' : '项目') + '</th><th>' + L_('pCountry') + '</th><th>' + L_('pFuel') + '</th><th class="num">' + L_('pMw') + '</th><th>COD</th><th>' + L_('pAemo') + '</th><th>' + L_('lEpc') + '</th><th class="num">' + L_('lWindow') + '</th><th>' + L_('lProduct') + '</th><th class="num">' + L_('lScore') + '</th><th>' + L_('track') + '</th><th></th></tr></thead><tbody>' + top.map(leadRow).join('') + '</tbody></table></div>'
       + (top.length ? '' : '<div class="empty">' + L_('noData') + '</div>')
       + '<p class="m-note">' + L_('leadsNote') + '</p></div>';
     openModal(html, 'leads');
     const b = $('m-csv'); if (b) b.addEventListener('click', () => exportLeadsCSV(top));
+    const te = $('m-trk-exp'); if (te) te.addEventListener('click', exportTrack);
+    const ti = $('m-trk-imp'), tf = $('m-trk-file');
+    if (ti && tf) { ti.addEventListener('click', () => { if (tf.click) tf.click(); }); tf.addEventListener('change', () => { const f = tf.files && tf.files[0]; if (!f || typeof FileReader === 'undefined') return; const rd = new FileReader(); rd.onload = () => { importTrackText(String(rd.result || '')); showLeads(); }; rd.readAsText(f); }); }
   }
   function leadsCSV(items) {
-    const H = ['排名', '线索分', '产品分', '窗口分', '状态EPC分', '项目', '英文名', '州', '类型', 'MW', 'MWh', 'COD', 'AEMO 状态', 'EPC 状态', '采购窗口', '产品匹配', '业主', '接入点', 'TNSP', 'REZ', '经度', '纬度', '示意坐标', '链接', '备注'];
-    const rows = items.map((it, i) => { const s = leadScore(it); return [i + 1, s.score, s.prod, s.win, s.st, it.name, it.en, it.state, fuelOf(it.fuel).zh, it.mw || '', it.mwh || '', it.cod || '', PL_ZH[it.status] || it.status, s.epc, s.window ? ymFmt(s.window.from) + '~' + ymFmt(s.window.to) : '', s.product.zh, it.owner || '', it.connNode || '', it.tnsp || '', it.rez || '', it.coord[0], it.coord[1], it.approx ? '是' : '', pageUrl() + '#pipe=' + it.id, String(it.notes || '').slice(0, 300)]; });
+    const H = ['排名', '线索分', '产品分', '窗口分', '状态EPC分', '项目', '英文名', '州', '类型', 'MW', 'MWh', 'COD', 'AEMO 状态', 'EPC 状态', '采购窗口', '窗口进行中', '本季升级', '产品匹配', '业主', '接入点', 'TNSP', 'REZ', '经度', '纬度', '示意坐标', '链接', '备注', '跟进状态', '负责人', '下次动作', '跟进备注'];
+    const rows = items.map((it, i) => { const s = leadScore(it), tr = trackOf(it.id) || {}; return [i + 1, s.score, s.prod, s.win, s.st, it.name, it.en, it.state, fuelOf(it.fuel).zh, it.mw || '', it.mwh || '', it.cod || '', PL_ZH[it.status] || it.status, s.epc, s.window ? ymFmt(s.window.from) + '~' + ymFmt(s.window.to) : '', s.winOpen ? '是' : '', s.up ? '是' : '', s.product.zh, it.owner || '', it.connNode || '', it.tnsp || '', it.rez || '', it.coord[0], it.coord[1], it.approx ? '是' : '', pageUrl() + '#pipe=' + it.id, String(it.notes || '').slice(0, 300), tr.st ? (TRACK_ST.find(x => x[0] === tr.st) || [])[1] || tr.st : '', tr.who || '', tr.next || '', tr.note || '']; });
     return '﻿' + [H].concat(rows).map(r => r.map(csvCell).join(',')).join('\r\n');
   }
   function exportLeadsCSV(items) { const csv = leadsCSV(items || leads().slice(0, 50)); if (download('au-leads-' + (PIPE_ASOF || 'now') + '.csv', csv, 'text/csv;charset=utf-8')) toast(en() ? 'CSV exported' : '已导出 CSV（可分单给同事）'); return csv; }
@@ -715,8 +765,15 @@
     const el = $('lead-list'), sum = $('leads-sum'); if (!el) return;
     const pool = PIPE.filter(passPipe), ls = leads(pool).slice(0, 10);
     if (sum) sum.textContent = fmtNum(pool.length) + (en() ? ' candidates' : ' 条候选');
-    el.innerHTML = ls.map((it, i) => { const s = leadScore(it), f = fuelOf(it.fuel); return '<div class="row" data-plid="' + esc(it.id) + '" role="button" tabindex="0"><div class="nm"><span style="color:#7b8ca6">' + (i + 1) + '.</span> <span style="color:' + f.color + '">' + f.icon + '</span> ' + esc(en() ? it.en : it.name) + '</div><div class="cd ' + (s.score >= 75 ? 'cool' : s.score >= 55 ? 'warm' : 'tbd') + '" title="' + L_('lScore') + '">' + s.score + '</div><div class="meta">' + esc(stShort(it.state)) + ' · ' + esc(mwFmt(it)) + (it.cod ? ' · COD ' + esc(it.cod) : '') + ' · ' + esc(plStatusName(it.status)) + ' · EPC ' + esc(epcName(s.epc)) + '<br>' + esc(en() ? s.product.en : s.product.zh) + (s.window ? ' · ' + ymFmt(s.window.from) + '~' + ymFmt(s.window.to) : '') + '</div></div>'; }).join('') || '<div class="empty">' + L_('noData') + '</div>';
+    el.innerHTML = ls.map((it, i) => { const s = leadScore(it), f = fuelOf(it.fuel); return '<div class="row" data-plid="' + esc(it.id) + '" role="button" tabindex="0"><div class="nm"><span style="color:#7b8ca6">' + (i + 1) + '.</span> <span style="color:' + f.color + '">' + f.icon + '</span> ' + esc(en() ? it.en : it.name) + '</div><div class="cd ' + (s.score >= 75 ? 'cool' : s.score >= 55 ? 'warm' : 'tbd') + '" title="' + L_('lScore') + '">' + s.score + '</div><div class="meta">' + esc(stShort(it.state)) + ' · ' + esc(mwFmt(it)) + (it.cod ? ' · COD ' + esc(it.cod) : '') + ' · ' + esc(plStatusName(it.status)) + ' · EPC ' + esc(epcName(s.epc)) + '<br>' + esc(en() ? s.product.en : s.product.zh) + (s.window ? ' · ' + ymFmt(s.window.from) + '~' + ymFmt(s.window.to) + (s.winOpen ? ' ⏰' : '') : '') + (function () { const tr = trackOf(it.id); return tr ? ' · <b style="color:#c9a7ff">📋 ' + esc(trackStName(tr.st || 'todo')) + (tr.next ? ' ' + esc(tr.next.slice(5)) : '') + '</b>' : ''; })() + '</div></div>'; }).join('') || '<div class="empty">' + L_('noData') + '</div>';
     el.querySelectorAll('.row').forEach(r => { r.addEventListener('click', () => showPipe(r.dataset.plid)); r.addEventListener('keydown', e => { if (e.key === 'Enter') showPipe(r.dataset.plid); }); });
+    // 📋 跟进中 N · 7 天内到期 M（点击 → 「我的线索」筛选）
+    const ts = $('track-sum');
+    if (ts) {
+      const c = trackCounts();
+      if (c.n) { ts.innerHTML = '<span class="d-link" data-mine="1">' + L_('trackSum').replace('{n}', c.n).replace('{d}', c.due) + '</span>'; ts.hidden = false; if (ts.removeAttribute) ts.removeAttribute('hidden'); const lk = ts.querySelector('[data-mine]'); if (lk) lk.addEventListener('click', () => { state.plMine = !state.plMine; syncUI(); render(); }); }
+      else { ts.innerHTML = ''; ts.hidden = true; if (ts.setAttribute) ts.setAttribute('hidden', ''); }
+    }
   }
 
   /* ---------- 🏢 账户视图 ---------- */
@@ -812,7 +869,7 @@
     const cell = v => String(v == null ? '' : v).replace(/\|/g, '／').replace(/\s*\n+\s*/g, ' ');
     const tbl = (head, rows) => rows.length ? '| ' + head.join(' | ') + ' |\n|' + head.map(() => '---').join('|') + '|\n' + rows.map(r => '| ' + r.map(cell).join(' | ') + ' |').join('\n') : '（无）';
     const coalRows = coalSorted.filter(p => p.state === a && p.status !== 'closed').map(p => { const cd = countdown(p); return [p.name, p.owner || '', p.mw ? fmtNum(p.mw) + ' MW' : '', (p.closeYear || '—') + (p.closeMonth ? '-' + String(p.closeMonth).padStart(2, '0') : ''), cd.txt + (p.closeText ? ' · ' + p.closeText : '')]; });
-    const top = leads(ps).slice(0, 10).map((it, i) => { const sc = leadScore(it); return [i + 1, it.name, fuelOf(it.fuel).zh, mwFmt(it), it.cod || '—', PL_ZH[it.status] || it.status, sc.epc, sc.window ? ymFmt(sc.window.from) + '~' + ymFmt(sc.window.to) : '—', sc.product.zh, sc.score]; });
+    const top = leads(ps).slice(0, 10).map((it, i) => { const sc = leadScore(it), tr = trackOf(it.id); return [i + 1, it.name, fuelOf(it.fuel).zh, mwFmt(it), it.cod || '—', PL_ZH[it.status] || it.status, sc.epc, sc.window ? ymFmt(sc.window.from) + '~' + ymFmt(sc.window.to) + (sc.winOpen ? '（进行中）' : '') : '—', sc.product.zh, sc.score, tr ? trackStName(tr.st || 'todo') + (tr.next ? ' ' + tr.next : '') + (tr.who ? ' ' + tr.who : '') : '']; });
     const open = d.ps.filter(p => p.epcStatus === '未招标').sort((x, y) => (y.inv || 0) - (x.inv || 0)).slice(0, 10).map(p => [p.name, (CATEGORIES[p.cat] || {}).short || p.cat, p.status + ' ' + p.year, usd(p), p.owner || '', p.cap || '']);
     const owners = buildAccounts(ps).slice(0, 8).map(o => '- ' + o.name + '：' + o.items.length + ' 条 · 承诺 ' + fmtNum(o.mw.committed) + ' MW · 预期 ' + fmtNum(o.mw.anticipated) + ' MW · 拟建 ' + fmtNum(o.mw.proposed) + ' MW' + (o.top ? ' · 最大：' + o.top.name + '（' + mwFmt(o.top) + '）' : ''));
     const lines = LINES.filter(l => l.status !== 'existing' && (l.nodes || []).some(id => NODE[id] && normState(NODE[id].state) === a)).sort((x, y) => (x.status === 'building' ? 0 : 1) - (y.status === 'building' ? 0 : 1) || (x.year || 9999) - (y.year || 9999)).map(l => '- ' + l.name + '（' + (l.type === 'dc' ? 'HVDC ' : '') + l.kv + ' kV · ' + (l.status === 'building' ? '在建' : '规划') + (l.year ? ' ' + l.year : '') + (l.owner ? ' · ' + l.owner : '') + (l.lengthKm ? ' · ' + fmtNum(l.lengthKm) + ' km' : '') + (l.costAud ? ' · ' + l.costAud : '') + '）');
@@ -835,7 +892,7 @@
     if (sh.policy) L.push('- 州政策：' + sh.policy);
     if (sh.coalExit) L.push('- 煤电退出：' + sh.coalExit);
     L.push('', '## 煤电退役时间表', '', tbl(['电厂', '业主', '在运', '关停', '倒计时 / 口径'], coalRows), '');
-    L.push('## 本季度线索 Top 10（该州管线，按线索分）', '', tbl(['#', '项目', '类型', '装机', 'COD', 'AEMO 状态', 'EPC', '采购窗口', '产品匹配', '线索分'], top), '');
+    L.push('## 本季度线索 Top 10（该州管线，按线索分）', '', tbl(['#', '项目', '类型', '装机', 'COD', 'AEMO 状态', 'EPC', '采购窗口', '产品匹配', '线索分', '跟进'], top), '');
     L.push('## EPC 未招标机会（项目库，按投资）', '', tbl(['项目', '品类', '状态 · 年', '投资', '业主', '规模'], open), '');
     L.push('## 重点业主（该州管线）', '', owners.join('\n') || '（无）', '');
     L.push('## 在建 / 规划输电工程', '', lines.join('\n') || '（无）', '');
@@ -1022,6 +1079,8 @@
     cardEl.querySelectorAll('[data-plid]').forEach(b => b.addEventListener('click', () => showPipe(b.dataset.plid)));
     cardEl.querySelectorAll('[data-zone]').forEach(b => b.addEventListener('click', () => showZone(b.dataset.zone)));
     cardEl.querySelectorAll('[data-brief]').forEach(b => b.addEventListener('click', () => exportStateBrief(b.dataset.brief)));
+    cardEl.querySelectorAll('[data-tr-save]').forEach(b => b.addEventListener('click', () => { const id = b.dataset.trSave; const v = k => { const e = $(k); return e ? e.value : ''; }; setTrack(id, { st: v('tr-st'), who: v('tr-who'), next: v('tr-next'), note: v('tr-note') }); toast(L_('trackSaved')); render(); showPipe(id, { noFly: true }); }));
+    cardEl.querySelectorAll('[data-tr-del]').forEach(b => b.addEventListener('click', () => { const id = b.dataset.trDel; delTrack(id); toast(L_('trackDeleted')); render(); showPipe(id, { noFly: true }); }));
     cardEl.querySelectorAll('[data-more]').forEach(b => b.addEventListener('click', () => { const ul = b.previousElementSibling; if (!ul || !ul.classList) return; const open = ul.classList.toggle('open'); b.textContent = open ? L_('less') : L_('more').replace('{n}', b.dataset.more); }));
     writeHash();
   }
@@ -1088,6 +1147,14 @@
       + '<div class="d-grid">' + cell(L_('pMw'), esc(mwFmt(it) || '—') + (it.siteMw ? ' · ' + L_('pSiteMw') + ' ' + fmtNum(it.siteMw) + ' MW' : '')) + cell(L_('pCod'), esc(it.cod || '—')) + cell(L_('pOwner'), esc(it.owner || '—')) + cell(L_('pAemo'), esc(plStatusName(it.status)) + (it.region ? ' · ' + esc(it.region) : '') + (it.kci ? ' · KCI ' + esc(it.kci) : ''))
       + cell(L_('pConn'), esc([it.connNode, it.tnsp].filter(Boolean).join(' · ') || '—')) + cell(L_('pRez'), z ? '<span class="d-link" data-zone="' + esc(z.key) + '">' + esc(en() ? (z.en || z.name) : z.name) + ' ▸</span>' : esc(it.rez || '—')) + '</div>'
       + (function () { const s = leadScore(it); return '<div class="d-strip" style="border-color:rgba(46,230,166,0.4);background:rgba(46,230,166,0.07)"><span class="dp-tag" style="color:#bfe9d8">🎯 ' + L_('lScore') + ' ' + s.score + '</span>' + esc(en() ? s.product.en : s.product.zh) + ' · ' + L_('lWindow') + ' ' + (s.window ? ymFmt(s.window.from) + ' ~ ' + ymFmt(s.window.to) : '—') + ' · EPC ' + esc(epcName(s.epc)) + '</div>'; })()
+      + (function () {   // 📋 本机跟进记录：状态 / 负责人 / 下次动作 / 备注
+        const tr = trackOf(it.id);
+        const opt = '<option value="">' + L_('unassigned') + '</option>' + TRACK_ST.map(x => '<option value="' + x[0] + '"' + (tr && tr.st === x[0] ? ' selected' : '') + '>' + esc(en() ? x[2] : x[1]) + '</option>').join('');
+        return '<div class="d-track"><div class="dt-h"><span class="dp-tag">📋 ' + L_('track') + '</span>' + (tr ? (tr.st ? '<span class="tag tr-' + tr.st + '">' + esc(trackStName(tr.st)) + '</span>' : '') + (tr.next ? '<small' + (dueIn(tr, 7) ? ' style="color:#ffb3c1;font-weight:700"' : '') + '>⏰ ' + esc(tr.next) + '</small>' : '') + (tr.t ? '<small>· ' + esc(tr.t) + '</small>' : '') : '<small>' + L_('trackNone') + '</small>') + '</div>'
+          + '<div class="dt-row"><select id="tr-st" aria-label="' + L_('track') + '">' + opt + '</select><input id="tr-who" placeholder="' + L_('trackWho') + '" value="' + esc(tr && tr.who || '') + '" maxlength="80" aria-label="' + L_('trackWho') + '"><input id="tr-next" type="date" value="' + esc(tr && tr.next || '') + '" aria-label="' + L_('trackNext') + '"></div>'
+          + '<textarea id="tr-note" rows="2" maxlength="600" placeholder="' + L_('trackNote') + '" aria-label="' + L_('trackNote') + '">' + esc(tr && tr.note || '') + '</textarea>'
+          + '<div class="dt-act"><button data-tr-save="' + esc(it.id) + '">' + L_('trackSave') + '</button>' + (tr ? '<button data-tr-del="' + esc(it.id) + '">' + L_('trackDel') + '</button>' : '') + '<small>' + L_('trackLocal') + '</small></div></div>';
+      })()
       + (it.approx ? '<div class="d-strip" style="border-color:rgba(255,176,46,0.45);background:rgba(255,176,46,0.08)">' + L_('pApprox') + '</div>' : '')
       + (it.tech ? '<div class="d-strip"><span class="dp-tag">' + L_('pFuel') + '</span>' + esc(it.tech) + (it.locality ? ' · ' + esc(it.locality) : '') + '</div>' : '')
       + (it.mix ? '<div class="d-strip"><span class="dp-tag">' + L_('pMix') + '</span>' + Object.keys(it.mix).map(f => { const ff = fuelOf(f); return ff.icon + ' ' + esc(en() ? ff.en : ff.zh) + ' ' + fmtNum(it.mix[f]) + ' MW'; }).join(' + ') + '</div>' : '')
@@ -1255,7 +1322,7 @@
     state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.recentOnly = false; state.q = ''; state.kvOff = new Set();
     state.layers = { grid: true, planned: true, nodes: true, coal: true, projects: true, fill: true, pipe: true, rez: true };
     state.plStatus = new Set(['committed', 'anticipated']); state.plFuelOff = new Set(); state.plOwner = null;
-    state.plWin = false; state.plHot = false; state.plUp = false;
+    state.plWin = false; state.plHot = false; state.plUp = false; state.plMine = false;
     const q = $('q'); if (q) q.value = '';
   }
   // 唯一的「state → 控件视觉」同步点（重置 / 应用 hash / 切语言后都走这里）
@@ -1321,7 +1388,7 @@
     const plsDef = state.plStatus.size === 2 && state.plStatus.has('committed') && state.plStatus.has('anticipated');
     if (!plsDef) p.set('pls', [...state.plStatus].join('~') || '-');
     if (state.plFuelOff.size) p.set('plf', [...state.plFuelOff].join('~'));
-    if (state.plWin) p.set('plw', '1'); if (state.plHot) p.set('plh', '1'); if (state.plUp) p.set('plu', '1');
+    if (state.plWin) p.set('plw', '1'); if (state.plHot) p.set('plh', '1'); if (state.plUp) p.set('plu', '1'); if (state.plMine) p.set('plm', '1');
     if (state.lang === 'en') p.set('lang', 'en');
     if (state.basemap && state.basemap !== BASE_DEFAULT) p.set('bm', state.basemap);
     if (state.plOwner) p.set('own', state.plOwner);
@@ -1346,7 +1413,7 @@
     if (p.has('kvoff')) state.kvOff = new Set(p.get('kvoff').split('~').filter(Boolean));
     if (p.has('pls')) state.plStatus = new Set(p.get('pls').split('~').filter(k => PL_STATUS.indexOf(k) >= 0));
     if (p.has('plf')) state.plFuelOff = new Set(p.get('plf').split('~').filter(Boolean));
-    if (p.has('plw')) state.plWin = true; if (p.has('plh')) state.plHot = true; if (p.has('plu')) state.plUp = true;
+    if (p.has('plw')) state.plWin = true; if (p.has('plh')) state.plHot = true; if (p.has('plu')) state.plUp = true; if (p.has('plm')) state.plMine = true;
     if (p.get('lang') === 'en') state.lang = 'en';
     if (p.has('bm') && BASES.some(b => b.key === p.get('bm'))) state.basemap = p.get('bm');
     if (p.has('own')) state.plOwner = p.get('own') || null;
@@ -1382,5 +1449,6 @@
 
   window.__AU__ = { state, PROJECTS, LINES, NODE, COAL, STATES, PIPE, ZONES, ZONE_STAT, CHANGES, render, filtered, filteredPipe, stateOf, zoneOf, countdown, showDetail, showCoal, showState, showLine, showPipe, showZone, stateToHash, applyHash, applyLang, resetState, syncUI, kpis, stateStats,
     leadScore, leads, leadsCSV, exportLeadsCSV, epcHintOf, ownerGroup, buildAccounts, buildEpcAccounts, filterOwner, showLeads, showAccounts, showChanges, buildChangesBrief, exportBrief, buildStateBrief, exportStateBrief, openModal, closeModal, openView,
-    windowOpen, UPGRADED, PL_QUICK, passPipeBase, normTnsp, renderFresh, applyBase, BASES, closeDrawers, toggleDrawer, clampList };
+    windowOpen, UPGRADED, PL_QUICK, passPipeBase, normTnsp, renderFresh, applyBase, BASES, closeDrawers, toggleDrawer, clampList,
+    TRACK, TRACK_ST, trackOf, setTrack, delTrack, trackCounts, trackActive, dueIn, exportTrack, importTrackText };
 })();

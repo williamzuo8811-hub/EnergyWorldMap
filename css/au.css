@@ -155,6 +155,25 @@ button { font-family: inherit; }
 .chip.pq-win.on { background: rgba(255,176,46,0.14); border-color: rgba(255,176,46,0.55); color: #ffd48a; }
 .chip.pq-hot.on { background: rgba(255,92,122,0.14); border-color: rgba(255,92,122,0.5); color: #ffb3c1; }
 .chip.pq-up.on { background: rgba(46,230,166,0.14); border-color: rgba(46,230,166,0.55); color: #bfe9d8; }
+.chip.pq-mine.on { background: rgba(201,167,255,0.16); border-color: rgba(201,167,255,0.6); color: #e2d2ff; }
+/* 📋 线索跟进（本地 CRM）：卡片里的记录条 + 状态标签 + 右栏汇总 */
+.card .d-track { margin: 10px 14px 0; padding: 9px 11px; border-radius: 10px; background: rgba(201,167,255,0.08); border: 1px solid rgba(201,167,255,0.32); font-size: 12.5px; }
+.card .d-track .dt-h { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 7px; }
+.card .d-track .dt-h .dp-tag { color: #e2d2ff; } .card .d-track .dt-h small { color: var(--txt-faint); font-size: 11px; }
+.card .d-track .dt-row { display: grid; grid-template-columns: 1.2fr 1fr 1.1fr; gap: 6px; margin-bottom: 6px; }
+.card .d-track select, .card .d-track input, .card .d-track textarea { width: 100%; min-width: 0; padding: 7px 8px; font-size: 12.5px; color: var(--txt); background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; font-family: inherit; color-scheme: dark; outline: none; }
+.card .d-track select:focus, .card .d-track input:focus, .card .d-track textarea:focus { border-color: #c9a7ff; }
+.card .d-track textarea { resize: vertical; min-height: 44px; display: block; }
+.card .d-track .dt-act { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+.card .d-track .dt-act button { padding: 7px 11px; font-size: 12px; font-weight: 700; color: var(--txt); background: rgba(201,167,255,0.16); border: 1px solid rgba(201,167,255,0.5); border-radius: 9px; cursor: pointer; }
+.card .d-track .dt-act button:hover { background: rgba(201,167,255,0.28); }
+.card .d-track .dt-act small { color: var(--txt-faint); font-size: 10.5px; flex: 1 1 100%; }
+.tag.tr-todo { color: #e2d2ff; border-color: rgba(201,167,255,0.5); background: rgba(201,167,255,0.12); }
+.tag.tr-contacted { color: #9fe3ff; border-color: rgba(33,199,255,0.5); background: rgba(33,199,255,0.12); }
+.tag.tr-quoted { color: #ffd48a; border-color: rgba(255,176,46,0.5); background: rgba(255,176,46,0.12); }
+.tag.tr-won { color: #bfe9d8; border-color: rgba(46,230,166,0.5); background: rgba(46,230,166,0.12); }
+.tag.tr-lost, .tag.tr-skip { color: var(--txt-dim); }
+.track-sum { margin-top: 6px; font-size: 12px; color: #e2d2ff; } .track-sum .d-link { color: #e2d2ff; cursor: pointer; text-decoration: underline dotted; }
 /* 底图切换行 */
 .bm-row .bm-lab { font-size: 11px; color: var(--txt-faint); align-self: center; margin-right: 2px; }
 /* 州档案长文要点列表（clampList）：默认只展开前几条 */
@@ -301,6 +320,8 @@ button { font-family: inherit; }
     transform: translateY(12px); padding-bottom: env(safe-area-inset-bottom, 0px); overscroll-behavior: contain; }
   .card.show { transform: translateY(0); }
   .card .d-close, .card .d-share { width: 36px; height: 36px; }
+  .card .d-track .dt-row { grid-template-columns: 1fr 1fr; } .card .d-track .dt-row select { grid-column: 1 / -1; }
+  .card .d-track select, .card .d-track input, .card .d-track textarea { font-size: 15px; padding: 10px 10px; }
   .map-legend:not(.inline) { display: none; }
   .map-legend.inline { display: block; }
   /* 触控目标 ≥44px：筛选芯片 / 州行 / 档案钮 / 品类行 / 开关 / 搜索框 / 列表行 */

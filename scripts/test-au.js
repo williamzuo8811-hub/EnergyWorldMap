@@ -200,6 +200,24 @@ try {
   const h = (() => { AU.state.plWin = true; AU.state.plUp = true; const s = AU.stateToHash(); AU.state.plWin = false; AU.state.plUp = false; return s; })();
   ok(/plw=1/.test(h) && /plu=1/.test(h), '快捷筛选进 hash（plw / plu）');
 } catch (e) { fails.push('评分校准 / 快捷筛选抛错：' + (e && e.message)); }
+// 📋 线索跟进（本地 CRM）：Node 无 localStorage → 内存；setTrack / trackOf / delTrack / counts / 我的线索筛选 / CSV 列 / JSON 合并
+try {
+  const id = AU.PIPE[0].id;
+  AU.setTrack(id, { st: 'contacted', who: '张三', next: '2099-01-01', note: '测试' });
+  ok(AU.trackOf(id) && AU.trackOf(id).st === 'contacted' && AU.trackOf(id).who === '张三' && /^\d{4}-\d{2}-\d{2}$/.test(AU.trackOf(id).t), 'setTrack / trackOf（带记录日期）');
+  ok(AU.trackCounts().n >= 1 && AU.trackCounts().due === 0, 'trackCounts：跟进中 ≥1，2099 年不算 7 天内到期');
+  AU.setTrack(id, { st: 'quoted', next: '2020-01-01' }); ok(AU.trackCounts().due >= 1, '过期的下次动作算到期');
+  AU.state.plMine = true; const fm = AU.filteredPipe(); ok(fm.length >= 1 && fm.every(i => AU.trackOf(i.id)), '📋 我的线索筛选只留有跟进记录的管线（' + fm.length + ' 条）'); AU.state.plMine = false;
+  const csv = AU.leadsCSV([AU.PIPE[0]]); ok(/跟进状态/.test(csv) && /已报价/.test(csv) && /窗口进行中/.test(csv), 'CSV 带跟进列 + 窗口进行中 / 本季升级列');
+  ok(AU.setTrack(id, { st: 'bogus', next: 'not-a-date' }) === null && !AU.trackOf(id), 'setTrack 清洗无效值后为空 → 删除记录');
+  const n = AU.importTrackText(JSON.stringify({ ver: 1, items: { [id]: { st: 'quoted', t: '2026-01-01' } } }), { silent: true });
+  ok(n === 1 && AU.trackOf(id).st === 'quoted', 'importTrackText 合并');
+  AU.setTrack(id, { st: 'won' }); const n2 = AU.importTrackText(JSON.stringify({ ver: 1, items: { [id]: { st: 'todo', t: '2020-01-01' } } }), { silent: true });
+  ok(n2 === 0 && AU.trackOf(id).st === 'won', '导入的旧记录不覆盖本机较新记录');
+  AU.delTrack(id); ok(!AU.trackOf(id), 'delTrack');
+  ok(AU.importTrackText('not json', { silent: true }) === 0, '无效备份返回 0');
+  AU.showPipe(AU.PIPE[0].id); AU.render();
+} catch (e) { fails.push('线索跟进抛错：' + (e && e.message)); }
 try { const csv = AU.leadsCSV(AU.leads().slice(0, 50)); const lines = csv.split('\r\n'); ok(csv.charCodeAt(0) === 0xfeff && lines.length === 51 && /^﻿排名,线索分,产品分/.test(csv) && lines[1].split(',').length >= 25, 'leadsCSV：BOM + 表头 + 50 行'); } catch (e) { fails.push('leadsCSV 抛错：' + (e && e.message)); }
 try { const acc = AU.buildAccounts(PIPE); const neoen = acc.find(a => a.name === 'Neoen'); ok(acc.length > 100 && neoen && neoen.items.length >= 10 && neoen.near > 0 && Object.keys(neoen.states).length >= 2, '业主归并：Neoen ≥10 条、跨 ≥2 州（实际 ' + (neoen && neoen.items.length) + '）'); ok(AU.ownerGroup('ACEN RENEWABLES').key === AU.ownerGroup('ACEN Renewables').key && AU.ownerGroup('Edify Energy Pty Ltd').name === 'Edify Energy', 'ownerGroup 别名 / 大小写归并'); } catch (e) { fails.push('buildAccounts 抛错：' + (e && e.message)); }
 try { const ep = AU.buildEpcAccounts(); ok(ep.length >= 8 && ep.some(a => /GenusPlus/.test(a.name)) && ep.some(a => /UGL/.test(a.name)) && ep.every(a => a.n === a.main.length + a.pipe.length), 'EPC 账户：含 GenusPlus / UGL，计数一致（' + ep.length + ' 家）'); } catch (e) { fails.push('buildEpcAccounts 抛错：' + (e && e.message)); }
