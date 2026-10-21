@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="lib/leaflet.css">
   <link rel="stylesheet" href="lib/MarkerCluster.css">
   <link rel="stylesheet" href="lib/MarkerCluster.Default.css">
-  <link rel="stylesheet" href="css/au.css?v=4">
+  <link rel="stylesheet" href="css/au.css?v=5">
 </head>
 <body>
   <!-- 首屏加载态：底图瓦片到位（或超时）后淡出 -->
@@ -195,35 +195,10 @@
   <!-- 库（Leaflet + 聚合）-->
   <script defer src="lib/leaflet.js"></script>
   <script defer src="lib/leaflet.markercluster.js"></script>
-  <!-- 数据层（与 index.html 同序）-->
+  <!-- 数据层：只加载 data.js（META / CATEGORIES / STATUS）+ 预生成的澳洲项目切片（scripts/build-au-slice.js 按 index.html 的真实数据链
+       用 util.buildProjects 同口径装配后筛出澳洲项目；改了 js/data*.js 要重跑，CI --check 防漂移）——省掉 ≈4 MB 全球数据链 -->
   <script defer src="js/data.js"></script>
-  <script defer src="js/data-extra.js"></script>
-  <script defer src="js/data-brazil.js"></script>
-  <script defer src="js/data-mideast.js"></script>
-  <script defer src="js/data-russia-ca.js"></script>
-  <script defer src="js/data-clients.js"></script>
-  <script defer src="js/data-brazil-future.js"></script>
-  <script defer src="js/data-saudi-future.js"></script>
-  <script defer src="js/data-seasia.js"></script>
-  <script defer src="js/data-africa.js"></script>
-  <script defer src="js/data-oceania.js"></script>
-  <script defer src="js/data-europe.js"></script>
-  <script defer src="js/data-nuclear.js"></script>
-  <script defer src="js/data-northam.js"></script>
-  <script defer src="js/data-southasia.js"></script>
-  <script defer src="js/data-china-future.js"></script>
-  <script defer src="js/data-clients2.js"></script>
-  <script defer src="js/data-refresh2606.js"></script>
-  <script defer src="js/data-refresh2606b.js"></script>
-  <script defer src="js/data-refresh2606c.js"></script>
-  <script defer src="js/data-clients3.js"></script>
-  <script defer src="js/data-mining2607.js"></script>
-  <script defer src="js/data-mining2608.js"></script>
-  <script defer src="js/data-australia2608.js"></script>
-  <script defer src="js/data-clients-mining.js"></script>
-  <script defer src="js/data-refresh2607.js"></script>
-  <script defer src="js/data-refresh2608.js"></script>
-  <script defer src="js/progress.js"></script>
+  <script defer src="js/au-projects.js"></script>
   <script defer src="js/pinyin-map.js"></script>
   <script defer src="js/util.js"></script>
   <!-- 澳洲专属层：州界（Natural Earth）+ 州电网公司档案 + 输电骨架 + 燃煤机组 -->
@@ -234,7 +209,7 @@
   <script defer src="js/au-pipeline.js"></script>
   <script defer src="js/au-rez.js"></script>
   <script defer src="js/au-changes.js"></script>
-  <script defer src="js/au.js?v=5"></script>
+  <script defer src="js/au.js?v=6"></script>
   <!-- PWA：注册 Service Worker（离线 + 重访秒开）。失败静默。 -->
   <script>
     if ('serviceWorker' in navigator) {

@@ -229,6 +229,20 @@ try {
   ok(AU.buildStateSVG('ACT').indexOf('新南威尔士州') > 0 && AU.buildStateSVG('XX') === '', '海报：ACT 并入 NSW，未知州返回空');
   ok(typeof AU.exportStatePoster('VIC') === 'string', 'exportStatePoster 在无 Image 环境回退 SVG 不抛错');
 } catch (e) { fails.push('COD 时间轴 / 海报抛错：' + (e && e.message)); }
+// 📦 澳洲项目切片（js/au-projects.js，scripts/build-au-slice.js 生成）必须与全量链现场装配的 PROJECTS 一致：id 集合 + 关键字段逐项比对
+try {
+  const saved = global.window; global.window = {};
+  require(J('js/au-projects.js'));
+  const SL = global.window.AU_PROJECTS; global.window = saved;
+  ok(SL && Array.isArray(SL.items) && SL.count === SL.items.length, '切片结构：{count, items[]}');
+  const live = AU.PROJECTS.slice().sort((a, b) => a.id - b.id), sl = SL.items.slice().sort((a, b) => a.id - b.id);
+  ok(live.length === sl.length && live.every((p, i) => p.id === sl[i].id), '切片 id 集合 = 全量链澳洲项目（' + sl.length + ' vs ' + live.length + '）—— 不一致请运行 node scripts/build-au-slice.js');
+  const KEYS = ['name', 'en', 'country', 'region', 'cat', 'status', 'year', 'inv', 'cap', 'owner', 'epc', 'epcStatus', 'updated', 'progress', 'sub', 'capMW', 'capMWh', 'flagship'];
+  const diff = [];
+  live.forEach((p, i) => { const q = sl[i]; if (!q) return; KEYS.forEach(k => { if (JSON.stringify(p[k] === undefined ? null : p[k]) !== JSON.stringify(q[k] === undefined ? null : q[k])) diff.push(p.id + '.' + k); }); if (JSON.stringify(p.coord) !== JSON.stringify(q.coord)) diff.push(p.id + '.coord'); });
+  ok(!diff.length, '切片字段与全量链一致（差异：' + diff.slice(0, 8).join(', ') + (diff.length > 8 ? ' …' : '') + '）');
+  ok(SL.builtFrom === ((global.window.ENERGY || {}).META || {}).lastUpdated, '切片 builtFrom = META.lastUpdated（' + SL.builtFrom + '）');
+} catch (e) { fails.push('澳洲项目切片比对抛错：' + (e && e.message)); }
 try { const csv = AU.leadsCSV(AU.leads().slice(0, 50)); const lines = csv.split('\r\n'); ok(csv.charCodeAt(0) === 0xfeff && lines.length === 51 && /^﻿排名,线索分,产品分/.test(csv) && lines[1].split(',').length >= 25, 'leadsCSV：BOM + 表头 + 50 行'); } catch (e) { fails.push('leadsCSV 抛错：' + (e && e.message)); }
 try { const acc = AU.buildAccounts(PIPE); const neoen = acc.find(a => a.name === 'Neoen'); ok(acc.length > 100 && neoen && neoen.items.length >= 10 && neoen.near > 0 && Object.keys(neoen.states).length >= 2, '业主归并：Neoen ≥10 条、跨 ≥2 州（实际 ' + (neoen && neoen.items.length) + '）'); ok(AU.ownerGroup('ACEN RENEWABLES').key === AU.ownerGroup('ACEN Renewables').key && AU.ownerGroup('Edify Energy Pty Ltd').name === 'Edify Energy', 'ownerGroup 别名 / 大小写归并'); } catch (e) { fails.push('buildAccounts 抛错：' + (e && e.message)); }
 try { const ep = AU.buildEpcAccounts(); ok(ep.length >= 8 && ep.some(a => /GenusPlus/.test(a.name)) && ep.some(a => /UGL/.test(a.name)) && ep.every(a => a.n === a.main.length + a.pipe.length), 'EPC 账户：含 GenusPlus / UGL，计数一致（' + ep.length + ' 家）'); } catch (e) { fails.push('buildEpcAccounts 抛错：' + (e && e.message)); }

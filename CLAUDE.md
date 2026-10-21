@@ -79,7 +79,7 @@ verify in a browser — there is no build step.
   the ordering rule (committed · EPC undisclosed > committed · awarded > proposed), `leads()` sorted, `leadsCSV` (BOM + 50 rows),
   `epcHintOf` text inference, owner merging (`ownerGroup` / `buildAccounts`: Neoen ≥10 items across ≥2 states), `buildEpcAccounts`
   (GenusPlus / UGL present), the three wide panels + `view` hash round-trip, `filterOwner`, and the `AU_CHANGES` structure (every
-  added / status / mw id resolves in `AU_PIPELINE`, `gone` ids do not, counts match).
+  added / status / mw id resolves in `AU_PIPELINE`, `gone` ids do not, counts match); the **P1–P6 upgrades**: lead-score calibration (未公开 > 无数据 > 示意坐标), `windowOpen`, the ⏰🔥⬆️📋 quick filters + hash, `normTnsp`, 📋 lead tracking (`setTrack`/`trackOf`/`delTrack`/`trackCounts`/`leadsCSV` columns/`importTrackText` merge rules), the COD timeline (`COD_MIN/COD_MAX`, `startPlay`/`pausePlay`), `ADDED`, the state poster (`buildStateSVG`, `exportStatePoster` SVG fallback) and the **slice drift guard** (loads `js/au-projects.js` in a sandbox and compares ids + key fields with the full-chain build).
 - `node scripts/test-coach.js` — after editing `js/coach.js` or `js/coach-content.js` (also asserts the `#project=<id>` deep link). Loads util + data +
   `clients-meta.js` + `coach-content.js` + `coach.js` under a minimal DOM stub and asserts the IIFE init,
   `window.__COACH__` exposure, the opportunity-pool assembly (from `PROJECTS` × `CLIENT_META`), persona /
@@ -90,9 +90,19 @@ verify in a browser — there is no build step.
 
 **Advisory CI checks** (zero-dep, warnings-only unless noted; same workflow):
 
-- `node scripts/check-freshness.js` — `::warning::` when `META.lastUpdated` is >2 months old.
+- `node scripts/check-freshness.js` — `::warning::` when `META.lastUpdated` is >2 months old, when `AU_PIPELINE.asOf`
+  (`js/au-pipeline.js`, AEMO publishes quarterly) is >4 months old, or `AU_COAL.asOf` >6 months.
 - `node scripts/check-budget.js` — size budgets: warn when a single `js/data*.js` >600 KB or the
-  synchronous first-paint script chain >6.5 MB (lazy `i18n-en.js` / `world-110m.js` listed separately).
+  synchronous first-paint script chain >6.5 MB (lazy `i18n-en.js` / `world-110m.js` listed separately); also reports
+  `au.html`'s chain and warns above 2.5 MB (it should be `data.js` + `au-projects.js` only — see `build-au-slice.js`).
+- `node scripts/build-au-slice.js --check` — **gate** (same job): `js/au-projects.js` must equal a fresh build from the
+  global data chain; re-run without `--check` after editing any `js/data*.js` / `progress.js` and commit the result.
+- `node scripts/test-layout.js` — **advisory `layout` job** (real Chromium via `npm i --no-save playwright`; skips with
+  exit 0 when the module is missing locally; `PLAYWRIGHT_CHROMIUM=/path/to/chrome` picks the binary): serves the repo
+  with Node's `http`, opens `au.html` + `index.html` at 390×844 / 844×390 / 1024×768 / 1280×720 / 1440×900 / 1920×1080,
+  aborts tile requests, and asserts no element makes the page wider than the viewport (the AU topbar once pushed the
+  grid 93–253 px wide and `overflow:hidden` silently cropped the right panel and the phone's 📊 FAB), the phone FABs /
+  ⤢ reset button are inside the viewport, the AU filter drawer shows its ✕ close button and closes, and no `pageerror`.
 - `node scripts/check-links.js` — internal `href`/`src`/markdown links must exist on disk (**ERROR**,
   they 404 after deploy); external links are probed with warnings only (401/403/429 = bot-blocked,
   counts as alive; `CHECK_LINKS_EXTERNAL=0` skips). Node ≥18 built-in `fetch`.
@@ -106,6 +116,11 @@ verify in a browser — there is no build step.
   (`npm i --no-save pinyin-pro`); runtime and CI stay zero-dep. Re-run when `validate-data.js`
   5g warns about missing chars after a data batch.
 - `node scripts/build-og.js` — social card + PWA icons (see above).
+- `node scripts/build-au-slice.js` — regenerates `js/au-projects.js` (`window.AU_PROJECTS = {builtFrom, source, count,
+  items[]}`): the ~260 Australian projects assembled by `util.buildProjects` (dedup / progress / `classifySub` /
+  `parseCapacity`, `requireCoord:true`) from `index.html`'s real data chain, sorted by id with sorted keys and no
+  timestamp so diffs stay readable. `au.html` loads only `data.js` + this file (≈300 KB instead of the 4.1 MB chain);
+  `au.js` falls back to a live `buildProjects` when the global is absent (which is how `test-au.js` runs).
 
 ## Architecture
 
@@ -155,8 +170,10 @@ A fourth standalone page, the **澳洲电网与能源动态地图** — linked f
 globe's top bar (`🇦🇺 澳洲`). It is the TGOOD Australia-market BD cockpit: the same data layer **filtered to
 `country === '澳大利亚'`** (~260 projects) plus six Australia-only layers (state borders, transmission backbone, coal
 fleet, state fact sheets, AEMO pipeline, REZ zones). Fully independent of `app.js`; `au.html`
-loads the usual `js/data*.js` + `progress.js` + `pinyin-map.js` + `util.js` chain, then the AU layers, then `js/au.js`
-(one IIFE, debug handle `window.__AU__`, guarded for the `scripts/test-au.js` DOM/Leaflet stub).
+loads `js/data.js` (META / CATEGORIES / STATUS) + the pre-built slice `js/au-projects.js` (see `build-au-slice.js`; not
+the 27-file global chain) + `pinyin-map.js` + `util.js`, then the AU layers, then `js/au.js`
+(one IIFE, debug handle `window.__AU__`, guarded for the `scripts/test-au.js` DOM/Leaflet stub, which loads the full chain
+instead and lets `au.js` fall back to a live `util.buildProjects`).
 
 - **`lib/au-states.js`** (`window.AU_STATES_GEO`): state / territory borders, Natural Earth 1:50m admin-1 (public
   domain; Jervis Bay merged into NSW), generated by `node scripts/build-au-states.js <ne_50m_admin_1_states_provinces.geojson>`
@@ -265,11 +282,53 @@ loads the usual `js/data*.js` + `progress.js` + `pinyin-map.js` + `util.js` chai
   EPC 未招标 projects by investment, top owners (`buildAccounts` on the state's pipeline), building / planned corridors touching the
   state, REZ zones with MW, the quarter's changes for that state (from `AU_CHANGES`), key grid projects, vendor notes, tender portals,
   行动建议 and sources; downloads as `au-<ABBR>-brief-<YYYY-MM>.md`. ACT folds into NSW like everywhere else.
+- **Layout & mobile (P1)**: `.app` uses `grid-template-columns: minmax(0, 1fr)` and the topbar / brand text carry `min-width: 0` —
+  the topbar's nowrap content must never widen the grid (it once pushed the page 93–253 px past the viewport and `overflow:hidden`
+  cropped the right panel and the phone FABs; `scripts/test-layout.js` guards this). Breakpoints: ≤1500 drop the subtitle, ≤1300 KPIs
+  wrap to a second row, ≤900 phone: two-row topbar (`#kpi-toggle` 📊 数据 collapses the KPIs, the action row scrolls horizontally with
+  the `#fresh-pill` 📅 AEMO date chip first), both side panels become `position:fixed` bottom drawers with a `.drawer-head` (handle +
+  ✕ 收起, swipe-down closes) and a `#drawer-backdrop`; `closeDrawers()`/`toggleDrawer()` keep `.app.drawer-open` / `.app.card-open`
+  which hide the FABs; `openCard` and `openModal` close the drawers; the detail card becomes a bottom sheet; the ⤢ reset button moves
+  under the zoom control; the legend is also rendered into `#legend-inline` inside the 图层 block; touch targets ≥36–44 px; the wide
+  modals' 12-column tables turn into one-card-per-row via `td(label, html, cls)` (`data-l` labels, `.rk-in` inline rank) and
+  `content-visibility:auto`.
+- **Basemaps**: `BASES` = 🌑 Esri dark (default overseas) / 🗺️ OSM / 🇨🇳 高德 (default when `inChina()` by time zone, like
+  `app.js`; Australia lies outside the GCJ-02 shift area so no `wgs2gcj` is needed); chips in `#bm-chips`, hash `bm=`, and a toast
+  after 12 s if no tile ever loaded (`tileFail`).
+- **Render memo**: `memo(key, signature)` lets `renderGrid` / `renderRez` / `renderCoal` / the coal, zone, line lists and the changes
+  block skip re-rendering when their inputs (layers / states / kV / lang / zoom band) did not change, so a search keystroke only
+  rebuilds project + pipeline markers; `zoomend` re-runs the memoised `renderRez`/`renderCoal` (REZ labels appear at zoom ≥5; coal
+  markers are 20 / 24 / 30 px by zoom band and closed plants show only at zoom ≥6). The pipeline cluster keeps clustering at every
+  zoom (no `disableClusteringAtZoom`) so the 41 % of items that share exact coordinates spiderfy on click. Pipeline search goes
+  through `util.matchProject` via `plProxy` (state zh/en names + fuel names live in the `country` slot, so pinyin like
+  `xinzhou chuneng` matches). The modal has a Tab focus trap and restores focus on close; `clampList()` splits the state sheets'
+  长 policy / coalExit / vendor paragraphs into sentence bullets with a 展开 toggle.
+- **Lead-score calibration (P3)**: `statusScore` — committed 未招标 30 / 未公开 27 / 无数据 24 / 已授标 16, anticipated 23 / 21 / 18 / 12,
+  proposed 6, plus +4 (capped at 30) when the id is in `UPGRADED` (= `AU_CHANGES.status` moved to committed this quarter); product fit
+  −2 for `approx` coordinates. `windowOpen(it)` = this month inside COD −24 → −9. `PL_QUICK` chips in `#pl-quick-chips`: ⏰ 采购窗口进行中
+  (`plWin`) / 🔥 线索分 ≥75 (`plHot`) / ⬆️ 本季升级为承诺 (`plUp`) / 📋 我的线索 (`plMine`), counts over `passPipeBase` (everything but
+  the quick flags), hash `plw/plh/plu/plm`. `normTnsp` canonicalises Transgrid / ElectraNet / Powerlink / TasNetworks / VicGrid /
+  Western Power at load and in `import-aemo.js` (the data file was normalised too). `renderFresh()` fills `#fresh-pill` (📅 AEMO asOf,
+  turns ⚠ yellow when >4 months old).
+- **📋 Lead tracking (P4, local CRM)**: `TRACK` (localStorage `au.leads.v1`, memory fallback) maps pipeline id → `{st, who, next, note, t}`
+  with `TRACK_ST` = todo / contacted / quoted / won / lost / skip; the pipe card carries a `.d-track` form (`[data-tr-save]` /
+  `[data-tr-del]`), `trackCell()` feeds the leads modal's 跟进 column, `renderLeads` shows the status inline plus `#track-sum`
+  (`trackCounts()` = active + due within 7 days incl. overdue → click toggles `plMine`), `leadsCSV` appends 窗口进行中 / 本季升级 /
+  跟进状态 / 负责人 / 下次动作 / 跟进备注, the modal header has ⤓ 备份 / ⤒ 恢复 (`exportTrack` / `importTrackText`: merge, newer `t`
+  wins per id, `confirm` unless `{silent:true}`), and the state brief's Top-10 table gains a 跟进 column.
+- **🗓️ COD timeline + 📰 change highlight + 📸 poster (P5)**: `#cod-range` (COD_MIN = this year → COD_MAX ≤ +10 y) sets `state.codMax`
+  (hash `cod=`; items without a COD are hidden while active and counted in `#cod-lab`; far right = off), `#cod-play` runs
+  `startPlay()` (1.2 s per year, `state.playYear` pulses that year's diamonds / clusters and fills `#cod-ticker`); `pausePlay()` on any
+  manual slider input or reset. Layer `changes` (default on) adds `.is-up` (green pulse, `UPGRADED`) / `.is-added` (cyan dashed,
+  `ADDED` = `AU_CHANGES.added`) to pipeline diamonds **and** to the cluster bubbles (`.mkc.pl.up/.added/.yr`), with legend rows.
+  `buildStateSVG(abbr)` → `exportStatePoster` renders a 1080×1620 PNG infographic (KPIs, pipeline GW bars, coal countdown, Top-8 leads
+  with tracking, REZ / grid works / this quarter, actions, source) through the same SVG→canvas path as `app.js`'s snapshot, SVG
+  fallback; the `📸 海报 PNG` button sits next to `⤓ 州机会简报`.
 - **EPC window**: the left panel has EPC-status chips (`state.epc`, incl. 无数据) and a `🔧 只看 EPC 未招标` toggle
   (`state.epcOnly`, same `epcStatus === '未招标'` rule as `app.js`); pre-tender markers pulse orange and the right-panel
   **EPC 未招标机会榜** ranks them by `inv`. Investment KPIs apply the `cat==='client'` exclusion rule.
 - State rows filter (`state.states`, fly-to-bounds from the polygons) and open the sheet; hash carries
-  `st/coff/stt/epc/epcw/yr/recent/q/loff/kvoff/pls/plf/own/view/lang` plus one open card (`project=<id>` / `coal=<idx>` / `state=<abbr>` /
+  `st/coff/stt/epc/epcw/yr/recent/q/loff/kvoff/pls/plf/plw/plh/plu/plm/cod/own/view/lang/bm` plus one open card (`project=<id>` / `coal=<idx>` / `state=<abbr>` /
   `line=<id>` / `pipe=<id>` / `zone=<key>`); `applyUIFromState`-style sync lives in `syncUI`; EN toggle relabels UI (data prose stays Chinese).
 
 ### Sales-pitch sparring (`coach.html` + `js/coach.js` + `js/coach-content.js`)
@@ -579,4 +638,6 @@ add new projects (with full `detail`), update changed projects' `status`/`cap`/`
 extend `js/progress.js` by `id`, and set `META.lastUpdated` to the current month. All content is in
 Simplified Chinese, UTF-8 — match the existing tone and field style. A new regional batch goes in its
 own `js/data-*.js` with a distinct id range (append via `.concat`, register in `index.html`). Always
-finish by running `node scripts/validate-data.js` and confirming a clean exit before committing.
+finish by running `node scripts/validate-data.js` and confirming a clean exit before committing; if any Australian
+project changed (or after any `js/data*.js` / `progress.js` edit, to be safe) also run `node scripts/build-au-slice.js` and
+commit the regenerated `js/au-projects.js` — CI's `--check` step fails otherwise.

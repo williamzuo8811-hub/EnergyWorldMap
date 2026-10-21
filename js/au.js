@@ -90,7 +90,10 @@
   const AU_BOUNDS = [[-44.5, 111.5], [-9.5, 155]];
 
   /* ---------- 数据装配（与 app.js 同口径）---------- */
-  const ALL = buildProjects ? buildProjects(window.ENERGY, window.ENERGY_EXTRA, window.ENERGY_PROGRESS, { requireCoord: true }) : [];
+  // 优先读预生成的澳洲切片（js/au-projects.js，scripts/build-au-slice.js 按同口径装配，≈210 KB），省掉 ≈4 MB 全球数据链；
+  // 没有切片时（scripts/test-au.js 走全量链）仍按 app.js 同口径现场装配
+  const SLICE = window.AU_PROJECTS && Array.isArray(window.AU_PROJECTS.items) ? window.AU_PROJECTS.items : null;
+  const ALL = SLICE || (buildProjects ? buildProjects(window.ENERGY, window.ENERGY_EXTRA, window.ENERGY_PROGRESS, { requireCoord: true }) : []);
   const PROJECTS = ALL.filter(p => /澳大利亚/.test(p.country || ''));
   PROJECTS.forEach(p => { p.auState = stateOf(p.coord); });
 

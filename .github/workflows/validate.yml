@@ -28,6 +28,8 @@ jobs:
         run: node scripts/test-globe.js
       - name: au.js（澳洲电网与能源动态地图）冒烟测试 + 澳洲专属数据完整性
         run: node scripts/test-au.js
+      - name: 澳洲项目切片与全球数据链一致（js/au-projects.js；改了 js/data*.js 要重跑 scripts/build-au-slice.js）
+        run: node scripts/build-au-slice.js --check
       - name: AEMO 发电信息导入器单元测试（内存 xlsx）
         run: node scripts/test-import-aemo.js
       - name: 国际大客户 BD 元数据校验
@@ -69,3 +71,28 @@ jobs:
             || echo "::warning::Lighthouse 两次尝试均失败，跳过本轮打分（趋势线，不影响合并）"
       - name: 评分阈值检查（性能≥60 · 无障碍≥90 · 最佳实践/SEO≥80 警告线）
         run: node scripts/check-lighthouse.js lh.json
+      - name: Lighthouse 跑分 au.html（澳洲地图；失败仅 warning）
+        run: |
+          npx --yes lighthouse@12 http://localhost:4173/au.html \
+            --output=json --output-path=./lh-au.json --quiet \
+            --only-categories=performance,accessibility,best-practices,seo \
+            --chrome-flags="--headless=new --no-sandbox --disable-gpu" \
+            || echo "::warning::Lighthouse au.html 跑分失败，跳过本轮（趋势线，不影响合并）"
+      - name: 评分阈值检查 au.html
+        run: node scripts/check-lighthouse.js lh-au.json
+
+  # 布局守卫（真实 Chromium）：au.html / index.html 在 6 种视口不比视口宽、手机浮钮在视口内、抽屉可关、无 pageerror
+  # （澳洲地图顶栏曾把整页撑宽 93–253px 并裁掉右栏与手机浮钮，Node 冒烟测试查不出这类 CSS 回归）。
+  # 要下载 Playwright Chromium（~150 MB），定位为 advisory：失败不挡合并，但 job 显示红叉提醒。
+  layout:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: 安装 Playwright Chromium（仅 CI 内，不进项目依赖）
+        run: npm i --no-save playwright@1.56.1 && npx playwright install --with-deps chromium
+      - name: 布局守卫 scripts/test-layout.js
+        run: node scripts/test-layout.js
