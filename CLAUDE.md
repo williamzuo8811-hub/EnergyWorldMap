@@ -167,7 +167,11 @@ loads the usual `js/data*.js` + `progress.js` + `pinyin-map.js` + `util.js` chai
   `status existing|building|planned`, `owner/year/lengthKm/costAud/notes/sources`). Corridors are **schematic
   hub-to-hub polylines, not surveyed routes** (Geoscience Australia's line dataset is not reachable offline); the legend
   says so. Styled by kV band (500/330/275/220/≤132 + HVDC), dashed for planned, animated dash for building; the kV chips
-  (`state.kvOff`) and the 🚧 layer toggle filter them; clicking opens a line card (`showLine`).
+  (`state.kvOff`) and the 🚧 layer toggle filter them; clicking opens a line card (`showLine`). The **Pilbara / NWIS** part
+  (Karratha · Dampier · Cape Lambert · Millstream · Pannawonica · Tom Price · Paraburdoo · Yandi · West Angelas · Newman ·
+  Port Hedland · Goldsworthy, plus the planned Maitland SIA common-user hub) is traced from Horizon Power's Pilbara network
+  diagram + 2021 system description and the ACCC Pilbara ISOCo determination (owner per corridor: Horizon 132/66 kV, Rio Tinto
+  220/132 kV private, BHP 132/66 kV, APA/Alinta 220 kV, Fortescue PEC) — see `data-src/aemo/README.md` for the document links.
 - **`js/au-coal.js`** (`window.AU_COAL = {asOf, plants}`): every coal station (operating + closed-since-2016 for
   context) with `closeYear/closeMonth/closeText/basis/replacement/sources`. `countdown(p)` turns that into the
   **退役倒计时** (剩 N 年 M 个月; hot ≤3 y / warm ≤8 y / cool) that drives the 🏭 markers (badge = closure year),
