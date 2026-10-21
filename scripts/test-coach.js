@@ -391,6 +391,18 @@ try {
 console.log('═══════════════════════════════════════════════');
 console.log(' 国际销售话术陪练 · coach.js 初始化冒烟测试');
 console.log('═══════════════════════════════════════════════');
+/* ---------- 深链接 coach.html#project=<id>（澳洲地图 🎯 线索榜 / 管线卡片 → 陪练）---------- */
+try {
+  const C = global.window.__COACH__; const pid = C.OPPS[Math.min(5, C.OPPS.length - 1)].p.id;
+  global.location.hash = '#project=' + pid;
+  ok(C.applyDeepLink() === true && C.state.deal && C.state.deal.opp.p.id === pid && C.state.mode === 'deal', '深链接 #project=<id> 直接开局（' + pid + '）');
+  global.location.hash = '#project=999999999';
+  ok(C.applyDeepLink() === false, '深链接 id 不存在 → false');
+  global.location.hash = '#lang=en';
+  ok(C.applyDeepLink() === false, '无 project 参数 → false');
+  global.location.hash = '';
+} catch (e) { fails.push('applyDeepLink 抛错：' + (e && e.message)); }
+
 if (fails.length) {
   console.log(`✘ 失败 ${fails.length}：`);
   fails.forEach(f => console.log('  · ' + f));

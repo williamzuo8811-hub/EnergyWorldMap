@@ -19,7 +19,10 @@ node scripts/import-aemo.js data-src/aemo/NEM-Generation-Information-<YYYY-MM>.x
 node scripts/test-au.js
 ```
 
-导入器会打印新增 / 状态变化 / 容量变化 / 不再出现 / 需补坐标清单，并沿用上一版的坐标、中文名与备注；
+导入器会打印新增 / 状态变化 / 容量变化 / 不再出现 / 需补坐标清单，并沿用上一版的坐标、中文名与备注；同时写出
+`js/au-changes.js`（`window.AU_CHANGES`，澳洲地图 📰 本季变化面板的数据：added / status(from→to) / mw / gone / needCoord）和一页中文简报
+`data-src/aemo/brief-<asOf>.md`（本目录保留每季一份；`--prev-asof` 可指定上一版的季度标签，`--no-changes` / `--no-brief` 关闭）。
+当前：`brief-2026-07.md` = 2026-04 → 2026-07 的差异（新增 47 · 状态变化 33 · 容量变化 45 · 不再出现 46 · 需补坐标 6）。
 改名的场站在上一版条目加 `aemo:"<AEMO Site Name>"` 后重跑即可保留。西澳（WEM）另有 "WEM Generation Information"，
 导入时加 `--wem`。
 

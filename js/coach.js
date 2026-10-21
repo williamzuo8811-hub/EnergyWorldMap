@@ -1346,9 +1346,20 @@
     ['ai-base', 'ai-key', 'ai-model'].forEach((id, k) => { const e = $(id); if (e) e.value = [cfg.base, cfg.key, cfg.model][k]; });
   }
 
+  // 深链接：coach.html#project=<id>（澳洲地图 🎯 线索榜 / 管线卡片的「🎓 陪练」按钮，或全球地图详情卡）→ 直接用该项目开一局闯关
+  function applyDeepLink() {
+    try {
+      const h = String((typeof location !== 'undefined' && location.hash) || '').replace(/^#/, '');
+      const m = h.match(/(?:^|&)project=(\d+)/); if (!m) return false;
+      const opp = OPP_BY_ID[+m[1]]; if (!opp) return false;
+      startDeal(opp); state.mode = 'deal'; return true;
+    } catch (e) { return false; }
+  }
+
   function init() {
     bindStatic();
     loadSavedDeal();
+    applyDeepLink();
     render();
     // 首屏加载态淡出
     const ld = $('coach-loader'); if (ld && ld.classList) { try { setTimeout(() => ld.classList.add('gone'), 100); } catch (e) { ld.classList.add('gone'); } }
@@ -1367,7 +1378,7 @@
     updateSkills: updateSkills, startExam: startExam, startMistake: startMistake, ALL_ROUNDS: ALL_ROUNDS, prog: function () { return prog; },
     startEnglish: startEnglish, dealSnapshot: dealSnapshot, saveDeal: saveDeal, loadSavedDeal: loadSavedDeal, resumeDeal: resumeDeal, clearDeal: clearDeal,
     buildShareSVG: buildShareSVG, exportShareCard: exportShareCard,
-    migrateProgress: migrateProgress, PROG_VER: PROG_VER,
+    migrateProgress: migrateProgress, PROG_VER: PROG_VER, applyDeepLink: applyDeepLink,
   };
 
   if (typeof document !== 'undefined' && document.addEventListener) {

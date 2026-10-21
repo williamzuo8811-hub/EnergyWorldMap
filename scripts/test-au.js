@@ -76,6 +76,7 @@ try {
   require(J('js/au-coal.js'));
   require(J('js/au-pipeline.js'));
   require(J('js/au-rez.js'));
+  require(J('js/au-changes.js'));
   require(J('js/au.js'));
 } catch (e) {
   console.error('✘ au.js 初始化抛出异常：\n', e && e.stack || e);
@@ -178,6 +179,27 @@ try { ZONES.forEach(z => AU.showZone(z.key)); ok(true, 'showZone() 不抛错'); 
 try { ZONES.forEach(z => ok(AU.zoneOf(z.center) != null, 'zoneOf(中心点) 应命中某区：' + z.en)); } catch (e) { fails.push('zoneOf() 抛错：' + (e && e.message)); }
 try { AU.render(); ok(true, 'render() 含管线/REZ 不抛错'); } catch (e) { fails.push('render() 抛错：' + (e && e.message)); }
 
+/* ---------- 断言：🎯 线索榜 / 🏢 账户 / 📰 本季变化 ---------- */
+try { PIPE.forEach(it => { const s = AU.leadScore(it); ok(typeof s.score === 'number' && s.score >= 0 && s.score <= 100 && s.product && typeof s.epc === 'string', '线索分越界或缺字段：' + it.en + ' ' + (s && s.score)); }); } catch (e) { fails.push('leadScore 抛错：' + (e && e.message)); }
+try { const ls = AU.leads(); ok(ls.length > 100 && ls.every((it, i) => i === 0 || AU.leadScore(ls[i - 1]).score >= AU.leadScore(it).score), 'leads() 按线索分降序（' + ls.length + ' 条）'); ok(ls[0] && ls[0].status !== 'proposed' && AU.leadScore(ls[0]).score >= 70, 'Top 1 线索为承诺 / 预期且 ≥70 分（实际 ' + (ls[0] && AU.leadScore(ls[0]).score) + '）'); } catch (e) { fails.push('leads() 抛错：' + (e && e.message)); }
+try { const c1 = AU.leadScore({ id: 't1', fuel: 'battery', mw: 500, status: 'committed', cod: '2028-06', notes: 'EPC 待公布' }), c2 = AU.leadScore({ id: 't2', fuel: 'battery', mw: 500, status: 'proposed', cod: '2028-06' }), c3 = AU.leadScore({ id: 't3', fuel: 'battery', mw: 500, status: 'committed', cod: '2028-06', notes: 'EPC 为 GenusPlus' }); ok(c1.score > c3.score && c3.score > c2.score && c1.epc === '未公开' && c3.epc === '已授标', '评分序：承诺·EPC 未公开 > 承诺·已授标 > 拟建'); ok(AU.epcHintOf({ notes: 'BoP 承包商待核' }) === '未公开' && AU.epcHintOf({ notes: '2025-10 向 Tesla 与 UGL 下达开工令' }) === '已授标' && AU.epcHintOf({}) === '无数据', 'epcHintOf 文本推断'); } catch (e) { fails.push('评分序 / epcHintOf 抛错：' + (e && e.message)); }
+try { const csv = AU.leadsCSV(AU.leads().slice(0, 50)); const lines = csv.split('\r\n'); ok(csv.charCodeAt(0) === 0xfeff && lines.length === 51 && /^﻿排名,线索分,产品分/.test(csv) && lines[1].split(',').length >= 25, 'leadsCSV：BOM + 表头 + 50 行'); } catch (e) { fails.push('leadsCSV 抛错：' + (e && e.message)); }
+try { const acc = AU.buildAccounts(PIPE); const neoen = acc.find(a => a.name === 'Neoen'); ok(acc.length > 100 && neoen && neoen.items.length >= 10 && neoen.near > 0 && Object.keys(neoen.states).length >= 2, '业主归并：Neoen ≥10 条、跨 ≥2 州（实际 ' + (neoen && neoen.items.length) + '）'); ok(AU.ownerGroup('ACEN RENEWABLES').key === AU.ownerGroup('ACEN Renewables').key && AU.ownerGroup('Edify Energy Pty Ltd').name === 'Edify Energy', 'ownerGroup 别名 / 大小写归并'); } catch (e) { fails.push('buildAccounts 抛错：' + (e && e.message)); }
+try { const ep = AU.buildEpcAccounts(); ok(ep.length >= 8 && ep.some(a => /GenusPlus/.test(a.name)) && ep.some(a => /UGL/.test(a.name)) && ep.every(a => a.n === a.main.length + a.pipe.length), 'EPC 账户：含 GenusPlus / UGL，计数一致（' + ep.length + ' 家）'); } catch (e) { fails.push('buildEpcAccounts 抛错：' + (e && e.message)); }
+try { AU.showLeads(); ok(AU.state.view === 'leads' && /view=leads/.test(AU.stateToHash()), 'showLeads() 打开面板并写 hash'); AU.showAccounts('owner'); AU.showAccounts('epc'); ok(AU.state.view === 'epc', 'showAccounts(epc) 视图'); AU.showChanges(); ok(AU.state.view === 'changes', 'showChanges() 视图'); AU.closeModal(); ok(AU.state.view === null && !/view=/.test(AU.stateToHash()), 'closeModal() 清除视图'); } catch (e) { fails.push('宽面板抛错：' + (e && e.message)); }
+try { const neoenKey = AU.ownerGroup('Neoen Australia Pty Ltd').key; AU.filterOwner(neoenKey); const f = AU.filteredPipe(); ok(f.length >= 10 && f.every(it => /neoen/i.test(it.owner || '')) && /own=Neoen/.test(AU.stateToHash()), 'filterOwner(Neoen) 只留 Neoen 管线并写 hash'); AU.resetState(); AU.syncUI(); AU.render(); ok(AU.state.plOwner === null, 'resetState 清除业主筛选'); } catch (e) { fails.push('filterOwner 抛错：' + (e && e.message)); }
+const CH = global.window.AU_CHANGES;
+ok(CH && /^\d{4}-\d{2}$/.test(CH.asOf) && CH.counts && ['added', 'status', 'mw', 'gone', 'needCoord'].every(k => Array.isArray(CH[k])), 'AU_CHANGES 结构（asOf / counts / 五个数组）');
+if (CH) {
+  CH.added.concat(CH.status, CH.mw).forEach(x => ok(pids.has(x.id), '季度变化条目在管线里找不到：' + x.id + ' ' + x.en));
+  CH.gone.forEach(x => ok(!pids.has(x.id), '「不再出现」条目仍在管线里：' + x.id));
+  CH.status.forEach(x => ok(x.from && x.to && x.from !== x.to, '状态变化缺 from/to：' + x.id));
+  CH.mw.forEach(x => ok(typeof x.from === 'number' && typeof x.to === 'number' && Math.abs(x.to - x.from) >= 5, '容量变化应 ≥5 MW：' + x.id));
+  CH.needCoord.forEach(id => ok(pids.has(id), '需补坐标 id 不在管线里：' + id));
+  ok(CH.counts.added === CH.added.length && CH.counts.gone === CH.gone.length && CH.counts.status === CH.status.length && CH.counts.mw === CH.mw.length && CH.counts.now === PIPE.length, 'AU_CHANGES counts 与数组 / 管线条数一致');
+}
+try { const b = AU.buildChangesBrief(); ok(/^# 澳洲 AEMO 管线季度变化简报/.test(b) && /升级为承诺/.test(b) && /线索 Top 10/.test(b) && b.length > 800, 'buildChangesBrief 生成简报'); } catch (e) { fails.push('buildChangesBrief 抛错：' + (e && e.message)); }
+
 /* ---------- 汇报 ---------- */
 if (fails.length) { console.error('✘ test-au 失败：\n - ' + fails.join('\n - ')); process.exit(1); }
-console.log('✔ test-au 通过：' + AU.PROJECTS.length + ' 个澳洲项目 · ' + (GRID.nodes || []).length + ' 节点 / ' + (GRID.lines || []).length + ' 走廊 · ' + COAL.length + ' 燃煤机组 · ' + Object.keys(SHEETS).length + ' 州档案 · ' + PIPE.length + ' 管线 · ' + ZONES.length + ' REZ');
+console.log('✔ test-au 通过：' + AU.PROJECTS.length + ' 个澳洲项目 · ' + (GRID.nodes || []).length + ' 节点 / ' + (GRID.lines || []).length + ' 走廊 · ' + COAL.length + ' 燃煤机组 · ' + Object.keys(SHEETS).length + ' 州档案 · ' + PIPE.length + ' 管线 · ' + ZONES.length + ' REZ · 线索榜 / 账户 / 本季变化（' + (CH ? CH.prevAsOf + '→' + CH.asOf : '无') + '）');

@@ -9,7 +9,7 @@
   const CAT_KEYS = Object.keys(CATEGORIES);
   // 纯逻辑（子分类规则 / 容量解析 / 坐标纠偏 / 标签映射 / 量级 / 数据装配）抽至 js/util.js，
   // 与 scripts/test-units.js 及 globe.js 共享同一实现
-  const { SUB_DEFS, wgs2gcj, normalizeOwner, LABELS_EN, capFmtMW, invMagnitude, buildProjects, matchProject, geoNameOf } = window.ENERGY_UTIL;
+  const { SUB_DEFS, wgs2gcj, normalizeOwner, LABELS_EN, capFmtMW, invMagnitude, buildProjects, matchProject, geoNameOf, EPC_COS } = window.ENERGY_UTIL;
 
   const SUB_LABEL = {};
   Object.keys(SUB_DEFS).forEach(cat => { SUB_LABEL[cat] = {}; SUB_DEFS[cat].forEach(d => { SUB_LABEL[cat][d.key] = d.label; }); });
@@ -1568,34 +1568,7 @@
   /* ---------- 🔧 EPC / 总承包商排行榜（epc 字段文本 → 承包商识别聚合；当前澳大利亚全量覆盖）----------
    * 识别表按"更具体在前"排序；只认承包/集成角色词，供应商（电池/风机/燃机）不计入。
    * 同一项目的联合体成员各记一次（榜单口径 = 在手项目参与数，投资额为参与项目累计）。 */
-  const EPC_COS = [
-    [/Consolidated Power Projects|CPP(?![A-Za-z])/, 'CPP (Consolidated Power)'],
-    [/UGL/, 'UGL (CIMIC)'], [/CPB/, 'CPB Contractors'],
-    [/Vestas/, 'Vestas'], [/GE Vernova|GE Renewable|GE\+/, 'GE Vernova'],
-    [/Fluence/, 'Fluence'], [/Tesla Energy/, 'Tesla Energy'],
-    [/Wärtsilä|瓦锡兰/, '瓦锡兰 Wärtsilä'], [/NHOA/, 'NHOA Energy'], [/Enerven/, 'Enerven'],
-    [/Elecnor|SecureEnergy/, 'Elecnor'], [/GenusPlus/, 'GenusPlus'], [/ACEREZ|Acciona/, 'Acciona'],
-    [/Downer/, 'Downer'], [/Yurika/, 'Yurika'], [/Zenviron/, 'Zenviron'], [/SCEE/, 'SCEE Group'],
-    [/All Energy Contracting/, 'All Energy Contracting'], [/ACLE/, 'ACLE Services'], [/Enzen/, 'Enzen'],
-    [/三星物产|Samsung C&T/, '三星物产 Samsung C&T'], [/山西电建|SEPC/, '中国能建山西电建'],
-    [/阳光电源/, '阳光电源 Sungrow'], [/Sunterra/, 'Sunterra'], [/Gransolar|GRS(?![A-Za-z])/, 'Gransolar (GRS)'],
-    [/GR Engineering|GRES/, 'GR Engineering'], [/Lycopodium/, 'Lycopodium'], [/Fluor/, 'Fluor'],
-    [/Hatch/, 'Hatch'], [/Wood Group/, 'Wood Group'], [/Civmec/, 'Civmec'],
-    [/Monadelphous/, 'Monadelphous'], [/Mondium/, 'Mondium'], [/Primero/, 'Primero (NRW)'],
-    [/MACA/, 'MACA'], [/SIMPEC/, 'SIMPEC'], [/Sedgman/, 'Sedgman'], [/Decmil/, 'Decmil'],
-    [/McConnell Dowell/, 'McConnell Dowell'], [/John Holland/, 'John Holland'],
-    [/Webuild|韦建德/, 'Webuild'], [/Clough/, 'Clough (Webuild)'], [/Saipem/, 'Saipem'],
-    [/Bechtel/, 'Bechtel'], [/McDermott/, 'McDermott'], [/Seatrium|胜科海事/, 'Seatrium'],
-    [/BW Offshore/, 'BW Offshore'], [/Allseas/, 'Allseas'], [/Valmec/, 'Valmec'], [/Wasco/, 'Wasco'],
-    [/Spiecapag/, 'Spiecapag'], [/AGIG/, 'AGIG'], [/Prysmian/, 'Prysmian'], [/Hitachi Energy/, 'Hitachi Energy'],
-    [/DT Infrastructure/, 'DT Infrastructure (Gamuda)'], [/Laing O'Rourke/, "Laing O'Rourke"],
-    [/Ghella/, 'Ghella'], [/Bouygues/, 'Bouygues'], [/GS E&C/, 'GS E&C'], [/中建海外/, '中国建筑(海外)'],
-    [/Multiplex/, 'Multiplex'], [/Lendlease/, 'Lendlease'], [/Martinus/, 'Martinus'], [/BMD/, 'BMD'],
-    [/FKG/, 'FKG Group'], [/MPC Kinetic/, 'MPC Kinetic'], [/NACAP/, 'NACAP'], [/CATCON/, 'CATCON'],
-    [/EPEC/, 'EPEC'], [/Energy Vault/, 'Energy Vault'], [/Doosan|斗山/, 'Doosan GridTech'],
-    [/VKJV/, 'VKJV'], [/MSP Engineering/, 'MSP Engineering'], [/Prudentia/, 'Prudentia Engineering'],
-    [/McCosker/, 'McCosker'], [/Cardinal/, 'Cardinal Contractors'], [/Byrnecut/, 'Byrnecut'], [/CSI/, 'CSI (MinRes)'],
-  ];
+  // 识别表 EPC_COS 在 js/util.js（与 au.js 🏢 EPC 账户视图共用）
   function epcCosOf(p) {
     if (!p.epc) return [];
     if (p._epcCos) return p._epcCos;
