@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="lib/leaflet.css">
   <link rel="stylesheet" href="lib/MarkerCluster.css">
   <link rel="stylesheet" href="lib/MarkerCluster.Default.css">
-  <link rel="stylesheet" href="css/au.css?v=3">
+  <link rel="stylesheet" href="css/au.css?v=5">
 </head>
 <body>
   <!-- 首屏加载态：底图瓦片到位（或超时）后淡出 -->
@@ -30,7 +30,7 @@
     <div class="al-text">澳洲电网与能源动态地图<span>加载电网骨架 · 州档案 · 项目数据…</span></div>
   </div>
 
-  <div class="app">
+  <div class="app" id="app">
     <header class="topbar">
       <div class="brand">
         <div class="logo">🇦🇺</div>
@@ -39,6 +39,8 @@
           <div class="sub" id="t-sub">输电骨架 · 州与电网公司 · 燃煤退役倒计时 · EPC 窗口期 · AEMO 管线 · REZ · 🎯 BD 线索榜</div>
         </div>
       </div>
+      <!-- 窄屏：KPI 默认收起，点「📊 数据」展开（给地图让出高度） -->
+      <button class="tbtn kpi-toggle" id="kpi-toggle" aria-expanded="false" aria-controls="kpis" aria-label="展开 / 收起关键数据">📊 数据 ▾</button>
       <div class="kpis" id="kpis">
         <div class="kpi"><div class="num accent" id="kpi-proj">0</div><div class="lab" id="lab-proj">澳洲项目</div></div>
         <div class="kpi"><div class="num good" id="kpi-inv">0</div><div class="lab" id="lab-inv">总投资</div></div>
@@ -48,6 +50,7 @@
         <div class="kpi"><div class="num pipe" id="kpi-pipe">0</div><div class="lab" id="lab-pipe">🧭 承诺+预期管线</div></div>
       </div>
       <div class="top-actions">
+        <span class="tbtn fresh" id="fresh-pill" title="数据截至">📅 AEMO</span>
         <button class="tbtn" id="btn-leads" title="本季度 Top 50 BD 线索（产品匹配 × 采购窗口 × 状态/EPC）">🎯 线索榜</button>
         <button class="tbtn" id="btn-accounts" title="业主作战地图 + EPC / 总承包商账户">🏢 账户</button>
         <button class="tbtn" id="btn-changes" title="AEMO 管线季度差异：新增 / 升级为承诺 / 容量变化 / 不再出现">📰 本季变化</button>
@@ -60,6 +63,7 @@
     <div class="body">
       <!-- 左：筛选 -->
       <aside class="panel left" id="left-panel" aria-label="筛选面板">
+        <div class="drawer-head"><span class="drawer-handle" aria-hidden="true"></span><span class="drawer-title" id="drawer-title-l">🔍 筛选</span><button class="drawer-close" id="drawer-close-l" aria-label="收起筛选面板">✕ 收起</button></div>
         <div class="block">
           <div class="block-title" id="t-states">州 / 领地 <span class="count" id="states-hint">点州看电网公司档案</span></div>
           <div class="state-list" id="state-list"></div>
@@ -75,8 +79,13 @@
             <button class="chip on" data-layer="fill" aria-pressed="true">🗺️ 州界着色</button>
             <button class="chip on" data-layer="pipe" aria-pressed="true">🧭 AEMO 管线</button>
             <button class="chip on" data-layer="rez" aria-pressed="true">🌞 REZ 区划</button>
+            <button class="chip on" data-layer="changes" aria-pressed="true">📰 本季变化高亮</button>
           </div>
           <div class="kv-row" id="kv-chips" role="group" aria-label="电压等级"></div>
+          <!-- 底图：暗色 Esri / OSM / 高德（大陆访客按时区默认高德；au.js 填充） -->
+          <div class="kv-row bm-row" id="bm-chips" role="group" aria-label="底图"></div>
+          <!-- 窄屏：地图上的浮动图例隐藏，同一份图例画在这里 -->
+          <div class="map-legend inline" id="legend-inline" aria-label="图例"></div>
         </div>
         <div class="block">
           <div class="block-title" id="t-epc">EPC / 总承包状态 <span class="count" id="epc-hint">未招标 = BD 窗口期</span></div>
@@ -87,6 +96,14 @@
           <div class="block-title" id="t-pipe">🧭 AEMO 管线 <span class="count" id="pipe-hint">承诺 / 预期 / 拟建</span></div>
           <div class="chip-row" id="pl-status-chips"></div>
           <div class="chip-row" id="pl-fuel-chips" style="margin-top:6px"></div>
+          <!-- BD 快捷筛选：⏰ 采购窗口进行中 / 🔥 线索分 ≥75 / ⬆️ 本季升级为承诺（au.js 填充，计数 = 当前基础筛选下） -->
+          <div class="chip-row" id="pl-quick-chips" style="margin-top:6px" role="group" aria-label="BD 快捷筛选"></div>
+          <!-- 🗓️ COD 时间轴：按预期投运年份累计显示管线，拉到最右 = 全部；▶ 从今年起逐年播放（范围由 au.js 按数据设定） -->
+          <div class="cod-row" id="cod-row">
+            <button class="chip cod-play" id="cod-play" aria-pressed="false" aria-label="播放 COD 时间轴">▶</button>
+            <input type="range" id="cod-range" min="2026" max="2035" step="1" value="2035" aria-label="COD 截止年份">
+            <span class="cod-lab" id="cod-lab">全部年份</span>
+          </div>
           <div class="chip-row" id="pl-owner-row" style="margin-top:6px" hidden><button class="chip on owner-pill" id="pl-owner-pill" aria-pressed="true" title="清除业主筛选"></button></div>
         </div>
         <div class="block">
@@ -116,6 +133,8 @@
       <main class="map-wrap">
         <div id="map" role="region" aria-label="澳洲能源地图"></div>
         <div class="map-legend" id="map-legend"></div>
+        <!-- ▶ COD 时间轴播放时的大字年份 -->
+        <div class="cod-ticker" id="cod-ticker" hidden aria-live="polite"></div>
         <div class="card" id="card" role="region" aria-label="详情卡"></div>
         <button class="fab fab-l" id="fab-filters" aria-label="展开 / 收起筛选" aria-expanded="false">🔍 筛选</button>
         <button class="fab fab-r" id="fab-dash" aria-label="展开 / 收起看板" aria-expanded="false">📊 看板</button>
@@ -124,9 +143,12 @@
 
       <!-- 右：看板 -->
       <aside class="panel right" id="right-panel" aria-label="看板">
+        <div class="drawer-head"><span class="drawer-handle" aria-hidden="true"></span><span class="drawer-title" id="drawer-title-r">📊 看板</span><button class="drawer-close" id="drawer-close-r" aria-label="收起看板">✕ 收起</button></div>
         <div class="block">
           <div class="block-title" id="t-leads">🎯 本季度线索 Top 10 <span class="count" id="leads-sum"></span></div>
           <div class="opp-list" id="lead-list"></div>
+          <!-- 📋 本机跟进汇总：跟进中 N · 7 天内到期 M（有记录才显示；点击 → 我的线索筛选） -->
+          <div class="track-sum" id="track-sum" hidden></div>
           <button class="btn-more" id="btn-leads-more">查看 Top 50 / 导出 CSV ▸</button>
         </div>
         <div class="block">
@@ -163,6 +185,8 @@
         </div>
       </aside>
     </div>
+    <!-- 窄屏抽屉遮罩：点击即收起抽屉 -->
+    <div class="drawer-backdrop" id="drawer-backdrop" aria-hidden="true"></div>
   </div>
 
   <!-- 宽面板：🎯 线索榜 / 🏢 账户 / 📰 本季变化（au.js 填充；Esc / 点遮罩关闭）-->
@@ -171,35 +195,10 @@
   <!-- 库（Leaflet + 聚合）-->
   <script defer src="lib/leaflet.js"></script>
   <script defer src="lib/leaflet.markercluster.js"></script>
-  <!-- 数据层（与 index.html 同序）-->
+  <!-- 数据层：只加载 data.js（META / CATEGORIES / STATUS）+ 预生成的澳洲项目切片（scripts/build-au-slice.js 按 index.html 的真实数据链
+       用 util.buildProjects 同口径装配后筛出澳洲项目；改了 js/data*.js 要重跑，CI --check 防漂移）——省掉 ≈4 MB 全球数据链 -->
   <script defer src="js/data.js"></script>
-  <script defer src="js/data-extra.js"></script>
-  <script defer src="js/data-brazil.js"></script>
-  <script defer src="js/data-mideast.js"></script>
-  <script defer src="js/data-russia-ca.js"></script>
-  <script defer src="js/data-clients.js"></script>
-  <script defer src="js/data-brazil-future.js"></script>
-  <script defer src="js/data-saudi-future.js"></script>
-  <script defer src="js/data-seasia.js"></script>
-  <script defer src="js/data-africa.js"></script>
-  <script defer src="js/data-oceania.js"></script>
-  <script defer src="js/data-europe.js"></script>
-  <script defer src="js/data-nuclear.js"></script>
-  <script defer src="js/data-northam.js"></script>
-  <script defer src="js/data-southasia.js"></script>
-  <script defer src="js/data-china-future.js"></script>
-  <script defer src="js/data-clients2.js"></script>
-  <script defer src="js/data-refresh2606.js"></script>
-  <script defer src="js/data-refresh2606b.js"></script>
-  <script defer src="js/data-refresh2606c.js"></script>
-  <script defer src="js/data-clients3.js"></script>
-  <script defer src="js/data-mining2607.js"></script>
-  <script defer src="js/data-mining2608.js"></script>
-  <script defer src="js/data-australia2608.js"></script>
-  <script defer src="js/data-clients-mining.js"></script>
-  <script defer src="js/data-refresh2607.js"></script>
-  <script defer src="js/data-refresh2608.js"></script>
-  <script defer src="js/progress.js"></script>
+  <script defer src="js/au-projects.js"></script>
   <script defer src="js/pinyin-map.js"></script>
   <script defer src="js/util.js"></script>
   <!-- 澳洲专属层：州界（Natural Earth）+ 州电网公司档案 + 输电骨架 + 燃煤机组 -->
@@ -210,7 +209,7 @@
   <script defer src="js/au-pipeline.js"></script>
   <script defer src="js/au-rez.js"></script>
   <script defer src="js/au-changes.js"></script>
-  <script defer src="js/au.js?v=4"></script>
+  <script defer src="js/au.js?v=6"></script>
   <!-- PWA：注册 Service Worker（离线 + 重访秒开）。失败静默。 -->
   <script>
     if ('serviceWorker' in navigator) {

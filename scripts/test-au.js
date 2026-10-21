@@ -183,6 +183,66 @@ try { AU.render(); ok(true, 'render() 含管线/REZ 不抛错'); } catch (e) { f
 try { PIPE.forEach(it => { const s = AU.leadScore(it); ok(typeof s.score === 'number' && s.score >= 0 && s.score <= 100 && s.product && typeof s.epc === 'string', '线索分越界或缺字段：' + it.en + ' ' + (s && s.score)); }); } catch (e) { fails.push('leadScore 抛错：' + (e && e.message)); }
 try { const ls = AU.leads(); ok(ls.length > 100 && ls.every((it, i) => i === 0 || AU.leadScore(ls[i - 1]).score >= AU.leadScore(it).score), 'leads() 按线索分降序（' + ls.length + ' 条）'); ok(ls[0] && ls[0].status !== 'proposed' && AU.leadScore(ls[0]).score >= 70, 'Top 1 线索为承诺 / 预期且 ≥70 分（实际 ' + (ls[0] && AU.leadScore(ls[0]).score) + '）'); } catch (e) { fails.push('leads() 抛错：' + (e && e.message)); }
 try { const c1 = AU.leadScore({ id: 't1', fuel: 'battery', mw: 500, status: 'committed', cod: '2028-06', notes: 'EPC 待公布' }), c2 = AU.leadScore({ id: 't2', fuel: 'battery', mw: 500, status: 'proposed', cod: '2028-06' }), c3 = AU.leadScore({ id: 't3', fuel: 'battery', mw: 500, status: 'committed', cod: '2028-06', notes: 'EPC 为 GenusPlus' }); ok(c1.score > c3.score && c3.score > c2.score && c1.epc === '未公开' && c3.epc === '已授标', '评分序：承诺·EPC 未公开 > 承诺·已授标 > 拟建'); ok(AU.epcHintOf({ notes: 'BoP 承包商待核' }) === '未公开' && AU.epcHintOf({ notes: '2025-10 向 Tesla 与 UGL 下达开工令' }) === '已授标' && AU.epcHintOf({}) === '无数据', 'epcHintOf 文本推断'); } catch (e) { fails.push('评分序 / epcHintOf 抛错：' + (e && e.message)); }
+// 评分校准：未公开（已核未授标）> 无数据 > 无数据且示意坐标；本季升级为承诺 +4（上限 30）；windowOpen = 本月在 COD 前 24→9 个月内
+try {
+  const base = { fuel: 'battery', mw: 500, status: 'committed', cod: '2028-06' };
+  const nd = AU.leadScore(Object.assign({ id: 't4' }, base)), ud = AU.leadScore(Object.assign({ id: 't5', notes: 'EPC 待公布' }, base)), ap = AU.leadScore(Object.assign({ id: 't6', approx: true }, base));
+  ok(ud.score > nd.score && nd.score > ap.score, '评分校准：未公开 > 无数据 > 无数据且示意坐标（' + ud.score + ' / ' + nd.score + ' / ' + ap.score + '）');
+  const upId = [...AU.UPGRADED][0];
+  if (upId) { const live = AU.PIPE.find(i => i.id === upId); ok(live && AU.leadScore(live).up === true && /升级为承诺/.test(AU.leadScore(live).stWhy), '本季升级为承诺的管线带 up 标记与 +4 说明'); }
+  const ym = d => { const t = new Date(); t.setMonth(t.getMonth() + d); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0'); };
+  ok(AU.windowOpen({ cod: ym(15) }) === true && AU.windowOpen({ cod: ym(3) }) === false && AU.windowOpen({ cod: ym(30) }) === false && AU.windowOpen({}) === false, 'windowOpen：COD 前 24→9 个月为真，窗口未开 / 已过 / 无 COD 为假');
+  AU.state.plWin = true; const fw = AU.filteredPipe(); ok(fw.length > 0 && fw.every(i => AU.windowOpen(i)), '⏰ 窗口期快捷筛选只留窗口打开的管线（' + fw.length + ' 条）'); AU.state.plWin = false;
+  AU.state.plUp = true; const fu = AU.filteredPipe(); ok(fu.every(i => AU.UPGRADED.has(i.id)), '⬆️ 本季升级快捷筛选只留升级为承诺的管线（' + fu.length + ' 条）'); AU.state.plUp = false;
+  AU.state.plHot = true; const fh = AU.filteredPipe(); ok(fh.every(i => AU.leadScore(i).score >= 75), '🔥 高分快捷筛选只留 ≥75'); AU.state.plHot = false; AU.render();
+  ok(AU.normTnsp('TransGrid') === 'Transgrid' && AU.normTnsp('Electranet') === 'ElectraNet' && AU.normTnsp('Powerlink') === 'Powerlink' && AU.normTnsp('') === '', 'normTnsp 归一 TransGrid / Electranet');
+  ok(!AU.PIPE.some(i => /^(TransGrid|Electranet)$/.test(i.tnsp || '')), '管线里不再有 TransGrid / Electranet 变体写法');
+  const h = (() => { AU.state.plWin = true; AU.state.plUp = true; const s = AU.stateToHash(); AU.state.plWin = false; AU.state.plUp = false; return s; })();
+  ok(/plw=1/.test(h) && /plu=1/.test(h), '快捷筛选进 hash（plw / plu）');
+} catch (e) { fails.push('评分校准 / 快捷筛选抛错：' + (e && e.message)); }
+// 📋 线索跟进（本地 CRM）：Node 无 localStorage → 内存；setTrack / trackOf / delTrack / counts / 我的线索筛选 / CSV 列 / JSON 合并
+try {
+  const id = AU.PIPE[0].id;
+  AU.setTrack(id, { st: 'contacted', who: '张三', next: '2099-01-01', note: '测试' });
+  ok(AU.trackOf(id) && AU.trackOf(id).st === 'contacted' && AU.trackOf(id).who === '张三' && /^\d{4}-\d{2}-\d{2}$/.test(AU.trackOf(id).t), 'setTrack / trackOf（带记录日期）');
+  ok(AU.trackCounts().n >= 1 && AU.trackCounts().due === 0, 'trackCounts：跟进中 ≥1，2099 年不算 7 天内到期');
+  AU.setTrack(id, { st: 'quoted', next: '2020-01-01' }); ok(AU.trackCounts().due >= 1, '过期的下次动作算到期');
+  AU.state.plMine = true; const fm = AU.filteredPipe(); ok(fm.length >= 1 && fm.every(i => AU.trackOf(i.id)), '📋 我的线索筛选只留有跟进记录的管线（' + fm.length + ' 条）'); AU.state.plMine = false;
+  const csv = AU.leadsCSV([AU.PIPE[0]]); ok(/跟进状态/.test(csv) && /已报价/.test(csv) && /窗口进行中/.test(csv), 'CSV 带跟进列 + 窗口进行中 / 本季升级列');
+  ok(AU.setTrack(id, { st: 'bogus', next: 'not-a-date' }) === null && !AU.trackOf(id), 'setTrack 清洗无效值后为空 → 删除记录');
+  const n = AU.importTrackText(JSON.stringify({ ver: 1, items: { [id]: { st: 'quoted', t: '2026-01-01' } } }), { silent: true });
+  ok(n === 1 && AU.trackOf(id).st === 'quoted', 'importTrackText 合并');
+  AU.setTrack(id, { st: 'won' }); const n2 = AU.importTrackText(JSON.stringify({ ver: 1, items: { [id]: { st: 'todo', t: '2020-01-01' } } }), { silent: true });
+  ok(n2 === 0 && AU.trackOf(id).st === 'won', '导入的旧记录不覆盖本机较新记录');
+  AU.delTrack(id); ok(!AU.trackOf(id), 'delTrack');
+  ok(AU.importTrackText('not json', { silent: true }) === 0, '无效备份返回 0');
+  AU.showPipe(AU.PIPE[0].id); AU.render();
+} catch (e) { fails.push('线索跟进抛错：' + (e && e.message)); }
+// 🗓️ COD 时间轴 / 📰 本季变化高亮 / 📸 州海报 SVG
+try {
+  ok(AU.COD_MIN >= 2020 && AU.COD_MAX > AU.COD_MIN, 'COD 时间轴范围有效（' + AU.COD_MIN + '→' + AU.COD_MAX + '）');
+  AU.state.codMax = AU.COD_MIN + 1; const fc = AU.filteredPipe(); ok(fc.length > 0 && fc.every(i => i.codYear && i.codYear <= AU.COD_MIN + 1), 'COD 截止年筛选：只留 COD ≤ 截止年（' + fc.length + ' 条）');
+  ok(/cod=/.test(AU.stateToHash()), 'cod 进 hash'); AU.state.codMax = null;
+  AU.startPlay(); ok(AU.state.codMax === AU.COD_MIN && AU.state.playYear === AU.COD_MIN, 'startPlay 从起始年开始'); AU.pausePlay(); ok(AU.state.playYear === null, 'pausePlay 清除播放年'); AU.state.codMax = null; AU.render();
+  ok(AU.ADDED.size === ((AU.CHANGES && AU.CHANGES.added) || []).length, 'ADDED 集合 = 本季新增条数');
+  const svg = AU.buildStateSVG('NSW'); ok(/^<svg/.test(svg) && svg.indexOf('新南威尔士州') > 0 && svg.indexOf('</svg>') > 0 && svg.length > 4000, 'buildStateSVG(NSW) 生成海报 SVG');
+  ok(AU.buildStateSVG('ACT').indexOf('新南威尔士州') > 0 && AU.buildStateSVG('XX') === '', '海报：ACT 并入 NSW，未知州返回空');
+  ok(typeof AU.exportStatePoster('VIC') === 'string', 'exportStatePoster 在无 Image 环境回退 SVG 不抛错');
+} catch (e) { fails.push('COD 时间轴 / 海报抛错：' + (e && e.message)); }
+// 📦 澳洲项目切片（js/au-projects.js，scripts/build-au-slice.js 生成）必须与全量链现场装配的 PROJECTS 一致：id 集合 + 关键字段逐项比对
+try {
+  const saved = global.window; global.window = {};
+  require(J('js/au-projects.js'));
+  const SL = global.window.AU_PROJECTS; global.window = saved;
+  ok(SL && Array.isArray(SL.items) && SL.count === SL.items.length, '切片结构：{count, items[]}');
+  const live = AU.PROJECTS.slice().sort((a, b) => a.id - b.id), sl = SL.items.slice().sort((a, b) => a.id - b.id);
+  ok(live.length === sl.length && live.every((p, i) => p.id === sl[i].id), '切片 id 集合 = 全量链澳洲项目（' + sl.length + ' vs ' + live.length + '）—— 不一致请运行 node scripts/build-au-slice.js');
+  const KEYS = ['name', 'en', 'country', 'region', 'cat', 'status', 'year', 'inv', 'cap', 'owner', 'epc', 'epcStatus', 'updated', 'progress', 'sub', 'capMW', 'capMWh', 'flagship'];
+  const diff = [];
+  live.forEach((p, i) => { const q = sl[i]; if (!q) return; KEYS.forEach(k => { if (JSON.stringify(p[k] === undefined ? null : p[k]) !== JSON.stringify(q[k] === undefined ? null : q[k])) diff.push(p.id + '.' + k); }); if (JSON.stringify(p.coord) !== JSON.stringify(q.coord)) diff.push(p.id + '.coord'); });
+  ok(!diff.length, '切片字段与全量链一致（差异：' + diff.slice(0, 8).join(', ') + (diff.length > 8 ? ' …' : '') + '）');
+  ok(SL.builtFrom === ((global.window.ENERGY || {}).META || {}).lastUpdated, '切片 builtFrom = META.lastUpdated（' + SL.builtFrom + '）');
+} catch (e) { fails.push('澳洲项目切片比对抛错：' + (e && e.message)); }
 try { const csv = AU.leadsCSV(AU.leads().slice(0, 50)); const lines = csv.split('\r\n'); ok(csv.charCodeAt(0) === 0xfeff && lines.length === 51 && /^﻿排名,线索分,产品分/.test(csv) && lines[1].split(',').length >= 25, 'leadsCSV：BOM + 表头 + 50 行'); } catch (e) { fails.push('leadsCSV 抛错：' + (e && e.message)); }
 try { const acc = AU.buildAccounts(PIPE); const neoen = acc.find(a => a.name === 'Neoen'); ok(acc.length > 100 && neoen && neoen.items.length >= 10 && neoen.near > 0 && Object.keys(neoen.states).length >= 2, '业主归并：Neoen ≥10 条、跨 ≥2 州（实际 ' + (neoen && neoen.items.length) + '）'); ok(AU.ownerGroup('ACEN RENEWABLES').key === AU.ownerGroup('ACEN Renewables').key && AU.ownerGroup('Edify Energy Pty Ltd').name === 'Edify Energy', 'ownerGroup 别名 / 大小写归并'); } catch (e) { fails.push('buildAccounts 抛错：' + (e && e.message)); }
 try { const ep = AU.buildEpcAccounts(); ok(ep.length >= 8 && ep.some(a => /GenusPlus/.test(a.name)) && ep.some(a => /UGL/.test(a.name)) && ep.every(a => a.n === a.main.length + a.pipe.length), 'EPC 账户：含 GenusPlus / UGL，计数一致（' + ep.length + ' 家）'); } catch (e) { fails.push('buildEpcAccounts 抛错：' + (e && e.message)); }

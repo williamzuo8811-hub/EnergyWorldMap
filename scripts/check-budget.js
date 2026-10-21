@@ -45,6 +45,16 @@ const total = syncScripts.reduce((s, f) => s + kb(f), 0);
 console.log(`\n首屏同步 JS（${syncScripts.length} 个脚本）：${fmt(total)}（预算 ${TOTAL_SYNC_MB} MB）`);
 if (total / 1024 > TOTAL_SYNC_MB) { warned++; console.log(`::warning::首屏同步 JS 总量 ${fmt(total)} 超预算 ${TOTAL_SYNC_MB} MB —— 考虑把大数据文件改为按需懒加载`); }
 
+// 2b) au.html 脚本链：澳洲地图改用 js/au-projects.js 切片后应远小于首页（预算 AU_BUDGET_TOTAL_MB，默认 2.5 MB）
+const AU_TOTAL_MB = Number(process.env.AU_BUDGET_TOTAL_MB || 2.5);
+try {
+  const auHtml = fs.readFileSync(path.join(ROOT, 'au.html'), 'utf8');
+  const auScripts = [...auHtml.matchAll(/<script[^>]*\ssrc="([^"]+\.js)/g)].map(m => m[1]);
+  const auTotal = auScripts.reduce((s, f) => s + kb(f), 0);
+  console.log(`\nau.html 脚本链（${auScripts.length} 个脚本）：${fmt(auTotal)}（预算 ${AU_TOTAL_MB} MB）`);
+  if (auTotal / 1024 > AU_TOTAL_MB) { warned++; console.log(`::warning::au.html 脚本链 ${fmt(auTotal)} 超预算 ${AU_TOTAL_MB} MB —— 是否误把全球数据链加回了 au.html？应只有 data.js + au-projects.js（见 scripts/build-au-slice.js）`); }
+} catch (e) { console.log('::warning::无法统计 au.html 脚本链：' + e.message); }
+
 // 3) 懒加载资源（仅展示）
 console.log('\n懒加载（不计入首屏）：');
 LAZY.forEach(f => console.log(`  ${f.padEnd(30)} ${fmt(kb(f))}`));
