@@ -49,12 +49,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: 缓存击穿：给本地 CSS/JS 资源加版本号（提交哈希）
-        # GitHub Pages 会让浏览器缓存 css/js；不带版本号时普通标签页会一直用旧文件。
-        # 这里只改部署产物里的 index.html（不动仓库源码），给本地 css/ 与 js/ 资源追加 ?v=<短哈希>，
-        # 每次提交哈希都不同 → 自动击穿缓存，普通页刷新即见最新。lib/ 为稳定第三方库，不加。
+        # GitHub Pages 会让浏览器缓存 css/js（max-age=600）；不带版本号时普通标签页会一直用旧文件。
+        # 这里只改部署产物（不动仓库源码），给四个页面里本地 css/ 与 js/ 资源追加 ?v=<短哈希>；源码里手写的 ?v=N
+        # （au.html 等用它做本地 / Cloudflare 的击穿）一并换成提交哈希。每次提交哈希都不同 → 自动击穿缓存，普通页刷新即见最新。
+        # 以前只改 index.html：au.html 合并后浏览器仍可能拿旧 css/js 配新 HTML。lib/ 为稳定第三方库，不加。
         run: |
           V="${GITHUB_SHA::8}"
-          sed -i -E -e "s#(href=\"css/[^\"?]+\.css)\"#\1?v=${V}\"#g" -e "s#(src=\"js/[^\"?]+\.js)\"#\1?v=${V}\"#g" index.html
+          for f in index.html au.html globe.html coach.html; do
+            sed -i -E -e "s#(href=\"css/[^\"?]+\.css)(\?v=[^\"]*)?\"#\1?v=${V}\"#g" -e "s#(src=\"js/[^\"?]+\.js)(\?v=[^\"]*)?\"#\1?v=${V}\"#g" "$f"
+          done
+          grep -c "?v=${V}" index.html au.html globe.html coach.html
       - name: 配置 Pages
         uses: actions/configure-pages@v5
       - name: 上传站点（整个仓库根目录即站点）
