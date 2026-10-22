@@ -198,7 +198,7 @@
     reset: ['↺ 重置全部筛选', '↺ Reset filters'], search: ['搜项目 / 业主 / EPC / 拼音…', 'Search project / owner / EPC…'], world: ['🗺️ 全球地图', '🗺️ World map'],
     coal: ['⏳ 燃煤退役倒计时', '⏳ Coal retirement countdown'], opps: ['🔧 EPC 未招标机会榜', '🔧 Pre-tender opportunities'], mix: ['📊 当前筛选 · 品类投资', '📊 Investment by category'], lines: ['🚧 在建 / 规划输电工程', '🚧 Transmission under construction / planned'],
     lgGrid: ['⚡ 输电骨架', '⚡ Backbone'], lgPlanned: ['🚧 在建 / 规划线路', '🚧 Building / planned'], lgNodes: ['🔘 枢纽变电站', '🔘 Hub substations'], lgCoal: ['🏭 燃煤电厂', '🏭 Coal plants'], lgProj: ['📍 能源项目', '📍 Projects'], lgFill: ['🗺️ 州界着色', '🗺️ State fill'],
-    legend: ['图例', 'Legend'], existing: ['已投运', 'existing'], building: ['在建', 'building'], planned: ['规划', 'planned'], legendNote: ['走廊为示意路径（枢纽站连线），非测绘线路', 'Corridors are schematic (hub-to-hub), not surveyed routes'],
+    legend: ['图例', 'Legend'], existing: ['已投运', 'existing'], building: ['在建', 'building'], planned: ['规划', 'planned'], legendNote: ['走廊为示意路径（枢纽站连线），非测绘线路', 'Corridors are schematic (hub-to-hub), not surveyed routes'], legendToggle: ['折叠 / 展开图例', 'Collapse / expand legend'],
     noData: ['无数据', 'n/a'], closed: ['已关停', 'closed'], left: ['剩', ''], yr: ['年', 'y'], mo: ['个月', 'm'], tbd: ['待定', 'TBD'], due: ['到期 · 待核', 'due · verify'],
     fly: ['🎯 飞到', '🎯 Fly to'], filterSt: ['📍 只看该州项目', '📍 Filter this state'], copy: ['🔗 链接已复制', '🔗 Link copied'], close: ['✕', '✕'],
     sheetMissing: ['该州档案待补充', 'Fact sheet pending'],
@@ -311,8 +311,28 @@
     document.querySelectorAll('#bm-chips .chip').forEach(c => { const on = c.dataset.bm === nb.key; c.classList.toggle('on', on); pressed(c, on); });
   }
   const toLatLng = c => [c[1], c[0]];
-  function flyToBounds(b, opts) { if (REDUCED_MOTION) map.fitBounds(b, Object.assign({}, opts, { animate: false })); else map.flyToBounds(b, opts); }
-  function flyTo(ll, z) { if (REDUCED_MOTION) map.setView(ll, z, { animate: false }); else map.flyTo(ll, z, { duration: 1.1 }); }
+  // 开卡后飞行：目标放到卡片没盖住的那半边（桌面 / 横屏手机的右侧卡 → 目标偏左；手机竖屏的底部半屏卡 → 目标偏上）。
+  // 1366 笔记本上 713px 宽的地图区被 380px 卡片盖掉一半、手机上卡片占 62dvh：居中飞到的点正好落在卡片底下。
+  // 返回卡片盖住的像素宽 / 高（x 或 y 之一）；露出的部分太窄（<220 / <160px）就不偏移。show*() 都是先 openCard 再飞，所以量得到。
+  function cardPad() {
+    const c = $('card'), m = $('map');
+    if (!c || !m || !c.classList || !c.classList.contains('show') || typeof c.getBoundingClientRect !== 'function') return null;
+    const cr = c.getBoundingClientRect(), mr = m.getBoundingClientRect();
+    if (!cr.width || !mr.width) return null;
+    if (cr.width >= mr.width - 40 && cr.top > mr.top + 40) { const h = Math.round(mr.bottom - cr.top); return h > 40 && mr.height - h >= 160 ? { x: 0, y: h } : null; }   // 底部半屏
+    if (cr.left > mr.left + mr.width * 0.35) { const w = Math.round(mr.right - cr.left); return w > 40 && mr.width - w >= 220 ? { x: w, y: 0 } : null; }   // 右侧卡
+    return null;
+  }
+  function flyToBounds(b, opts) {
+    const pad = cardPad(); opts = Object.assign({}, opts);
+    if (pad) { const p = opts.padding || [0, 0], br = opts.paddingBottomRight || p; opts.paddingTopLeft = opts.paddingTopLeft || p; opts.paddingBottomRight = [br[0] + pad.x, br[1] + pad.y]; }
+    if (REDUCED_MOTION) map.fitBounds(b, Object.assign(opts, { animate: false })); else map.flyToBounds(b, opts);
+  }
+  function flyTo(ll, z) {
+    const pad = cardPad();
+    if (pad && map.project && map.unproject) { try { const zz = z == null ? map.getZoom() : z; ll = map.unproject(map.project(ll, zz).add([pad.x / 2, pad.y / 2]), zz); } catch (e) { /* stub */ } }
+    if (REDUCED_MOTION) map.setView(ll, z, { animate: false }); else map.flyTo(ll, z, { duration: 1.1 });
+  }
   const fitAU = () => map.fitBounds(AU_BOUNDS, { padding: [10, 10], animate: false });
   fitAU();
 
@@ -1129,11 +1149,14 @@
     el.innerHTML = ls.map(l => { const b = bandOf(l); return '<div class="row" data-line="' + esc(l.id) + '" role="button" tabindex="0"><div class="nm"><span style="color:' + b.color + '">' + (l.type === 'dc' ? 'HVDC' : l.kv + 'kV') + '</span> ' + esc(en() ? (l.en || l.name) : l.name) + '</div><div class="cd ' + (l.status === 'building' ? 'warm' : 'cool') + '">' + L_(l.status) + (l.year ? ' ' + l.year : '') + '</div><div class="meta">' + esc(l.owner || '') + (l.lengthKm ? ' · ' + fmtNum(l.lengthKm) + ' km' : '') + (l.costAud ? ' · ' + esc(l.costAud) : '') + '</div></div>'; }).join('') || '<div class="empty">' + L_('noData') + '</div>';
     el.querySelectorAll('.row').forEach(r => { r.addEventListener('click', () => showLine(r.dataset.line)); r.addEventListener('keydown', e => { if (e.key === 'Enter') showLine(r.dataset.line); }); });
   }
+  // 图例折叠状态记在本机（au.legend.v1）：16 行图例在 1366×768 笔记本上盖住西南角的聚合点，看熟了就收成一枚胶囊
+  const LEGEND_KEY = 'au.legend.v1';
+  let legendOpen = (function () { try { return !(hasLS() && localStorage.getItem(LEGEND_KEY) === '0'); } catch (e) { return true; } })();
   function renderLegend() {
     const el = $('map-legend'), inl = $('legend-inline'); if (!el && !inl) return;
-    const html = '<div class="lg-h">' + L_('legend') + '</div>'
-      + KV_BANDS.map(b => '<div class="lg-row"><i style="--c:' + b.color + '"></i>' + b.label + '</div>').join('')
-      + '<div class="lg-row"><i style="--c:' + DC.color + '"></i>' + DC.label + '</div>'
+    const html = '<button type="button" class="lg-h" aria-expanded="' + (legendOpen ? 'true' : 'false') + '" title="' + L_('legendToggle') + '">' + L_('legend') + '<span class="lg-caret" aria-hidden="true">▾</span></button><div class="lg-body">'
+      + '<div class="lg-kv">' + KV_BANDS.map(b => '<div class="lg-row"><i style="--c:' + b.color + '"></i>' + b.label + '</div>').join('')
+      + '<div class="lg-row"><i style="--c:' + DC.color + '"></i>' + DC.label + '</div></div>'
       + '<div class="lg-row"><i class="dash" style="--c:#cfd8ea"></i>' + L_('building') + ' / ' + L_('planned') + '</div>'
       + '<div class="lg-row"><i class="coal" style="--c:#ff5c7a"></i>🏭 ' + (en() ? 'coal · badge = closure year' : '燃煤电厂 · 角标 = 关停年') + '</div>'
       + '<div class="lg-row"><i class="dot" style="--c:#ffb02e"></i>' + (en() ? 'pulsing = EPC pre-tender' : '脉冲圈 = EPC 未招标') + '</div>'
@@ -1141,9 +1164,13 @@
       + '<div class="lg-row"><i class="dia hollow" style="--c:#21c7ff"></i>' + esc(plStatusName('proposed')) + '</div>'
       + '<div class="lg-row"><i class="dia up" style="--c:#21c7ff"></i>' + L_('lgUp') + ' <i class="dia added" style="--c:#21c7ff;margin-left:8px"></i>' + L_('lgAdded') + '</div>'
       + '<div class="lg-row"><i class="zone" style="--c:#2ee6a6"></i>REZ ' + esc(zoneStatusName('declared')) + ' <i class="zone" style="--c:#ffb02e;margin-left:6px"></i>' + esc(zoneStatusName('planned')) + '</div>'
-      + '<div class="lg-note">' + L_('legendNote') + '</div>';
-    if (el) el.innerHTML = html;
-    if (inl) inl.innerHTML = html;   // 窄屏：同一份图例画进左栏「图层」块
+      + '<div class="lg-note">' + L_('legendNote') + '</div></div>';
+    if (el) {
+      el.innerHTML = html; if (el.classList) el.classList.toggle('collapsed', !legendOpen);
+      const t = el.querySelector('.lg-h');
+      if (t) t.addEventListener('click', () => { legendOpen = !legendOpen; try { if (hasLS()) localStorage.setItem(LEGEND_KEY, legendOpen ? '1' : '0'); } catch (e) { /* 隐私模式 */ } renderLegend(); });
+    }
+    if (inl) inl.innerHTML = html.replace(/^<button[^>]*>/, '<div class="lg-h">').replace('</button>', '</div>');   // 窄屏：同一份图例画进左栏「图层」块（标题不是按钮、不折叠）
   }
   function updateCounts(items) {
     const byCat = {}, bySt = {}, byEpc = {};
@@ -1181,6 +1208,7 @@
     restyleGeo(); renderRez(); renderGrid(); renderCoal(); renderProjects(items); renderPipe(pitems);
     kpis(items, pitems); renderLeads(pitems); renderCoalList(); renderOpps(items); renderCatBars(items); renderLineList(); renderPipeStats(pitems); renderZoneList(); renderChangesBlock(); updateCounts(items);
     writeHash();
+    fitTopbar(false);   // KPI 数字变宽时只允许升档（去副标 / 换行），不降档，筛选时顶栏高度不来回跳
   }
 
   /* ---------- 卡片 ---------- */
@@ -1481,6 +1509,25 @@
   }
   // 顶栏「数据截至」胶囊：AEMO 管线表季度版本 + 煤电关停表；管线落后 >4 个月变黄（AEMO 每季度发新表）
   const ageMonths = ym => { const m = String(ym || '').match(/^(\d{4})-(\d{2})$/); return m ? (NOW.getFullYear() - +m[1]) * 12 + (NOW.getMonth() + 1 - +m[2]) : null; };
+  /* ---------- 顶栏自适应：副标 → 去副标 → KPI 换到第二行，按内容实测而不是视口断点 ----------
+   * 中英文标签、按钮数、系统字体都会改变顶栏内容宽度，媒体查询断点总有某种组合让最后一个 KPI 滑到 📅 AEMO 胶囊底下
+   * （旧断点下中文 1501–1680px、英文 1401–1920px 都中招）。这里直接量：.kpis 内容溢出自己的盒子（= 压到操作条底下）或副标被截断，就升一档。
+   * full=true（初始化 / resize / 切语言）从头量；full=false（render 后 KPI 数字变宽）只升不降。≤900 手机档交给 CSS。
+   * 顶栏高度变了地图容器就变了，但没有 window resize，Leaflet 不会自己 invalidateSize —— 下面用 ResizeObserver 盯住容器。 */
+  const topbarEl = document.querySelector('.topbar');
+  function fitTopbar(full) {
+    const tb = topbarEl, kp = $('kpis'), sub = $('t-sub');
+    if (!tb || !tb.classList || !kp || typeof kp.scrollWidth !== 'number') return;
+    if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) { tb.classList.remove('no-sub', 'kpi-wrap'); return; }
+    const over = e => !!e && typeof e.scrollWidth === 'number' && e.scrollWidth - e.clientWidth > 1;
+    const fits = () => !over(kp) && !(!tb.classList.contains('no-sub') && over(sub));
+    if (full) tb.classList.remove('no-sub', 'kpi-wrap');
+    if (!tb.classList.contains('kpi-wrap') && !fits()) { tb.classList.add('no-sub'); if (!fits()) tb.classList.add('kpi-wrap'); }
+  }
+  let _fitRaf = 0;
+  const raf = fn => (window.requestAnimationFrame ? window.requestAnimationFrame(fn) : setTimeout(fn, 16));
+  if (window.addEventListener) window.addEventListener('resize', () => { if (_fitRaf) return; _fitRaf = raf(() => { _fitRaf = 0; fitTopbar(true); }); });
+  if (typeof ResizeObserver === 'function') { try { const mw = $('map'); if (mw) new ResizeObserver(() => { try { map.invalidateSize(); } catch (e) { /* stub */ } }).observe(mw); } catch (e) { /* 老浏览器 */ } }
   function renderFresh() {
     const el = $('fresh-pill'); if (!el) return;
     const age = ageMonths(PIPE_ASOF), stale = age != null && age > 4;
@@ -1506,6 +1553,7 @@
     buildCats(); buildStatus(); buildEpc(); buildPipeChips(); buildBasemap(); renderStateList(); renderLegend(); syncUI(); render();
     if (state.card) { const c = state.card; if (c.kind === 'project') showDetail(c.id, { noFly: true }); else if (c.kind === 'coal') showCoal(c.id, { noFly: true }); else if (c.kind === 'state') showState(c.id, { noFly: true }); else if (c.kind === 'line') showLine(c.id, { noFly: true }); else if (c.kind === 'pipe') showPipe(c.id, { noFly: true }); else if (c.kind === 'zone') showZone(c.id, { noFly: true }); }
     if (state.view) openView(state.view);
+    fitTopbar(true);   // 标签宽度变了，从头量
   }
 
   /* ---------- 分享链接 / hash ---------- */
@@ -1576,16 +1624,17 @@
   _hashLock = true;
   const pendingCard = applyHash();
   _hashLock = false;
-  applyBase(state.basemap || BASE_DEFAULT); buildBasemap(); renderFresh();
+  applyBase(state.basemap || BASE_DEFAULT); buildBasemap(); renderFresh(); fitTopbar(true);
   if (state.lang === 'en') applyLang(); else { syncUI(); render(); }
   if (state.states.size === 1) flyToState([...state.states][0]);
+  else if (!pendingCard) { try { map.invalidateSize(); } catch (e) { /* stub */ } fitAU(); }   // 顶栏换行后地图矮了 41px：按最终尺寸重新套住大陆
   if (pendingCard) {
     const c = pendingCard;
     if (c.kind === 'project') showDetail(c.id); else if (c.kind === 'coal') showCoal(c.id); else if (c.kind === 'state') showState(c.id); else if (c.kind === 'line') showLine(c.id); else if (c.kind === 'pipe') showPipe(c.id); else if (c.kind === 'zone') showZone(c.id);
   }
   if (state.view && state.lang !== 'en') openView(state.view);   // EN 时 applyLang() 已按 state.view 打开
 
-  window.__AU__ = { state, PROJECTS, LINES, NODE, COAL, STATES, PIPE, ZONES, ZONE_STAT, CHANGES, render, filtered, filteredPipe, stateOf, zoneOf, countdown, showDetail, showCoal, showState, showLine, showPipe, showZone, stateToHash, applyHash, applyLang, resetState, syncUI, kpis, stateStats,
+  window.__AU__ = { map, state, PROJECTS, LINES, NODE, COAL, STATES, PIPE, ZONES, ZONE_STAT, CHANGES, render, filtered, filteredPipe, stateOf, zoneOf, countdown, showDetail, showCoal, showState, showLine, showPipe, showZone, stateToHash, applyHash, applyLang, resetState, syncUI, kpis, stateStats,
     leadScore, leads, leadsCSV, exportLeadsCSV, epcHintOf, ownerGroup, buildAccounts, buildEpcAccounts, filterOwner, showLeads, showAccounts, showChanges, buildChangesBrief, exportBrief, buildStateBrief, exportStateBrief, openModal, closeModal, openView,
     windowOpen, UPGRADED, PL_QUICK, passPipeBase, normTnsp, renderFresh, applyBase, BASES, closeDrawers, toggleDrawer, clampList,
     TRACK, TRACK_ST, trackOf, setTrack, delTrack, trackCounts, trackActive, dueIn, exportTrack, importTrackText,

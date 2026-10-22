@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="lib/leaflet.css">
   <link rel="stylesheet" href="lib/MarkerCluster.css">
   <link rel="stylesheet" href="lib/MarkerCluster.Default.css">
-  <link rel="stylesheet" href="css/au.css?v=7">
+  <link rel="stylesheet" href="css/au.css?v=8">
 </head>
 <body>
   <!-- 首屏加载态：底图瓦片到位（或超时）后淡出 -->
@@ -64,6 +64,11 @@
       <!-- 左：筛选 -->
       <aside class="panel left" id="left-panel" aria-label="筛选面板">
         <div class="drawer-head"><span class="drawer-handle" aria-hidden="true"></span><span class="drawer-title" id="drawer-title-l">🔍 筛选</span><button class="drawer-close" id="drawer-close-l" aria-label="收起筛选面板">✕ 收起</button></div>
+        <!-- 搜索 + 重置放最前（与全球地图一致）：原先在面板最底，手机抽屉 / 768 高的笔记本要滑过 ~1000px 才摸得到 -->
+        <div class="block">
+          <div class="search"><span class="ico">🔍</span><input id="q" type="search" placeholder="搜项目 / 业主 / EPC / 拼音…" aria-label="搜索项目"></div>
+          <button class="btn-reset" id="btn-reset">↺ 重置全部筛选</button>
+        </div>
         <div class="block">
           <div class="block-title" id="t-states">州 / 领地 <span class="count" id="states-hint">点州看电网公司档案</span></div>
           <div class="state-list" id="state-list"></div>
@@ -121,10 +126,6 @@
             <button class="chip" data-preset="recent" aria-pressed="false">🆕 近一年</button>
             <button class="chip" data-preset="future" aria-pressed="false">未来 2027+</button>
           </div>
-        </div>
-        <div class="block">
-          <div class="search"><span class="ico">🔍</span><input id="q" type="search" placeholder="搜项目 / 业主 / EPC / 拼音…" aria-label="搜索项目"></div>
-          <button class="btn-reset" id="btn-reset">↺ 重置全部筛选</button>
         </div>
         <div class="credit">数据：AEMO Generation Information（2026-07，季度差异见 📰 本季变化）+ KCI · AEMO ISP · TNSP/DNSP 规划报告 · 业主公告 · 自建项目库 · 州界 Natural Earth · 地名 Australian Postcodes（走廊为示意，非测绘线路；管线示意坐标按所在地 / 接入站放置）</div>
       </aside>
@@ -209,7 +210,7 @@
   <script defer src="js/au-pipeline.js"></script>
   <script defer src="js/au-rez.js"></script>
   <script defer src="js/au-changes.js"></script>
-  <script defer src="js/au.js?v=8"></script>
+  <script defer src="js/au.js?v=9"></script>
   <!-- PWA：注册 Service Worker（离线 + 重访秒开）。失败静默。 -->
   <script>
     if ('serviceWorker' in navigator) {

@@ -187,7 +187,13 @@ button { font-family: inherit; }
 
 /* 图例 */
 .map-legend { position: absolute; left: 12px; bottom: 34px; z-index: 500; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 9px 11px; font-size: 11px; color: var(--txt-dim); backdrop-filter: blur(8px); box-shadow: var(--shadow); max-width: 240px; }
-.map-legend .lg-h { font-weight: 700; color: var(--txt); margin-bottom: 5px; letter-spacing: .5px; }
+/* 标题是按钮：点击折叠成一枚「图例 ▸」胶囊（au.js 记在 localStorage au.legend.v1）——16 行图例在 1366×768 笔记本上盖住西南角的聚合点 */
+.map-legend .lg-h { display: flex; align-items: center; gap: 6px; width: 100%; margin: 0 0 5px; padding: 0; border: 0; background: none; font: inherit; font-weight: 700; color: var(--txt); letter-spacing: .5px; text-align: left; cursor: pointer; }
+.map-legend .lg-h .lg-caret { margin-left: auto; font-size: 10px; color: var(--txt-faint); transition: transform .15s; }
+.map-legend.collapsed .lg-h { margin-bottom: 0; } .map-legend.collapsed .lg-h .lg-caret { transform: rotate(-90deg); }
+.map-legend.collapsed .lg-body { display: none; }
+.map-legend.inline .lg-h { cursor: default; } .map-legend.inline .lg-h .lg-caret { display: none; }
+.map-legend .lg-kv { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }   /* 电压等级两列：图例矮 5 行 */
 .map-legend .lg-row { display: flex; align-items: center; gap: 7px; margin: 3px 0; }
 .map-legend .lg-row i { width: 22px; height: 0; border-top: 3px solid var(--c); flex: none; }
 .map-legend .lg-row i.dash { border-top-style: dashed; }
@@ -286,10 +292,20 @@ button { font-family: inherit; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* ---------- 响应式 ----------
-   断点：≤1500 顶栏去副标、KPI 收紧（1440 笔记本单行放得下）；≤1300 KPI 换到第二行；≤1180 两侧栏收窄；
-   ≤900 手机：顶栏两行（标题 + 📊 数据开关 / 横向可滑的操作条）、KPI 默认收起、两侧栏改底部抽屉、卡片改底部半屏。 */
-@media (max-width: 1500px) { .brand .sub { display: none; } .kpis { gap: 12px; } .kpi .num { font-size: 17px; } }
-@media (max-width: 1400px) { .topbar { flex-wrap: wrap; gap: 8px 14px; } .kpis { order: 3; width: 100%; justify-content: space-between; margin-left: 0; } .kpi { text-align: left; } .top-actions { margin-left: auto; } }
+   顶栏「副标 → 去副标 → KPI 换到第二行」三档不按视口断点，而由 au.js fitTopbar() 按内容实测切换（.topbar.no-sub / .topbar.kpi-wrap）：
+   中英文标签、按钮数、系统字体都会改变顶栏内容宽度，媒体查询断点总有某种组合让最后一个 KPI 滑到 📅 AEMO 胶囊底下
+   （旧断点 ≤1500 去副标 / ≤1400 换行：中文 1501–1680px、英文 1401–1920px 都中招，因为 .kpis 的 min-width:0 让 nowrap 的 KPI 溢出到操作条底下）；
+   ≤1180 两侧栏收窄；≤900 手机：顶栏两行（标题 + 📊 数据开关 / 横向可滑的操作条）、KPI 默认收起、两侧栏改底部抽屉、卡片改底部半屏。 */
+@media (min-width: 901px) {
+  .topbar.no-sub .brand .sub { display: none; }
+  .topbar.no-sub .brand { flex-shrink: 0; }   /* 去副标后标题不再参与收缩：空间不够时只有 .kpis 溢出，fitTopbar 才量得准 */
+  .topbar.no-sub .kpis { gap: 12px; } .topbar.no-sub .kpi .num { font-size: 17px; }
+  .topbar.kpi-wrap { flex-wrap: wrap; gap: 8px 14px; }
+  .topbar.kpi-wrap .brand { flex-shrink: 1; }
+  .topbar.kpi-wrap .kpis { order: 3; width: 100%; justify-content: space-between; margin-left: 0; }
+  .topbar.kpi-wrap .kpi { text-align: left; }
+  .topbar.kpi-wrap .top-actions { margin-left: auto; }
+}
 /* ≤1180（iPad 横屏等）：三栏只剩 444px 地图、图例盖住半张图 → 右侧看板改成右侧抽屉（📊 看板浮钮），左栏保留 */
 @media (max-width: 1180px) {
   .body { grid-template-columns: 270px 1fr; }
@@ -314,7 +330,7 @@ button { font-family: inherit; }
   .panel.right .drawer-head .drawer-title, .panel.right .drawer-head .drawer-close { padding-top: 0; margin-top: 0; }
 }
 @media (max-width: 900px) {
-  .topbar { gap: 6px 8px; padding: 6px 10px; padding-top: calc(6px + env(safe-area-inset-top, 0px)); }
+  .topbar { flex-wrap: wrap; gap: 6px 8px; padding: 6px 10px; padding-top: calc(6px + env(safe-area-inset-top, 0px)); }   /* 两行：标题 + 📊 数据 / 操作条（以前靠 ≤1400 的 flex-wrap，那条规则已改成 .kpi-wrap 类） */
   .brand { flex: 1 1 auto; gap: 9px; } .brand .logo { width: 30px; height: 30px; font-size: 16px; } .brand h1 { font-size: 15px; }
   .kpi-toggle { display: inline-flex; align-items: center; gap: 4px; flex: none; }
   .kpi-toggle[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
@@ -323,6 +339,10 @@ button { font-family: inherit; }
   .kpi { flex: 1 0 30%; text-align: left; } .kpi .num { font-size: 16px; }
   .top-actions { order: 2; width: 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; margin-left: 0; padding-bottom: 1px; }
   .top-actions::-webkit-scrollbar { display: none; }
+  /* 右缘渐隐提示「还能往右滑」（EN / 🔗 / 🗺️ 全球地图 藏在屏外）；末尾加一个空位，滑到底时最后一个按钮不被渐隐吃掉 */
+  .top-actions { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
+  .top-actions::after { content: ''; flex: none; width: 22px; }
+  .brand .sub { display: none; }
   .tbtn { flex: none; padding: 9px 11px; min-height: 36px; }
   .body { grid-template-columns: 1fr; }
   /* 底部抽屉：固定定位、带把手与关闭钮、遮罩点击即关；z 高于浮钮（浮钮在抽屉打开时隐藏） */
@@ -483,7 +503,7 @@ button { font-family: inherit; }
   .mtable tr.clk:hover td { background: transparent; }
   .mtable td { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 3px 0; border: none; }
   .mtable td.num, .mtable th.num { text-align: right; }
-  .mtable td::before { content: attr(data-l); color: var(--txt-faint); font-size: 11px; flex: none; min-width: 60px; }
+  .mtable td::before { content: attr(data-l); color: var(--txt-faint); font-size: 11px; flex: none; min-width: 60px; text-align: left; }   /* .num 的 text-align:right 别传给列名 */
   .mtable td:not([data-l])::before, .mtable td[data-l=""]::before { display: none; }
   .mtable td.full { display: block; } .mtable td.full::before { display: none; }
   .mtable td.act { justify-content: flex-start; padding-top: 6px; }
