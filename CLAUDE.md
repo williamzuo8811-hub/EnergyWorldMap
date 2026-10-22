@@ -110,12 +110,15 @@ verify in a browser — there is no build step.
   browser is the runner's own Google Chrome via `PLAYWRIGHT_CHROMIUM=/path/to/chrome`, because `playwright install` refuses
   Chromium on `ubuntu-latest` 26.04; skips with exit 0 when the module is missing locally, fails hard when the binary is set
   or `CI` is): serves the repo
-  with Node's `http`, opens `au.html` + `index.html` + `globe.html` + `coach.html` (the coach gate is unlocked via an init-script
-  `localStorage` flag) at 390×844 / 844×390 / 1024×768 / 1280×720 / 1440×900 / 1920×1080, aborts tile requests, and asserts no
+  with Node's `http`, opens `au.html` (plus `au.html#lang=en` at the desktop viewports — English labels are wider) + `index.html` +
+  `globe.html` + `coach.html` (the coach gate is unlocked via an init-script
+  `localStorage` flag) at 390×844 / 844×390 / 1024×768 / 1280×720 / 1440×900 / 1536×864 / 1920×1080, aborts tile requests, and asserts no
   element makes the page wider than the viewport (the AU topbar once pushed the grid 93–253 px wide and `overflow:hidden` silently
   cropped the right panel and the phone's 📊 FAB); **AU**: phone FABs / ⤢ reset inside the viewport, the filter drawer's ✕ closes,
   an open card sits above Leaflet's control layer (`z-index > 1000`) and inside the viewport, at 1024 the right panel is a drawer
-  (📊 FAB visible, map ≥ 700 px), on desktop the KPIs don't intersect the top-action buttons; **index**: on narrow screens the
+  (📊 FAB visible, map ≥ 700 px), on desktop `.kpis` does not overflow its box, no single `.kpi` intersects the top-action buttons
+  (the box-level `hit('.kpis', '.top-actions')` check never saw the overflowing last KPI) and the subtitle is not ellipsized, and after
+  `showPipe` the flown-to point lands left of the right-side card (desktop) / above the bottom sheet (portrait phone); **index**: on narrow screens the
   expanded ⋯ dock stays inside the viewport without squashing the basemap row or covering the zoom control, the detail card never
   overlaps the FABs, the heat facets / heat legend / region legend clear the FABs, at 921–1180 the credit pill clears the 📊 FAB,
   on desktop the heat facets clear the bottom-left zoom control and the heat legend clears the hint pill; **globe**: the topbar is
@@ -302,8 +305,14 @@ instead and lets `au.js` fall back to a live `util.buildProjects`).
   行动建议 and sources; downloads as `au-<ABBR>-brief-<YYYY-MM>.md`. ACT folds into NSW like everywhere else.
 - **Layout & mobile (P1)**: `.app` uses `grid-template-columns: minmax(0, 1fr)` and the topbar / brand text carry `min-width: 0` —
   the topbar's nowrap content must never widen the grid (it once pushed the page 93–253 px past the viewport and `overflow:hidden`
-  cropped the right panel and the phone FABs; `scripts/test-layout.js` guards this). Breakpoints: ≤1500 drop the subtitle, ≤1400 KPIs
-  wrap to a second row (a 1366 laptop could not fit them on one line — the last label hid under the 📅 AEMO chip), ≤1180 (iPad
+  cropped the right panel and the phone FABs; `scripts/test-layout.js` guards this). **Topbar fit is content-measured, not a breakpoint**:
+  `fitTopbar(full)` in `au.js` steps subtitle → `.topbar.no-sub` (subtitle hidden, KPI numbers 17 px) → `.topbar.kpi-wrap` (KPIs on their own
+  full-width row) by checking whether `.kpis` overflows its own box (`scrollWidth > clientWidth`, i.e. the last KPI slid under the 📅 AEMO
+  chip) or the subtitle got ellipsized; `full=true` on init / resize / language toggle re-measures from scratch, `render()` calls
+  `full=false` which only escalates (KPI numbers getting wider never un-wraps, so filtering doesn't bounce the topbar height). The old
+  `≤1500` / `≤1400` media queries were tuned for Chinese labels at 1440 and failed at 1501–1680 px in Chinese and at every desktop
+  width in English (the 1536×864 = 1920 @ 125 % laptop was the usual victim). A `ResizeObserver` on `#map` calls `map.invalidateSize()`
+  because a topbar height change is not a window resize (Leaflet would keep the old container size). Remaining breakpoints: ≤1180 (iPad
   landscape) the **right panel becomes a right-side drawer** opened by the 📊 看板 FAB (the three-column layout left a 444 px map
   with the legend over half of it) and ⤢ reset moves under the zoom control, ≤900 phone: two-row topbar (`#kpi-toggle` 📊 数据
   collapses the KPIs, the action row scrolls horizontally with the `#fresh-pill` 📅 AEMO date chip first), both side panels become
@@ -314,7 +323,14 @@ instead and lets `au.js` fall back to a live `util.buildProjects`).
   buttons); the toast moves to the top; the legend is also rendered into `#legend-inline` inside the 图层 block. **z-order**: the
   card is `z-index: 1010` and drawers `1100` / backdrop `1050` — above Leaflet's control layer (`.leaflet-top/.leaflet-bottom` are
   1000), otherwise the attribution / zoom buttons draw over bottom sheets. The card's `max-height: calc(100% - 84px)` keeps the ⤢
-  reset button (desktop) / 📊 FAB (≤1180) clear of its bottom edge. Touch targets ≥36–44 px are applied for `≤900px` **or**
+  reset button (desktop) / 📊 FAB (≤1180) clear of its bottom edge. **Card-aware fly**: every `show*()` opens the card first and then
+  flies, so `flyTo` / `flyToBounds` call `cardPad()` (the card's covered width for a right-side card / height for a phone bottom sheet)
+  and shift the target into the uncovered part (`map.project` + half the covered size, or `paddingBottomRight` for bounds) — on a 1366
+  laptop the 713 px map lost half its width to the 380 px card and the flown-to marker sat under it; skipped when the uncovered part is
+  <220 / <160 px. The map legend's header is a button: click collapses it to a `图例 ▸` pill (`localStorage` `au.legend.v1`; the kV rows
+  are a two-column `.lg-kv` grid so the expanded legend is ~5 rows shorter); the inline copy in the phone drawer never collapses. The
+  search + reset block is the **first** block of the left panel (as on the world map) — it used to sit ~1000 px down. The phone action
+  row has a right-edge `mask-image` fade + a trailing spacer to hint that EN / 🔗 / 🗺️ are off-screen. Touch targets ≥36–44 px are applied for `≤900px` **or**
   `(pointer: coarse)` (an iPad at 901–1180 is still a touchscreen), and every marker (`.mk` / `.pl-mk` / `.node-mk`) gets a
   transparent `::before` halo (`inset: -9px`) on coarse pointers so 8-px dots are tappable. The map is created with
   `zoomSnap: 0.5` so `fitAU()` lands on 3.5 on phones / iPads (integer 3 showed the continent at a third of the width). The wide
