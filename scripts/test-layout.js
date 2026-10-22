@@ -14,7 +14,11 @@
  *     （旧的 ≤1500 / ≤1400 断点在 1536 中文 / 任何宽度英文下都把「承诺+预期管线」压到 📅 AEMO 胶囊底下；
  *     hit('.kpis', '.top-actions') 量的是盒子、看不见溢出的子元素，所以这里逐个 KPI 量）；开卡飞到的点落在卡片左侧
  *   · index.html 窄屏：展开 ⋯ 工具坞后坞体不掉出视口、底图切换行没被压扁；热力 / 区域洞察模式的底部图例不和浮钮相碰；
- *     详情卡底边不压住浮钮；921–1180：署名不和 📊 浮钮相碰；桌面：热力分面条不被左下角缩放钮盖住
+ *     详情卡底边不压住浮钮；竖屏手机的详情卡是底部半屏（贴地图底边、z > 1000、开卡时浮钮隐藏、关卡恢复），flyTo / 点圆点开卡后
+ *     目标点落在卡片上方；热力图例单行（left:50% 的绝对定位可用宽度只有半屏，360px 上曾折成两行）；大区图例 10 个芯片全部可见；
+ *     长 toast 不按半屏宽折行；≤560 国别面板头的国家名不被按钮挤成一列字；921–1180：署名不和 📊 浮钮相碰；
+ *     桌面（中英文）：热力分面条不被左下角缩放钮盖住、底部提示条不压署名胶囊 / 缩放钮（1280–1536 曾叠在一起）
+ *   · au.html 1920：首屏（fitAU 落在缩放 5）不画 REZ 区名标签（固定 ≥5 时东海岸 ~40 个标签叠成一团），放大一级后出现
  *   · globe.html：顶栏不比视口宽（360px 手机曾把操作按钮挤出屏外）；桌面图例不被左栏盖住
  *   · coach.html：顶栏不比视口宽、页面不横向溢出，窄屏首屏能看到对练台（模式页签改横条后，对练内容紧随其后）
  *   · 没有 pageerror（globe.gl 在软件渲染下的 WebGL 内部报错除外）
@@ -29,7 +33,7 @@ const ROOT = path.join(__dirname, '..');
 // 1536×864 = 1920 屏 125% 缩放（最常见的 Windows 笔记本），正是顶栏 KPI 被 📅 胶囊盖住的宽度带
 const VIEWPORTS = [[390, 844, true], [844, 390, true], [1024, 768, true], [1280, 720, false], [1440, 900, false], [1536, 864, false], [1920, 1080, false]];
 // au.html 的英文档只跑桌面视口（标签更宽，顶栏最容易放不下）
-const PAGES = ['au.html', 'au.html#lang=en', 'index.html', 'globe.html', 'coach.html'];
+const PAGES = ['au.html', 'au.html#lang=en', 'index.html', 'index.html#lang=en', 'globe.html', 'coach.html'];
 // coach.html 的访问口令门：已解锁标记（与 coach.html 内联脚本一致）
 const COACH_UNLOCK = '7a96764cc44efb32ba02e5ecf68c78740256a25c594e57b1a7972c1a2ecf5677';
 
@@ -78,7 +82,7 @@ const ev = (pg, body) => pg.evaluate(new Function(HELPERS + body));
   }
   for (const page of PAGES) {
     for (const [w, h, mobile] of VIEWPORTS) {
-      const isAU = page.startsWith('au.html');
+      const isAU = page.startsWith('au.html'); const isIndex = page.startsWith('index.html');
       if (page.includes('#lang=en') && w <= 1180) continue;
       const ctx = await browser.newContext({ viewport: { width: w, height: h }, isMobile: mobile, hasTouch: mobile, locale: 'zh-CN', timezoneId: 'Australia/Sydney' });
       if (page === 'coach.html') await ctx.addInitScript(k => { try { localStorage.setItem('coach_access_v1', k); } catch (e) {} }, COACH_UNLOCK);
@@ -135,10 +139,16 @@ const ev = (pg, body) => pg.evaluate(new Function(HELPERS + body));
             ok(k.subCut <= 1, tag + ' 顶栏副标被截断：' + JSON.stringify(k));
             const fc = await flyCheck(); ok(fc && fc.x > 0 && fc.x < fc.cardL, tag + ' 开卡后目标点被右侧卡片盖住：' + JSON.stringify(fc));
             await pg.evaluate(() => { const b = document.querySelector('.card .d-close'); if (b) b.click(); }); await pg.waitForTimeout(200);
+            // 首屏不画 REZ 区名（1920 宽屏 fitAU 落在缩放 5，阈值固定 ≥5 时东海岸 ~40 个标签叠成一团）；放大一级后出现
+            await pg.evaluate(() => { const A = window.__AU__; A.map.fitBounds([[-44.5, 111.5], [-9.5, 155]], { padding: [10, 10], animate: false }); A.render(); }); await pg.waitForTimeout(300);
+            const rz0 = await pg.evaluate(() => document.querySelectorAll('.rez-lab').length);
+            ok(rz0 === 0, tag + ' 首屏就画了 ' + rz0 + ' 个 REZ 区名标签');
+            await pg.evaluate(() => { const A = window.__AU__; A.map.setView([-33, 150], A.map.getZoom() + 1.5, { animate: false }); }); await pg.waitForTimeout(400);
+            ok((await pg.evaluate(() => document.querySelectorAll('.rez-lab').length)) > 0, tag + ' 放大后仍没有 REZ 区名标签');
           }
         }
 
-        if (page === 'index.html') {
+        if (isIndex) {
           if (narrow) {
             ok((await ev(pg, "return inView('#fab-filters')")) !== false, tag + ' 🔍 筛选浮钮不在视口内');
             ok((await ev(pg, "return inView('#fab-stats')")) !== false, tag + ' 📊 统计浮钮不在视口内');
@@ -149,22 +159,51 @@ const ev = (pg, body) => pg.evaluate(new Function(HELPERS + body));
             ok(t.bh != null && t.bh >= 28, tag + ' 底图切换行被压扁：' + JSON.stringify(t));
             ok(!t.hitZoom, tag + ' 展开的工具坞压住缩放 ＋/－');
             await pg.click('#tools-toggle'); await pg.waitForTimeout(200);
-            // 详情卡底边不压住浮钮
-            await pg.evaluate(() => { const p = window.__APP__.PROJECTS.find(x => x.flagship && x.coord) || window.__APP__.PROJECTS[0]; window.__APP__.showDetail(p); }); await pg.waitForTimeout(400);
+            // 详情卡：底边不压住浮钮、整卡在视口内；竖屏手机 = 底部半屏（贴地图底边、z > 1000、浮钮隐藏），flyTo 的目标点落在卡片上方
+            await pg.evaluate(() => { const A = window.__APP__; const p = A.PROJECTS.find(x => x.flagship && x.coord && x.country === '沙特阿拉伯') || A.PROJECTS[0]; A.showDetail(p); A.flyTo(A.toLatLng(p.coord), 6, { duration: 0.3 }); }); await pg.waitForTimeout(900);
             ok(!(await ev(pg, "return hit('.detail.show', '#fab-filters') || hit('.detail.show', '#fab-stats')")), tag + ' 详情卡压住底部浮钮');
             ok((await ev(pg, "return inView('.detail.show')")) === true, tag + ' 详情卡超出视口');
+            const dc = await pg.evaluate(() => { const A = window.__APP__; const p = A.PROJECTS.find(x => x.flagship && x.coord && x.country === '沙特阿拉伯') || A.PROJECTS[0]; const c = document.querySelector('.detail.show').getBoundingClientRect(), m = document.getElementById('map').getBoundingClientRect(); const pt = A.map.latLngToContainerPoint(A.toLatLng(p.coord)); return { l: Math.round(c.left - m.left), t: Math.round(c.top - m.top), r: Math.round(c.right - m.left), b: Math.round(c.bottom - m.top), mw: Math.round(m.width), mh: Math.round(m.height), x: Math.round(pt.x), y: Math.round(pt.y), z: +getComputedStyle(document.querySelector('.detail')).zIndex, fab: getComputedStyle(document.getElementById('fab-filters')).display }; });
+            const covered = dc.x > dc.l && dc.x < dc.r && dc.y > dc.t && dc.y < dc.b;
+            ok(!covered, tag + ' 开卡飞行后目标点被详情卡盖住：' + JSON.stringify(dc));
+            if (h > w) {
+              ok(dc.l <= 1 && dc.r >= dc.mw - 1 && dc.b >= dc.mh - 1 && dc.t > dc.mh * 0.25, tag + ' 竖屏详情卡不是贴底的半屏卡：' + JSON.stringify(dc));
+              ok(dc.z > 1000 && dc.fab === 'none', tag + ' 竖屏半屏卡应高于 Leaflet 控件层且开卡时隐藏浮钮：' + JSON.stringify(dc));
+              // 点圆点开卡：被卡片盖住的圆点要被挪到卡片上方
+              await pg.evaluate(() => { document.querySelector('.detail .d-close').click(); window.__APP__.map.setView([24.7, 46.7], 7, { animate: false }); }); await pg.waitForTimeout(600);
+              const mk = await pg.evaluate(() => { const m = document.getElementById('map').getBoundingClientRect(); const mk = [...document.querySelectorAll('.leaflet-marker-pane .mk')].map(el => ({ el, r: el.getBoundingClientRect() })).filter(x => x.r.width > 0 && x.r.top > m.top + 60 && x.r.bottom < m.bottom).sort((a, b) => b.r.top - a.r.top)[0]; if (!mk) return null; mk.el.dispatchEvent(new MouseEvent('click', { bubbles: true })); return true; });
+              if (mk) { await pg.waitForTimeout(800); const mv = await pg.evaluate(() => { const A = window.__APP__; const nm = document.querySelector('.detail.show .d-name'); const p = nm && A.PROJECTS.find(x => nm.textContent.replace('★ ', '').trim() === x.name); if (!p) return null; const c = document.querySelector('.detail.show').getBoundingClientRect(), m = document.getElementById('map').getBoundingClientRect(); const pt = A.map.latLngToContainerPoint(A.toLatLng(p.coord)); return { y: Math.round(pt.y), cardT: Math.round(c.top - m.top) }; }); ok(mv && mv.y > 0 && mv.y < mv.cardT, tag + ' 点圆点开卡后圆点仍被半屏卡盖住：' + JSON.stringify(mv)); }
+            }
             await pg.evaluate(() => { const c = document.querySelector('.detail .d-close'); if (c) c.click(); }); await pg.waitForTimeout(200);
+            ok((await ev(pg, "return getComputedStyle(document.getElementById('fab-filters')).display")) !== 'none', tag + ' 关卡后浮钮没有恢复');
+            // 长 toast：left:50% 的绝对定位元素可用宽度只有容器一半，没有 width:max-content 时按半屏宽折行
+            await pg.evaluate(() => document.getElementById('btn-share').click()); await pg.waitForTimeout(250);
+            const tw = await ev(pg, "const r = rectOf('.toast.show'); return r ? { w: r.w, h: r.h } : null");
+            ok(tw && tw.h < 44, tag + ' toast 被折成多行：' + JSON.stringify(tw));
+            // ≤560 国别面板头：国家名独占首行（宽 ≥ 100px），📍 / ⊕ 按钮换到第二行
+            if (w <= 560) {
+              await pg.evaluate(() => window.__APP__.showCountry('沙特阿拉伯')); await pg.waitForTimeout(400);
+              const ch = await ev(pg, "const n = rectOf('.cp-head .cp-name'), f = rectOf('.cp-head .cp-filter'); return { nw: n && n.w, nb: n && n.b, ft: f && f.t }");
+              ok(ch.nw >= 100 && ch.ft != null && ch.ft >= ch.nb - 2, tag + ' 国别面板头：国家名被按钮挤扁 / 按钮没换行：' + JSON.stringify(ch));
+              await pg.evaluate(() => { const c = document.getElementById('cp-close'); if (c) c.click(); }); await pg.waitForTimeout(200);
+            }
             // 热力模式：分面条 / 图例让开浮钮
             await pg.evaluate(() => document.getElementById('btn-heat').click()); await pg.waitForTimeout(500);
             ok(!(await ev(pg, "return hit('.heat-facets', '#fab-filters') || hit('.heat-facets', '#fab-stats') || hit('.heat-legend', '#fab-filters') || hit('.heat-legend', '#fab-stats') || hit('.heat-legend', '.heat-facets')")), tag + ' 热力分面条 / 图例与浮钮（或彼此）相交');
+            const hl = await ev(pg, "const r = rectOf('#heat-legend'); return r ? r.h : null");
+            ok(hl != null && hl < 40, tag + ' 顶部热力图例被折成两行（高 ' + hl + 'px）');
             await pg.evaluate(() => document.getElementById('btn-heat').click()); await pg.waitForTimeout(200);
             // 区域洞察模式（懒加载国界后渲染图例）
             await pg.evaluate(() => document.getElementById('btn-region').click()); await pg.waitForTimeout(1500);
             ok(!(await ev(pg, "return hit('.region-legend', '#fab-filters') || hit('.region-legend', '#fab-stats')")), tag + ' 大区图例与浮钮相交');
+            const rl = await ev(pg, "const box = document.querySelector('.region-legend .rl-chips'); if (!box) return null; const b = box.getBoundingClientRect(); return [...box.querySelectorAll('.rl-chip')].filter(c => c.getBoundingClientRect().bottom > b.bottom + 1).length");
+            ok(rl === 0, tag + ' 大区图例有 ' + rl + ' 个芯片被裁掉（滚动容器太矮）');
             await pg.evaluate(() => document.getElementById('btn-region').click()); await pg.waitForTimeout(200);
           } else if (w <= 1180) {
             ok(!(await ev(pg, "return hit('.map-credit', '#fab-stats')")), tag + ' 署名胶囊被 📊 浮钮压住');
           } else {
+            // 底部居中的操作提示条不压右下角署名 / 左下角缩放钮（1280–1536 中英文曾叠在一起；英文更长）
+            ok(!(await ev(pg, "return hit('.map-hint', '.map-credit') || hit('.map-hint', '.leaflet-control-zoom')")), tag + ' 操作提示条压住署名胶囊 / 缩放钮');
             await pg.evaluate(() => document.getElementById('btn-heat').click()); await pg.waitForTimeout(500);
             ok(!(await ev(pg, "return hit('.heat-facets', '.leaflet-control-zoom')")), tag + ' 热力分面条被左下角缩放钮盖住');
             ok(!(await ev(pg, "return hit('.heat-legend', '.map-hint')")), tag + ' 热力图例与操作提示条相交');

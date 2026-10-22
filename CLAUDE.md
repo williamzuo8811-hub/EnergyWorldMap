@@ -109,19 +109,26 @@ verify in a browser — there is no build step.
 - `node scripts/test-layout.js` — **advisory `layout` job** (`npm i --no-save playwright` for the library only; the
   browser is the runner's own Google Chrome via `PLAYWRIGHT_CHROMIUM=/path/to/chrome`, because `playwright install` refuses
   Chromium on `ubuntu-latest` 26.04; skips with exit 0 when the module is missing locally, fails hard when the binary is set
-  or `CI` is): serves the repo
-  with Node's `http`, opens `au.html` (plus `au.html#lang=en` at the desktop viewports — English labels are wider) + `index.html` +
-  `globe.html` + `coach.html` (the coach gate is unlocked via an init-script
+  or `CI` is; **locally in the Claude cloud container** the npm `playwright` is newer than the pre-installed browsers, so run it as
+  `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium node scripts/test-layout.js` — without the variable it prints "浏览器启动失败，跳过" and
+  exits 0, which looks like a pass): serves the repo
+  with Node's `http`, opens `au.html` + `index.html` (plus `au.html#lang=en` / `index.html#lang=en` at the desktop viewports — English
+  labels are wider) + `globe.html` + `coach.html` (the coach gate is unlocked via an init-script
   `localStorage` flag) at 390×844 / 844×390 / 1024×768 / 1280×720 / 1440×900 / 1536×864 / 1920×1080, aborts tile requests, and asserts no
   element makes the page wider than the viewport (the AU topbar once pushed the grid 93–253 px wide and `overflow:hidden` silently
   cropped the right panel and the phone's 📊 FAB); **AU**: phone FABs / ⤢ reset inside the viewport, the filter drawer's ✕ closes,
   an open card sits above Leaflet's control layer (`z-index > 1000`) and inside the viewport, at 1024 the right panel is a drawer
   (📊 FAB visible, map ≥ 700 px), on desktop `.kpis` does not overflow its box, no single `.kpi` intersects the top-action buttons
   (the box-level `hit('.kpis', '.top-actions')` check never saw the overflowing last KPI) and the subtitle is not ellipsized, and after
-  `showPipe` the flown-to point lands left of the right-side card (desktop) / above the bottom sheet (portrait phone); **index**: on narrow screens the
+  `showPipe` the flown-to point lands left of the right-side card (desktop) / above the bottom sheet (portrait phone), and at 1920 the
+  first screen draws no REZ name labels (they appear one zoom level in); **index**: on narrow screens the
   expanded ⋯ dock stays inside the viewport without squashing the basemap row or covering the zoom control, the detail card never
-  overlaps the FABs, the heat facets / heat legend / region legend clear the FABs, at 921–1180 the credit pill clears the 📊 FAB,
-  on desktop the heat facets clear the bottom-left zoom control and the heat legend clears the hint pill; **globe**: the topbar is
+  overlaps the FABs, on portrait phones it is a bottom sheet (flush with the map's bottom edge, `z-index > 1000`, FABs hidden while
+  open and back after close) and both `flyTo` and a marker click leave the project point above the sheet, the heat legend is one row,
+  all 10 region-legend chips are visible, a long toast does not wrap at half the screen, at ≤560 the country panel's name keeps
+  ≥100 px with the 📍/⊕ buttons on a second row, the heat facets / heat legend / region legend clear the FABs, at 921–1180 the credit
+  pill clears the 📊 FAB, on desktop (zh + en) the hint pill clears the credit pill and the zoom control, the heat facets clear the
+  bottom-left zoom control and the heat legend clears the hint pill; **globe**: the topbar is
   never wider than the viewport, the legend is not under the left panel; **coach**: no horizontal overflow and the deck is visible
   in the first phone screen; and no `pageerror` (globe.gl's own WebGL error under software rendering is filtered).
 - `node scripts/check-links.js` — internal `href`/`src`/markdown links must exist on disk (**ERROR**,
@@ -341,7 +348,7 @@ instead and lets `au.js` fall back to a live `util.buildProjects`).
   after 12 s if no tile ever loaded (`tileFail`).
 - **Render memo**: `memo(key, signature)` lets `renderGrid` / `renderRez` / `renderCoal` / the coal, zone, line lists and the changes
   block skip re-rendering when their inputs (layers / states / kV / lang / zoom band) did not change, so a search keystroke only
-  rebuilds project + pipeline markers; `zoomend` re-runs the memoised `renderRez`/`renderCoal` (REZ labels appear at zoom ≥5; coal
+  rebuilds project + pipeline markers; `zoomend` re-runs the memoised `renderRez`/`renderCoal` (REZ labels appear at zoom ≥ `REZ_LABEL_ZOOM` = the `fitAU()` zoom + 0.5, min 5 — a fixed ≥5 piled ~40 east-coast labels onto the 1920 first screen where `fitAU` already lands on 5; coal
   markers are 20 / 24 / 30 px by zoom band and closed plants show only at zoom ≥6). The pipeline cluster keeps clustering at every
   zoom (no `disableClusteringAtZoom`) so the 41 % of items that share exact coordinates spiderfy on click. Pipeline search goes
   through `util.matchProject` via `plProxy` (state zh/en names + fuel names live in the `country` slot, so pinyin like
@@ -611,7 +618,23 @@ Narrow = `(max-width: 820px)` **or** a landscape phone `(max-width: 1180px) and 
   percentages of the *map area*, not `dvh` of the viewport — so it clears the FAB row whatever the topbar height (a wrapped topbar
   once pushed the card onto the FABs); on landscape phones it sits at `left: 118px; top: 12px` (right of the zoom control, clear of
   the wider EN `🔍 Filters` FAB) and the credit pill hides while a card is open (`.detail.show ~ .map-credit`). In tour mode the card
-  gives up 290 px to the narration bar.
+  gives up 290 px to the narration bar. **Portrait phones** (`(max-width: 820px) and (orientation: portrait)`, `body:not(.story-on)`)
+  get a **bottom sheet** instead (like `au.html`: flush bottom, `62dvh`, handle bar in the sticky `.d-top`, `z-index: 1010` above
+  Leaflet's control layer, `body.detail-on` hides the FABs, swipe-down ≥48 px on the title bar closes) — the top-anchored card used to
+  cover the whole map on a 360 px phone, so the dot you had just tapped was always under it. Tour mode keeps the top card (the
+  narration bar owns the bottom). **Card-aware camera** in `app.js`: `cardFree()` returns the map rectangle the open card does *not*
+  cover (above a bottom sheet / right of a left card / left of a right card); `flyTo()` shifts its target into that rectangle's
+  centre (`cardTargetPt`, no-op when the map centre is already inside it), and a marker click calls `revealLatLng()` which `panBy`s a
+  covered dot into it (844×390 landscape: the card spans 118–498 px, the old centre target at 422 px sat under it).
+- **Centred overlays need `width: max-content`**: an absolutely positioned element with `left: 50%; transform: translateX(-50%)`
+  only gets half the container as available width, so `.toast` (all three stylesheets) and the narrow-screen top-centre `.heat-legend`
+  wrapped at 180 px on a 360 px phone ("投资热力" on two lines, long toasts on three). Keep `max-width: calc(100% - 32px)` next to it.
+- **Specificity in the ≤560 `.cp-head` block**: the base `.cp-filter` / `.cp-add` / `.ri-nav` rules come *after* that media block, so
+  its single-class selectors never won — the country name was squeezed to one character per line. Every selector in that block is
+  prefixed with `.cp-head`, and `.cp-name` has `flex: 1 1 calc(100% - 160px)` so the first line holds only icon + name + ✕ (+ ◂▸ on the
+  insight card) and the 📍/⊕ buttons always wrap below it (a 120 px basis still let 📍 squeeze onto the first line at 390 px).
+- **`.app` height is `100dvh`** (with a `100vh` fallback, as in `au.css`): with plain `100vh` the bottom strip of the map and the
+  attribution sat under the mobile browser's toolbar in portrait (only the landscape block had `dvh`).
 - **Topbar at ≤820**: `.brand { flex: 1 1 0 }` (basis 0, not auto) so the title truncates instead of wrapping `EN` / `📊 数据`
   onto a second row at 360 px.
 - **⋯ tools dock**: `.map-tools` is bounded by `max-height: calc(100% - 28px)` (minus the FAB row when open on narrow screens),
@@ -621,8 +644,11 @@ Narrow = `(max-width: 820px)` **or** a landscape phone `(max-width: 1180px) and 
   laptop; narrow screens use `calc(100% - 64px)` to clear the zoom control). At 921–1500 the `.story-card` narrows to
   `calc(100% - 420px)` so the narration bar clears the dock column.
 - **Desktop**: `.heat-facets` / `.region-legend` start at `left: 56px` (the zoom control sits bottom-left), and `.map-hint` hides in
-  heat / choropleth / insight modes (it collided with the heat legend at 1440 px). `.country-panel` is `max-height: calc(100dvh - 56px)`
-  on narrow screens and its header wraps the 📍/⊕/◂▸ buttons to a second row at ≤560 px.
+  heat / choropleth / insight modes (it collided with the heat legend at 1440 px); at 921–1600 the hint pill is centred in the gap
+  between the zoom control and the credit pill (`left: calc(50% - 68px); max-width: calc(100% - 256px)`, ellipsized) — the 514 px
+  Chinese / 690 px English pill overlapped the credit pill at 1280–1536 and the zoom buttons at 1280 EN. `.country-panel` is
+  `max-height: calc(100dvh - 56px)` on narrow screens and its header wraps the 📍/⊕/◂▸ buttons to a second row at ≤560 px. The
+  `.region-legend .rl-chips` scroll box is 124 px tall on narrow screens (4 rows — 96 px cut the 4th row of 10 chips in half).
 - **Touch**: `@media (pointer: coarse) .mk::before` adds a 9-px transparent halo around every project dot (8–12 px dots were hard to
   tap); pseudo-elements take part in hit testing, so Leaflet's marker click fires.
 
