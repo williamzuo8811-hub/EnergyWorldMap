@@ -333,7 +333,9 @@
     if (pad && map.project && map.unproject) { try { const zz = z == null ? map.getZoom() : z; ll = map.unproject(map.project(ll, zz).add([pad.x / 2, pad.y / 2]), zz); } catch (e) { /* stub */ } }
     if (REDUCED_MOTION) map.setView(ll, z, { animate: false }); else map.flyTo(ll, z, { duration: 1.1 });
   }
-  const fitAU = () => map.fitBounds(AU_BOUNDS, { padding: [10, 10], animate: false });
+  // REZ 标签出现的缩放阈值 = 取景缩放 + 半级（最低 5）：1920 宽屏上 fitAU 已落在 5，固定 ≥5 会让 ~40 个区名在首屏东海岸叠成一团
+  let REZ_LABEL_ZOOM = 5;
+  const fitAU = () => { map.fitBounds(AU_BOUNDS, { padding: [10, 10], animate: false }); REZ_LABEL_ZOOM = Math.max(5, (map.getZoom ? map.getZoom() : 4) + 0.5); };
   fitAU();
 
   // 首屏 loader：瓦片到位或超时即淡出；若 12 秒内一张瓦片都没到而错误不断（海外瓦片被墙 / 断网），提示切底图
@@ -467,7 +469,7 @@
   const zoneLabel = z => { const t = (z.ispId ? z.ispId + ' · ' : '') + (en() ? (z.en || z.name) : z.name).replace(/\s*[（(].*?[)）]\s*/g, '').trim(); if (t.length <= 22) return t; const cut = t.slice(0, 22), sp = cut.lastIndexOf(' '); return (sp > 10 && /[A-Za-z0-9]/.test(cut) ? cut.slice(0, sp) : cut).replace(/[\s·/–-]+$/, '') + '…'; };
   function renderRez() {
     const zoom = zoomNow();
-    if (!memo('rez', [state.layers.rez, stSig(), state.lang, zoom >= 5 ? 1 : 0].join('|'))) return;
+    if (!memo('rez', [state.layers.rez, stSig(), state.lang, zoom >= REZ_LABEL_ZOOM ? 1 : 0].join('|'))) return;
     rezLayer.clearLayers();
     ZONES_SORTED.slice().reverse().forEach(z => {   // 候选区先画、已划定后画（在上层）
       if (!zoneVisible(z)) return;
@@ -477,7 +479,7 @@
       pg.bindTooltip('<b>' + esc(en() ? (z.en || z.name) : z.name) + '</b><br>' + esc(zoneStatusName(z.status)) + ' · ' + esc(z.body || '') + (z.targetGw ? ' · ' + z.targetGw + ' GW' : '') + '<br><span style="color:#93a4c4">' + L_('zPipe') + ' ' + gw((st.committed || 0) + (st.anticipated || 0)) + ' + ' + gw(st.proposed || 0) + ' ' + plStatusName('proposed') + '</span>', { sticky: true, className: 'au-tip' });
       pg.on('click', e => { if (L.DomEvent && L.DomEvent.stopPropagation) L.DomEvent.stopPropagation(e); showZone(z.key, { noFly: true }); });
       pg.addTo(rezLayer);
-      if (zoom >= 5 && z.center) L.marker(toLatLng(z.center), { icon: L.divIcon({ className: 'rez-lab', iconSize: [0, 0], html: '<span style="--c:' + col + '">' + esc(zoneLabel(z)) + '</span>' }), interactive: false }).addTo(rezLayer);
+      if (zoom >= REZ_LABEL_ZOOM && z.center) L.marker(toLatLng(z.center), { icon: L.divIcon({ className: 'rez-lab', iconSize: [0, 0], html: '<span style="--c:' + col + '">' + esc(zoneLabel(z)) + '</span>' }), interactive: false }).addTo(rezLayer);
     });
   }
   map.on('zoomend', () => { renderRez(); renderCoal(); });   // 两者都带签名记忆：只在标签 / 尺寸档位真变时重画

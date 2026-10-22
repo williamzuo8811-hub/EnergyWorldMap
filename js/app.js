@@ -144,8 +144,41 @@
   // 全球取景：fitBounds 自动适配各屏幕（SW [纬,经] → NE [纬,经]）
   const WORLD_BOUNDS = [[-58, -170], [72, 185]];
   function fitWorld() { map.fitBounds(WORLD_BOUNDS, { padding: [24, 24], animate: !REDUCED_MOTION }); }
-  // 相机飞行统一走这两个包装：减少动态偏好下退化为无动画跳转
+  // 开卡后的取景：详情卡在竖屏手机是底部半屏、横屏手机 / 桌面在左侧——算出卡片没盖住的那片空白区（容器像素矩形）。
+  // 此前 flyTo 一律把目标放地图正中：844×390 横屏卡占 118–498px、正中 422px 正好在卡片底下；竖屏半屏卡更是盖住整个下半区
+  function cardFree() {
+    const c = document.getElementById('detail'), m = document.getElementById('map');
+    if (!c || !m || !c.classList || !c.classList.contains('show') || typeof c.getBoundingClientRect !== 'function') return null;
+    const cr = c.getBoundingClientRect(), mr = m.getBoundingClientRect();
+    if (!cr.width || !mr.width) return null;
+    let f = null;
+    if (cr.width >= mr.width - 40 && cr.bottom >= mr.bottom - 6) f = { l: 0, t: 0, r: mr.width, b: cr.top - mr.top };          // 底部半屏 → 卡片上方
+    else if (cr.right < mr.left + mr.width * 0.8) f = { l: cr.right - mr.left, t: 0, r: mr.width, b: mr.height };               // 左侧卡 → 卡片右边
+    else if (cr.left > mr.left + mr.width * 0.2) f = { l: 0, t: 0, r: cr.left - mr.left, b: mr.height };                        // 右侧卡 → 卡片左边
+    return f && f.r - f.l >= 160 && f.b - f.t >= 120 ? f : null;
+  }
+  // 目标点该落到的容器像素：地图中心本来就在空白区里（留 40px 余量）就不动，否则用空白区中心
+  function cardTargetPt() {
+    const f = cardFree(); if (!f || !map.getSize) return null;
+    const sz = map.getSize(), cx = sz.x / 2, cy = sz.y / 2;
+    if (cx > f.l + 40 && cx < f.r - 40 && cy > f.t + 40 && cy < f.b - 40) return null;
+    return { x: (f.l + f.r) / 2, y: (f.t + f.b) / 2 };
+  }
+  // 点圆点开卡（不改缩放）：标记被卡片盖住时平移地图，把它挪到空白区中心
+  function revealLatLng(ll) {
+    const f = cardFree(); if (!f || !map.latLngToContainerPoint || !map.panBy) return;
+    try {
+      const p = map.latLngToContainerPoint(ll);
+      if (p.x > f.l + 12 && p.x < f.r - 12 && p.y > f.t + 12 && p.y < f.b - 12) return;   // 已在空白区内
+      map.panBy([p.x - (f.l + f.r) / 2, p.y - (f.t + f.b) / 2], { animate: !REDUCED_MOTION, duration: 0.5 });
+    } catch (e) { /* 测试桩无投影 */ }
+  }
+  // 相机飞行统一走这两个包装：减少动态偏好下退化为无动画跳转；开着卡片时把目标挪到卡片没盖住的那片
   function flyTo(ll, zoom, opts) {
+    const pt = cardTargetPt();
+    if (pt && map.project && map.unproject && map.getSize) {
+      try { const z = zoom == null ? map.getZoom() : zoom, sz = map.getSize(), px = map.project(ll, z); ll = map.unproject([px.x - (pt.x - sz.x / 2), px.y - (pt.y - sz.y / 2)], z); } catch (e) { /* 测试桩无投影 */ }
+    }
     if (REDUCED_MOTION) map.setView(ll, zoom, { animate: false });
     else map.flyTo(ll, zoom, opts);
   }
@@ -573,7 +606,7 @@
         (p.progress ? '<br><span style="color:#8fb0e0">📍 ' + esc(p.progress) + '</span>' : ''),
         { direction: 'top', offset: [0, -d / 2 - 2], className: 'mk-tip', sticky: true }
       );
-      m.on('click', () => showDetail(p));
+      m.on('click', () => { showDetail(p); revealLatLng(toLatLng(p.coord)); });   // 竖屏半屏卡 / 横屏右移卡会盖住刚点的点：挪进空白区
       markers.push(m);
     });
     markerCluster.addLayers(markers);
@@ -1184,6 +1217,7 @@
         (p.epcStatus ? ' · ' + tr(p.epcStatus) : '') + '</span>' + esc(p.epc) + '</div>' : '') +
       '<div class="d-desc">' + descBody(p) + '</div>';
     detailEl.classList.add('show');
+    if (document.body && document.body.classList) document.body.classList.add('detail-on');   // 竖屏手机：半屏卡开着时隐藏 🔍/📊 浮钮（见 styles.css）
     document.getElementById('d-close').addEventListener('click', hideDetail);
     const ds = document.getElementById('d-share');
     if (ds) ds.addEventListener('click', () => {
@@ -1205,8 +1239,14 @@
     focusEl('d-close');
   }
   const cell = (k, v) => '<div class="d-cell"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
-  const hideDetail = () => { const was = detailEl.classList.contains('show'); detailEl.classList.remove('show'); _detailP = null; if (was) restoreFocus(); };
+  const hideDetail = () => { const was = detailEl.classList.contains('show'); detailEl.classList.remove('show'); if (document.body && document.body.classList) document.body.classList.remove('detail-on'); _detailP = null; if (was) restoreFocus(); };
   map.on('click', hideDetail);
+  // 竖屏手机的底部半屏卡：吸顶标题栏（把手所在）下滑 ≥48px 也关卡（与澳洲地图抽屉同款手势）；卡片正文滚动不受影响
+  if (detailEl.addEventListener) {
+    let _y0 = null;
+    detailEl.addEventListener('touchstart', e => { const t = e.touches && e.touches[0]; _y0 = t && e.target && e.target.closest && e.target.closest('.d-top') && !e.target.closest('button') ? t.clientY : null; }, { passive: true });
+    detailEl.addEventListener('touchend', e => { const t = e.changedTouches && e.changedTouches[0]; if (_y0 != null && t && t.clientY - _y0 > 48 && window.matchMedia && window.matchMedia('(max-width: 820px) and (orientation: portrait)').matches) hideDetail(); _y0 = null; }, { passive: true });
+  }
 
   /* ---------- 国别下钻面板（点详情卡的国家打开）---------- */
   const countryPanel = document.getElementById('country-panel');
@@ -2262,5 +2302,5 @@
   })();
 
   // 调试 / 程序化控制句柄
-  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showLeague, showEpcLeague, showDetail, showCountry, showRegionInsight, PROJECTS, applyLang, buildRegionTree, showCompare, openCompare, toggleFav, FAVS, showTrends, startStory, storyStep, exitStory, showStoryPicker };
+  window.__APP__ = { map, BASES, switchBase, render, state, markerCluster, lineLayer, stateToHash, buildSnapshotSVG, showClientBoard, showLeague, showEpcLeague, showDetail, showCountry, showRegionInsight, PROJECTS, applyLang, buildRegionTree, showCompare, openCompare, toggleFav, FAVS, showTrends, startStory, storyStep, exitStory, showStoryPicker, flyTo, revealLatLng, toLatLng };
 })();
