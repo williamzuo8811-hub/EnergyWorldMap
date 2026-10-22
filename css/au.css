@@ -202,7 +202,7 @@ button { font-family: inherit; }
 .fab-l { left: max(12px, env(safe-area-inset-left, 0px)); } .fab-r { right: max(12px, env(safe-area-inset-right, 0px)); }
 
 /* ---------- 详情卡（项目 / 燃煤电厂 / 州档案 / 线路 共用一个槽位）---------- */
-.card { position: absolute; right: 12px; top: 12px; z-index: 700; width: 380px; max-width: calc(100% - 24px); max-height: calc(100% - 60px); overflow-y: auto;
+.card { position: absolute; right: 12px; top: 12px; z-index: 1010;   /* > Leaflet 控件层 1000：窄屏底部卡片不再被版权条 / 缩放钮压住 */ width: 380px; max-width: calc(100% - 24px); max-height: calc(100% - 84px); overflow-y: auto;   /* 底边留 84px：桌面 ⤢ 复位钮 / ≤1180 的 📊 浮钮不被卡片压住 */
   background: var(--panel-solid); border: 1px solid var(--border-strong); border-radius: var(--radius); box-shadow: var(--shadow);
   opacity: 0; transform: translateY(-8px); pointer-events: none; transition: opacity .18s, transform .18s; scrollbar-width: thin; }
 .card.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
@@ -289,8 +289,30 @@ button { font-family: inherit; }
    断点：≤1500 顶栏去副标、KPI 收紧（1440 笔记本单行放得下）；≤1300 KPI 换到第二行；≤1180 两侧栏收窄；
    ≤900 手机：顶栏两行（标题 + 📊 数据开关 / 横向可滑的操作条）、KPI 默认收起、两侧栏改底部抽屉、卡片改底部半屏。 */
 @media (max-width: 1500px) { .brand .sub { display: none; } .kpis { gap: 12px; } .kpi .num { font-size: 17px; } }
-@media (max-width: 1300px) { .topbar { flex-wrap: wrap; gap: 8px 14px; } .kpis { order: 3; width: 100%; justify-content: space-between; margin-left: 0; } .kpi { text-align: left; } .top-actions { margin-left: auto; } }
-@media (max-width: 1180px) { .body { grid-template-columns: 270px 1fr 310px; } }
+@media (max-width: 1400px) { .topbar { flex-wrap: wrap; gap: 8px 14px; } .kpis { order: 3; width: 100%; justify-content: space-between; margin-left: 0; } .kpi { text-align: left; } .top-actions { margin-left: auto; } }
+/* ≤1180（iPad 横屏等）：三栏只剩 444px 地图、图例盖住半张图 → 右侧看板改成右侧抽屉（📊 看板浮钮），左栏保留 */
+@media (max-width: 1180px) {
+  .body { grid-template-columns: 270px 1fr; }
+  .drawer-head { display: flex; align-items: center; justify-content: center; position: sticky; top: 0; z-index: 2; margin: 0 -14px 10px; padding: 8px 14px 6px; background: rgba(12, 20, 40, 0.97); border-bottom: 1px solid var(--border); }
+  .drawer-head .drawer-handle { position: absolute; top: 6px; left: 50%; width: 38px; height: 4px; margin-left: -19px; border-radius: 2px; background: var(--border-strong); }
+  .drawer-head .drawer-title { flex: 1; font-size: 13px; font-weight: 700; color: var(--txt-dim); padding-top: 8px; }
+  .drawer-head .drawer-close { margin-top: 8px; padding: 8px 12px; min-height: 36px; font-size: 12.5px; font-weight: 700; color: var(--txt); background: rgba(255,255,255,0.06); border: 1px solid var(--border-strong); border-radius: 999px; cursor: pointer; }
+  .drawer-backdrop { position: fixed; inset: 0; z-index: 1050; background: rgba(4, 8, 18, 0.45); }
+  .drawer-backdrop.show { display: block; }
+  /* 抽屉 z 高于 Leaflet 控件层（1000）：横屏抽屉顶到地图顶部时不再被缩放钮压住 */
+  .panel.right { position: fixed; top: 0; right: 0; bottom: 0; width: min(380px, 86%); z-index: 1100; border: none; border-left: 1px solid var(--border-strong); box-shadow: var(--shadow);
+    transform: translateX(104%); transition: transform .22s; background: rgba(12, 20, 40, 0.97); padding: 0 14px calc(28px + env(safe-area-inset-bottom, 0px)); overscroll-behavior: contain; }
+  .panel.right.open { transform: none; }
+  .fab-r { display: block; }
+  .app.drawer-open .fab { display: none; }
+  /* ⤢ 复位钮让开右下角的 📊 浮钮：挪到缩放控件下方 */
+  .home { right: auto; bottom: auto; left: 10px; top: 84px; }
+}
+@media (min-width: 901px) and (max-width: 1180px) {
+  .panel.left .drawer-head { display: none; }
+  .panel.right .drawer-head .drawer-handle { display: none; }
+  .panel.right .drawer-head .drawer-title, .panel.right .drawer-head .drawer-close { padding-top: 0; margin-top: 0; }
+}
 @media (max-width: 900px) {
   .topbar { gap: 6px 8px; padding: 6px 10px; padding-top: calc(6px + env(safe-area-inset-top, 0px)); }
   .brand { flex: 1 1 auto; gap: 9px; } .brand .logo { width: 30px; height: 30px; font-size: 16px; } .brand h1 { font-size: 15px; }
@@ -304,19 +326,13 @@ button { font-family: inherit; }
   .tbtn { flex: none; padding: 9px 11px; min-height: 36px; }
   .body { grid-template-columns: 1fr; }
   /* 底部抽屉：固定定位、带把手与关闭钮、遮罩点击即关；z 高于浮钮（浮钮在抽屉打开时隐藏） */
-  .panel { position: fixed; left: 0; right: 0; bottom: 0; max-height: 72vh; max-height: 72dvh; z-index: 900; border: none; border-top: 1px solid var(--border-strong); border-radius: 16px 16px 0 0;
+  /* 两侧栏都改成底部抽屉（选择器写成 .panel.left/.panel.right 以压过 ≤1180 的右侧抽屉规则）；把手 / 关闭钮 / 遮罩样式见 ≤1180 区块 */
+  .panel.left, .panel.right { position: fixed; top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 72vh; max-height: 72dvh; z-index: 1100; border: none; border-top: 1px solid var(--border-strong); border-radius: 16px 16px 0 0;
     transform: translateY(105%); transition: transform .22s; background: rgba(12, 20, 40, 0.97); padding: 0 14px calc(28px + env(safe-area-inset-bottom, 0px)); overscroll-behavior: contain; }
-  .panel.open { transform: translateY(0); }
-  .drawer-head { display: flex; align-items: center; justify-content: center; position: sticky; top: 0; z-index: 2; margin: 0 -14px 10px; padding: 8px 14px 6px; background: rgba(12, 20, 40, 0.97); border-bottom: 1px solid var(--border); }
-  .drawer-head .drawer-handle { position: absolute; top: 6px; left: 50%; width: 38px; height: 4px; margin-left: -19px; border-radius: 2px; background: var(--border-strong); }
-  .drawer-head .drawer-title { flex: 1; font-size: 13px; font-weight: 700; color: var(--txt-dim); padding-top: 8px; }
-  .drawer-head .drawer-close { margin-top: 8px; padding: 8px 12px; min-height: 36px; font-size: 12.5px; font-weight: 700; color: var(--txt); background: rgba(255,255,255,0.06); border: 1px solid var(--border-strong); border-radius: 999px; cursor: pointer; }
-  .drawer-backdrop { position: fixed; inset: 0; z-index: 850; background: rgba(4, 8, 18, 0.45); }
-  .drawer-backdrop.show { display: block; }
+  .panel.left.open, .panel.right.open { transform: translateY(0); }
   .fab { display: block; }
   .app.drawer-open .fab, .app.card-open .fab { display: none; }
-  /* 复位钮挪到缩放控件下方（右下角让给 📊 看板浮钮；横屏时两者曾重叠） */
-  .home { right: auto; bottom: auto; left: 10px; top: 84px; width: 34px; height: 34px; }
+  .home { width: 34px; height: 34px; }
   /* 详情卡改成底部半屏：不再压住缩放控件，也不会被抽屉盖住（开卡时抽屉自动收起） */
   .card { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-width: none; max-height: 62vh; max-height: 62dvh; border-radius: 16px 16px 0 0; border-bottom: none;
     transform: translateY(12px); padding-bottom: env(safe-area-inset-bottom, 0px); overscroll-behavior: contain; }
@@ -326,7 +342,18 @@ button { font-family: inherit; }
   .card .d-track select, .card .d-track input, .card .d-track textarea { font-size: 15px; padding: 10px 10px; }
   .map-legend:not(.inline) { display: none; }
   .map-legend.inline { display: block; }
-  /* 触控目标 ≥44px：筛选芯片 / 州行 / 档案钮 / 品类行 / 开关 / 搜索框 / 列表行 */
+  .cod-ticker { top: 10px; font-size: 34px; }
+  /* toast 上移到 🔍/📊 浮钮之上（顶部让给 COD 年份大字与两行顶栏） */
+  .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); max-width: calc(100% - 32px); }
+}
+/* 手机横屏（高 ≤500）：底部半屏卡片只剩 240px 高、还压住缩放钮 → 改成右侧竖卡，用足高度（开卡时浮钮已隐藏） */
+@media (max-width: 900px) and (max-height: 500px) and (orientation: landscape) {
+  .card { left: auto; right: 12px; top: 12px; bottom: auto; width: min(380px, 58%); max-height: calc(100% - 24px); border-radius: var(--radius); border-bottom: 1px solid var(--border-strong); padding-bottom: 0; }
+  .card { transform: translateY(-8px); }
+  .card.show { transform: translateY(0); }
+}
+/* 触控目标 ≥36–44px：窄屏，或任何粗指针（触屏）设备——iPad 横屏 901–1180 走桌面三栏时芯片也要够大 */
+@media (max-width: 900px), (pointer: coarse) {
   .chip { padding: 10px 13px; font-size: 13px; min-height: 40px; }
   .kv-row .chip { padding: 8px 11px; font-size: 12px; min-height: 36px; }
   .state-row { padding: 10px 8px; } .state-row .doc { padding: 8px 11px; font-size: 12px; min-height: 36px; }
@@ -336,9 +363,11 @@ button { font-family: inherit; }
   .row { padding: 10px 9px; }
   .bar-row { min-height: 36px; }
   .cod-row input[type=range] { height: 44px; }
-  .cod-ticker { top: 10px; font-size: 34px; }
+  .card .d-close, .card .d-share { width: 36px; height: 36px; }
+  /* 项目圆点最小 8px：触屏加一圈透明命中区（伪元素参与命中测试，不改视觉） */
+  .mk::before, .pl-mk::before, .node-mk::before { content: ''; position: absolute; inset: -9px; border-radius: 50%; }
 }
-@media (min-width: 901px) { .drawer-backdrop { display: none !important; } }
+@media (min-width: 1181px) { .drawer-backdrop { display: none !important; } }
 @media (prefers-reduced-motion: reduce) { .au-building, .mk .dot.is-open::after, .pl-mk i.is-up::after, .pl-mk i.is-year::before { animation: none; } .card, .panel { transition: none; } }
 
 /* ---------- 🧭 AEMO 管线标记（菱形；承诺实心 / 预期虚线边 / 拟建空心）---------- */

@@ -281,7 +281,8 @@
   const coalSorted = COAL.slice().sort((a, b) => countdown(a).months - countdown(b).months || (b.mw || 0) - (a.mw || 0));   // 倒计时升序：在运(近→远) → 待定 → 已关停
 
   /* ---------- 地图 ---------- */
-  const map = L.map('map', { center: [-27, 134], zoom: 4, minZoom: 3, maxZoom: 17, zoomControl: false, attributionControl: true });
+  // zoomSnap 0.5：fitBounds 可落在 3.5 这类半级，手机竖屏 / iPad 上整个大陆铺满地图区（整级 3 时只占 1/3 宽）
+  const map = L.map('map', { center: [-27, 134], zoom: 4, minZoom: 3, maxZoom: 17, zoomSnap: 0.5, zoomControl: false, attributionControl: true });
   L.control.zoom({ position: 'topleft' }).addTo(map);   // 左下角留给图例
   if (map.attributionControl && map.attributionControl.setPrefix) map.attributionControl.setPrefix('');
   /* ---------- 底图：暗色 Esri（海外默认）/ OSM / 高德（国内默认；澳洲在 GCJ-02 偏移区之外，无需纠偏）----------

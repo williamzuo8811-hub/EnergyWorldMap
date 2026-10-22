@@ -284,8 +284,9 @@ input[type=range]::-webkit-slider-thumb {
   box-shadow: var(--shadow);
   overflow: hidden; transform: translateY(-8px); opacity: 0; pointer-events: none;
   transition: opacity .2s, transform .2s;
-  /* 桌面默认限高（窄屏会在下方 @media 用 dvh 覆盖）；放在基础规则里，确保 @media 的窄屏值能后置覆盖 */
-  max-height: calc(100vh - 110px);
+  /* 桌面限高按【地图区高度】算（.detail 绝对定位于 .map-wrap），底边留 106px 给左下角的缩放 ＋/－（100vh − 110px 没扣掉顶栏，
+     长英文正文曾把卡片压到缩放钮上）；窄屏在下方 @media 后置覆盖 */
+  max-height: calc(100% - 106px);
 }
 .detail.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
 .detail .d-top { padding: 14px 16px; position: relative; }
@@ -414,7 +415,8 @@ input[type=range]::-webkit-slider-thumb {
   /* 顶栏精简成一行：logo + 标题 + 📊 数据开关；英文副标隐藏、KPI 收起，最大化地图。
      点「📊 数据」后 4 个 KPI 在下方换成 2×2 全显示 */
   .topbar { flex-wrap: wrap; gap: 8px 12px; padding: 8px 12px; padding-top: calc(8px + env(safe-area-inset-top, 0px)); }
-  .brand { flex: 1 1 auto; min-width: 0; gap: 9px; }
+  /* flex-basis 0（而非 auto）：标题按剩余空间截断省略，不再把 EN / 📊 数据 挤到第二行（360px 手机曾两行，详情卡随之下移压住浮钮） */
+  .brand { flex: 1 1 0; min-width: 0; gap: 9px; }
   .brand .logo { width: 30px; height: 30px; font-size: 16px; }
   .brand > div { min-width: 0; }
   .brand h1 { font-size: 15px; overflow: hidden; text-overflow: ellipsis; }
@@ -452,16 +454,24 @@ input[type=range]::-webkit-slider-thumb {
   .map-tools > :not(.tools-toggle) { display: none; }
   .map-tools.tools-open > :not(.tools-toggle) { display: flex; }
   .map-tools.tools-open .tools-toggle { color: var(--accent); border-color: var(--accent); }
-  /* 展开后的工具坞限高可滚动：矮屏（横屏手机等）上 11 个按钮不溢出视口 */
-  .map-tools.tools-open .tools-dock { max-height: calc(100vh - 240px); max-height: calc(100dvh - 240px); overflow-y: auto; overscroll-behavior: contain; }
+  /* 展开后的工具坞：整个 .map-tools 以地图区为界（底部让出 76px 浮钮行），坞内可滚动——矮屏横屏时「⤢ 复位」不再掉出视口；
+     左侧让出 64px 给缩放 ＋/－（底图切换行可换行），展开时隐藏顶部居中的署名胶囊（会被坞盖住） */
+  .map-tools.tools-open { max-height: calc(100% - 28px - 76px - env(safe-area-inset-bottom, 0px)); max-width: calc(100% - 64px); }
+  .map-tools.tools-open .basemap-switch { flex-wrap: wrap; justify-content: flex-end; }
+  .map-tools.tools-open ~ .map-credit { display: none; }
 
   /* iPhone 安全区：底部浮动按钮上移让开 home 横条 / 浏览器底栏 */
   .mobile-fab { bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
   /* 缩放控件改放地图左上角（见 app.js：窄屏 topleft），彻底避开底部 🔍/📊 浮钮；
      左上角的详情卡相应下移，避免开卡时挡住缩放 ＋/－ */
   .detail { top: 76px; }
-  /* 窄屏：用动态视口高度（dvh）顶住底部浏览器栏，给底部 🔍/📊 浮钮留出余量，超长内容整卡可滑动 */
-  .detail { max-height: calc(100dvh - 168px); }
+  /* 窄屏限高按【地图区高度】算（.detail 绝对定位于 .map-wrap，百分比 = 地图区高），而不是按视口减固定值：
+     顶栏换行 / KPI 展开 / 英文长正文时底边仍留出 96px 给 🔍/📊 浮钮，整卡可滑动 */
+  .detail { max-height: calc(100% - 76px - 96px - env(safe-area-inset-bottom, 0px)); }
+  /* 导览模式：底部解说条约 200px 高，详情卡再让出空间，否则卡片底部永远被解说条盖住、滑不出来 */
+  body.story-on .detail { max-height: calc(100% - 76px - 290px); }
+  /* 国别面板限高用动态视口（iOS 地址栏显示时 84vh 会超出可视区） */
+  .country-panel { max-height: calc(100dvh - 56px); }
   /* 🔍 浮钮在左下 → 热力分面条上移让位 */
   .heat-facets { bottom: 70px; }
 }
@@ -479,8 +489,10 @@ input[type=range]::-webkit-slider-thumb {
   }
   .fab-left { left: max(16px, env(safe-area-inset-left)); }
   .fab-right { right: max(16px, env(safe-area-inset-right)); }
-  /* 短屏顶栏已很矮，展开后的工具坞可用足更多竖向空间（少滚动）*/
-  .map-tools.tools-open .tools-dock { max-height: calc(100dvh - 128px); }
+  /* 横屏：详情卡改放缩放控件右侧、顶到地图顶部，用足矮屏高度（左侧 🔍 浮钮 x≤95、右侧 📊 浮钮与 ⋯ 开关 ≥110px 都让开） */
+  .detail { left: 118px; top: 12px; width: min(380px, calc(100% - 230px)); max-height: calc(100% - 24px); }
+  body.story-on .detail { max-height: calc(100% - 24px); }
+  .detail.show ~ .map-credit { display: none; }   /* 顶部居中的署名会被卡片压住，开卡时直接隐藏 */
 }
 
 /* ============================================================
@@ -546,7 +558,8 @@ input[type=range]::-webkit-slider-thumb {
 .leaflet-tooltip.mk-tip::before { display: none; }
 
 /* 地图工具：底图切换 + 工具坞 */
-.map-tools { position: absolute; top: 14px; right: 14px; z-index: 1200; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+/* 宽度以地图区减去左上角详情卡（332px + 边距）为界：四个底图按钮一行 ≈450px，1366 笔记本上曾钻到详情卡底下 */
+.map-tools { position: absolute; top: 14px; right: 14px; z-index: 1200; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; max-height: calc(100% - 28px); max-width: calc(100% - 372px); }
 /* ⋯ 工具开关：仅移动端可见（媒体查询点亮），桌面端隐藏。
    用青色描边 + 工具图标，避免深色按钮在深色地图上"隐身"找不到 */
 .tools-toggle {
@@ -557,7 +570,7 @@ input[type=range]::-webkit-slider-thumb {
   box-shadow: 0 0 0 1px rgba(33, 199, 255, 0.25), var(--shadow);
 }
 .tools-toggle:active { transform: scale(.95); }
-.basemap-switch { display: flex; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; backdrop-filter: blur(8px); box-shadow: var(--shadow); }
+.basemap-switch { display: flex; flex: none; flex-wrap: wrap; justify-content: flex-end; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; backdrop-filter: blur(8px); box-shadow: var(--shadow); }
 .basemap-switch .bm { padding: 7px 11px; font-size: 12px; color: var(--txt-dim); cursor: pointer; border-right: 1px solid var(--border); transition: all 0.15s; user-select: none; }
 .basemap-switch .bm:last-child { border-right: none; }
 .basemap-switch .bm:hover { color: var(--txt); background: rgba(255, 255, 255, 0.05); }
@@ -565,7 +578,10 @@ input[type=range]::-webkit-slider-thumb {
 
 /* 工具坞：所有功能按钮收进几张等宽玻璃卡片（列内 stretch → 宽度自动取最长文案，中英文都对齐）。
    组内按钮无边框、左对齐图标+文案，悬停柔光，激活态保留各功能的识别色渐变 */
-.tools-dock { display: flex; flex-direction: column; gap: 8px; }
+/* 坞体在 .map-tools 的限高内可滚动（矮窗口 / 横屏手机），scrollbar 细化 */
+.tools-dock { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.tools-dock::-webkit-scrollbar { width: 6px; }
+.tools-dock::-webkit-scrollbar-thumb { background: rgba(120, 160, 220, 0.28); border-radius: 6px; }
 .tool-group {
   display: flex; flex-direction: column; gap: 2px; padding: 4px;
   background: var(--panel); border: 1px solid var(--border); border-radius: 13px;
@@ -632,13 +648,16 @@ body.choro-on .heat-legend.choro-legend { display: flex; }
 }
 .map-credit .mc-by { color: var(--txt-faint); }
 body.heat-on .map-credit { display: none; }
+/* 热力 / 染色 / 洞察模式各有自己的底部图例，居中的操作提示条让位（1440 宽时曾压住热力图例） */
+body.heat-on .map-hint, body.choro-on .map-hint, body.insight-on .map-hint { display: none; }
 @media (max-width: 920px), (max-width: 1180px) and (max-height: 500px) and (orientation: landscape) {
   /* 窄屏/手机横屏底部四角已被 缩放/筛选/统计 占用 → 署名移到地图上部居中（标题栏下方，左上缩放与右上⋯之间）*/
   .map-credit { right: auto; left: 50%; transform: translateX(-50%); top: 12px; bottom: auto; }
 }
 
 /* 🔥 热力分面（聚焦单一品类，仅热力模式显示）*/
-.heat-facets { position: absolute; left: 14px; bottom: 14px; z-index: 1100; display: none; flex-wrap: wrap; gap: 5px; max-width: 60%; padding: 7px 9px; background: rgba(6, 11, 24, 0.78); border: 1px solid var(--border); border-radius: 12px; backdrop-filter: blur(6px); box-shadow: var(--shadow); }
+/* 桌面端缩放 ＋/－ 在左下角：分面条 / 大区图例从 56px 起（窄屏缩放钮在左上，末尾区块改回 14px） */
+.heat-facets { position: absolute; left: 56px; bottom: 14px; z-index: 1100; display: none; flex-wrap: wrap; gap: 5px; max-width: min(60%, calc(100% - 340px)); padding: 7px 9px; background: rgba(6, 11, 24, 0.78); border: 1px solid var(--border); border-radius: 12px; backdrop-filter: blur(6px); box-shadow: var(--shadow); }
 body.heat-on .heat-facets { display: flex; }
 .heat-facets .hf { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; font-size: 11px; color: var(--txt-dim); background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border); border-radius: 14px; cursor: pointer; user-select: none; transition: all .15s; }
 .heat-facets .hf .d { width: 8px; height: 8px; border-radius: 50%; }
@@ -648,7 +667,7 @@ body.heat-on .heat-facets { display: flex; }
 
 /* 🌍 区域能源洞察：大区色块图例（仅区域洞察模式显示，点芯片选区+飞行+弹洞察卡）*/
 body.insight-on .map-credit { display: none; }
-.region-legend { position: absolute; left: 14px; bottom: 14px; z-index: 1100; display: none; flex-direction: column; gap: 6px; max-width: min(560px, 64%); padding: 9px 11px; background: rgba(6, 11, 24, 0.82); border: 1px solid var(--border); border-radius: 13px; backdrop-filter: blur(6px); box-shadow: var(--shadow); }
+.region-legend { position: absolute; left: 56px; bottom: 14px; z-index: 1100; display: none; flex-direction: column; gap: 6px; max-width: min(560px, 64%); padding: 9px 11px; background: rgba(6, 11, 24, 0.82); border: 1px solid var(--border); border-radius: 13px; backdrop-filter: blur(6px); box-shadow: var(--shadow); }
 body.insight-on .region-legend { display: flex; }
 .region-legend .rl-cap { font-size: 10.5px; letter-spacing: .5px; color: var(--txt-faint); }
 .region-legend .rl-chips { display: flex; flex-wrap: wrap; gap: 5px; }
@@ -985,6 +1004,14 @@ body.insight-on .region-legend { display: flex; }
 .cp-proj { display: flex; flex-direction: column; gap: 6px; }
 .cp-note { font-size: 10px; color: var(--txt-faint); margin-top: 12px; line-height: 1.5; }
 @media (max-width: 920px) { .country-panel { width: 94%; } .cp-kpis { grid-template-columns: repeat(2, 1fr); } }
+/* 窄屏面板头：国家名 + ✕ 占第一行，📍地图筛选 / ⊕加入对比 / ◂▸ 换到第二行平铺（此前「沙特阿拉伯」被挤成三行） */
+@media (max-width: 560px) {
+  .cp-head { flex-wrap: wrap; gap: 8px 6px; padding: 12px 14px; }
+  .cp-head .cp-name { flex: 1 1 0; min-width: 0; font-size: 17px; }
+  .cp-close { order: 1; }
+  .cp-filter, .cp-add { order: 2; flex: 1 1 40%; margin: 0; text-align: center; min-height: 36px; }
+  .ri-nav { order: 2; width: 36px; height: 36px; }
+}
 
 /* 国别下钻面板里的「⊕ 加入对比」按钮 */
 .cp-add {
@@ -1130,9 +1157,41 @@ body.insight-on .region-legend { display: flex; }
 .story-card .sc-dots i.on { background: #a855f7; box-shadow: 0 0 7px rgba(168, 85, 247, 0.7); }
 /* 故事模式：底部提示条/署名让位给解说条 */
 body.story-on .map-hint, body.story-on .map-credit { display: none; }
-@media (max-width: 820px), (max-width: 1180px) and (max-height: 500px) and (orientation: landscape) {
-  /* 窄屏/手机横屏：解说条上移让开底部 🔍/📊 浮钮 */
+@media (max-width: 820px) {
+  /* 窄屏：解说条上移让开底部 🔍/📊 浮钮（横屏另有停靠规则，见移动端区块） */
   .story-card { bottom: calc(74px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* ============================================================
+ * 窄屏底部浮层让位（必须排在各浮层的基础规则之后：此前 .heat-legend/.heat-facets 的 bottom:70px 写在基础规则之前，
+ * 被同优先级的基础规则覆盖而失效——热力分面条、热力图例、大区图例、toast 都压在 🔍/📊 浮钮底下）
+ * ============================================================ */
+/* 921–1180：只有右侧 📊 浮钮，署名 / 热力图例上移；地图区只剩 ~770px，底图切换行换行、不再压到左上角的详情卡 */
+@media (min-width: 921px) and (max-width: 1180px) {
+  .map-credit, .heat-legend { bottom: 70px; }
+}
+/* ≤1500（1366 / 1440 笔记本）：地图区 750–820px，解说条让开右侧工具坞 */
+@media (min-width: 921px) and (max-width: 1500px) {
+  .story-card { width: min(560px, calc(100% - 420px)); }
+}
+/* 手机横屏导览：解说条停靠右下、浮钮隐藏（否则解说条盖住左侧详情卡正文）——须排在 .story-card 基础规则之后 */
+@media (max-width: 1180px) and (max-height: 500px) and (orientation: landscape) {
+  body.story-on .mobile-fab { display: none; }
+  .story-card { left: auto; right: 14px; bottom: 12px; width: min(420px, calc(100% - 520px)); max-height: calc(100% - 24px); overflow-y: auto; transform: translateY(10px); }
+  .story-card.show { transform: none; }
+}
+@media (max-width: 820px), (max-width: 1180px) and (max-height: 500px) and (orientation: landscape) {
+  .heat-facets, .region-legend { left: 14px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+  /* 热力图例改到顶部居中（热力模式下署名隐藏，位置空出），不再和分面条互相叠压 */
+  .heat-legend { bottom: auto; top: 12px; right: auto; left: 50%; transform: translateX(-50%); max-width: calc(100% - 120px); }
+  .heat-legend .hl-bar { width: 84px; }
+  /* toast 改到顶部：底部已被浮钮 / 图例 / 解说条占满 */
+  .toast { bottom: auto; top: calc(62px + env(safe-area-inset-top, 0px)); transform: translateX(-50%) translateY(-12px); max-width: calc(100% - 32px); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+}
+/* 触屏：项目圆点最小只有 8px，给每个标记加一圈透明命中区（伪元素参与命中测试，不改视觉） */
+@media (pointer: coarse) {
+  .mk::before { content: ''; position: absolute; inset: -9px; border-radius: 50%; }
 }
 
 /* ============================================================

@@ -47,7 +47,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); c
 
 .kpis { display: flex; gap: 22px; margin-left: auto; }
 .kpi { text-align: right; }
-.kpi .num { font-size: 20px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.kpi .num { font-size: 20px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }   /* 「14.2 万亿」窄栏不拆成两行 */
 .kpi .lab { font-size: 10.5px; color: var(--txt-dim); margin-top: 4px; white-space: nowrap; }
 .kpi .num.accent { color: var(--accent); }
 .kpi .num.good { color: var(--good); }
@@ -95,7 +95,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); c
 .btn-reset2:hover { color: var(--warn); border-color: var(--warn); }
 
 /* ---------- 底部图例 + 提示 ---------- */
-.legend { position: fixed; left: 16px; bottom: 16px; z-index: 20; max-width: min(62vw, 560px);
+.legend { position: fixed; left: 284px; bottom: 16px; z-index: 20; max-width: min(560px, calc(100vw - 284px - 230px));   /* 放在左栏右侧：左栏（252px + 16）到底时曾盖住图例前两行；右侧给署名 / 提示留 230px */
   padding: 10px 14px; border-radius: var(--radius); background: var(--panel); border: 1px solid var(--border);
   backdrop-filter: blur(10px); box-shadow: var(--shadow); pointer-events: none; user-select: none; }
 .legend .lg-head { display: flex; gap: 14px; font-size: 11px; color: var(--txt-dim); margin-bottom: 8px; }
@@ -209,7 +209,9 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); c
   .brand { gap: 8px; }
   .brand > div:not(.logo) { display: none; }
   .brand .logo { width: 34px; height: 34px; font-size: 18px; }
-  .kpis { gap: 13px; margin-left: 4px; }
+  /* 品牌块只剩 logo，但不能被压到 0 宽（min-width:0 曾让 KPI「4123」钻到 logo 底下） */
+  .brand { flex: none; }
+  .kpis { gap: 11px; margin-left: 4px; min-width: 0; overflow: hidden; }
   .kpi .num { font-size: 15px; }
   .kpi .lab { font-size: 9px; }
   .top-actions { gap: 6px; margin-left: auto; }
@@ -221,12 +223,21 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); c
   .left-panel { top: 56px; left: 10px; width: 212px; padding: 11px;
     max-height: calc(100vh - 68px); max-height: calc(100dvh - 68px); -webkit-overflow-scrolling: touch; }
   .left-panel.collapsed { display: none; }
+  /* 筛选面板展开时（212px 宽、顶到底部）会盖住图例左半边：面板开着就先藏图例 */
+  .left-panel:not(.collapsed) ~ .legend { display: none; }
   .panel-toggle { display: inline-flex; }
   .detail, .region-card { top: auto; bottom: 0; right: 0; left: 0; width: 100%; max-width: 100%; border-radius: 16px 16px 0 0;
     max-height: 64dvh; }
   .legend { max-width: calc(100vw - 20px); left: 10px; bottom: 10px; }
   .hint { display: none; }
-  .credit { bottom: 10px; right: 10px; }
+  /* 署名挪到顶栏下方右侧：底部整行是图例（曾盖住图例最后一行「矿业 / 国际大客户」） */
+  .credit { bottom: auto; top: 54px; right: 10px; font-size: 10px; padding: 4px 9px; }   /* 缩一号：左栏展开（212px 宽）时两者不相碰 */
+}
+@media (max-width: 600px) {
+  /* 手机：KPI 整块收起（360px 一行放不下 logo + 4 个 KPI + 4 个按钮，操作按钮曾被挤出屏外）；澳洲入口收成图标 */
+  .kpis { display: none; }
+  #btn-au-g { font-size: 0; }
+  #btn-au-g::before { content: "🇦🇺"; font-size: 15px; }
 }
 @media (max-width: 480px) {
   /* 极窄屏：KPI 仅留数字（彩色已足够区分），进一步防溢出 */

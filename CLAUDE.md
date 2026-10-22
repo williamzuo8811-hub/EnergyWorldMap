@@ -110,10 +110,17 @@ verify in a browser — there is no build step.
   browser is the runner's own Google Chrome via `PLAYWRIGHT_CHROMIUM=/path/to/chrome`, because `playwright install` refuses
   Chromium on `ubuntu-latest` 26.04; skips with exit 0 when the module is missing locally, fails hard when the binary is set
   or `CI` is): serves the repo
-  with Node's `http`, opens `au.html` + `index.html` at 390×844 / 844×390 / 1024×768 / 1280×720 / 1440×900 / 1920×1080,
-  aborts tile requests, and asserts no element makes the page wider than the viewport (the AU topbar once pushed the
-  grid 93–253 px wide and `overflow:hidden` silently cropped the right panel and the phone's 📊 FAB), the phone FABs /
-  ⤢ reset button are inside the viewport, the AU filter drawer shows its ✕ close button and closes, and no `pageerror`.
+  with Node's `http`, opens `au.html` + `index.html` + `globe.html` + `coach.html` (the coach gate is unlocked via an init-script
+  `localStorage` flag) at 390×844 / 844×390 / 1024×768 / 1280×720 / 1440×900 / 1920×1080, aborts tile requests, and asserts no
+  element makes the page wider than the viewport (the AU topbar once pushed the grid 93–253 px wide and `overflow:hidden` silently
+  cropped the right panel and the phone's 📊 FAB); **AU**: phone FABs / ⤢ reset inside the viewport, the filter drawer's ✕ closes,
+  an open card sits above Leaflet's control layer (`z-index > 1000`) and inside the viewport, at 1024 the right panel is a drawer
+  (📊 FAB visible, map ≥ 700 px), on desktop the KPIs don't intersect the top-action buttons; **index**: on narrow screens the
+  expanded ⋯ dock stays inside the viewport without squashing the basemap row or covering the zoom control, the detail card never
+  overlaps the FABs, the heat facets / heat legend / region legend clear the FABs, at 921–1180 the credit pill clears the 📊 FAB,
+  on desktop the heat facets clear the bottom-left zoom control and the heat legend clears the hint pill; **globe**: the topbar is
+  never wider than the viewport, the legend is not under the left panel; **coach**: no horizontal overflow and the deck is visible
+  in the first phone screen; and no `pageerror` (globe.gl's own WebGL error under software rendering is filtered).
 - `node scripts/check-links.js` — internal `href`/`src`/markdown links must exist on disk (**ERROR**,
   they 404 after deploy); external links are probed with warnings only (401/403/429 = bot-blocked,
   counts as alive; `CHECK_LINKS_EXTERNAL=0` skips). Node ≥18 built-in `fetch`.
@@ -295,12 +302,22 @@ instead and lets `au.js` fall back to a live `util.buildProjects`).
   行动建议 and sources; downloads as `au-<ABBR>-brief-<YYYY-MM>.md`. ACT folds into NSW like everywhere else.
 - **Layout & mobile (P1)**: `.app` uses `grid-template-columns: minmax(0, 1fr)` and the topbar / brand text carry `min-width: 0` —
   the topbar's nowrap content must never widen the grid (it once pushed the page 93–253 px past the viewport and `overflow:hidden`
-  cropped the right panel and the phone FABs; `scripts/test-layout.js` guards this). Breakpoints: ≤1500 drop the subtitle, ≤1300 KPIs
-  wrap to a second row, ≤900 phone: two-row topbar (`#kpi-toggle` 📊 数据 collapses the KPIs, the action row scrolls horizontally with
-  the `#fresh-pill` 📅 AEMO date chip first), both side panels become `position:fixed` bottom drawers with a `.drawer-head` (handle +
-  ✕ 收起, swipe-down closes) and a `#drawer-backdrop`; `closeDrawers()`/`toggleDrawer()` keep `.app.drawer-open` / `.app.card-open`
-  which hide the FABs; `openCard` and `openModal` close the drawers; the detail card becomes a bottom sheet; the ⤢ reset button moves
-  under the zoom control; the legend is also rendered into `#legend-inline` inside the 图层 block; touch targets ≥36–44 px; the wide
+  cropped the right panel and the phone FABs; `scripts/test-layout.js` guards this). Breakpoints: ≤1500 drop the subtitle, ≤1400 KPIs
+  wrap to a second row (a 1366 laptop could not fit them on one line — the last label hid under the 📅 AEMO chip), ≤1180 (iPad
+  landscape) the **right panel becomes a right-side drawer** opened by the 📊 看板 FAB (the three-column layout left a 444 px map
+  with the legend over half of it) and ⤢ reset moves under the zoom control, ≤900 phone: two-row topbar (`#kpi-toggle` 📊 数据
+  collapses the KPIs, the action row scrolls horizontally with the `#fresh-pill` 📅 AEMO date chip first), both side panels become
+  `position:fixed` bottom drawers (selectors `.panel.left, .panel.right` so they beat the ≤1180 right-drawer rules) with a
+  `.drawer-head` (handle + ✕ 收起, swipe-down closes) and a `#drawer-backdrop`; `closeDrawers()`/`toggleDrawer()` keep
+  `.app.drawer-open` / `.app.card-open` which hide the FABs; `openCard` and `openModal` close the drawers; the detail card becomes a
+  bottom sheet (a **right-side card on landscape phones**, height ≤500, where a 62dvh sheet was 240 px tall and covered the zoom
+  buttons); the toast moves to the top; the legend is also rendered into `#legend-inline` inside the 图层 block. **z-order**: the
+  card is `z-index: 1010` and drawers `1100` / backdrop `1050` — above Leaflet's control layer (`.leaflet-top/.leaflet-bottom` are
+  1000), otherwise the attribution / zoom buttons draw over bottom sheets. The card's `max-height: calc(100% - 84px)` keeps the ⤢
+  reset button (desktop) / 📊 FAB (≤1180) clear of its bottom edge. Touch targets ≥36–44 px are applied for `≤900px` **or**
+  `(pointer: coarse)` (an iPad at 901–1180 is still a touchscreen), and every marker (`.mk` / `.pl-mk` / `.node-mk`) gets a
+  transparent `::before` halo (`inset: -9px`) on coarse pointers so 8-px dots are tappable. The map is created with
+  `zoomSnap: 0.5` so `fitAU()` lands on 3.5 on phones / iPads (integer 3 showed the continent at a third of the width). The wide
   modals' 12-column tables turn into one-card-per-row via `td(label, html, cls)` (`data-l` labels, `.rk-in` inline rank) and
   `content-visibility:auto`.
 - **Basemaps**: `BASES` = 🌑 Esri dark (default overseas) / 🗺️ OSM / 🇨🇳 高德 (default when `inChina()` by time zone, like
@@ -562,6 +579,43 @@ EN). Detail-card body is bilingual-aware: in EN mode it prefers `detailEn`/`desc
 project **or** merged by `id` from `js/i18n-en.js`), else falls back to the Chinese text with a note —
 so growing English coverage is just a matter of adding `id` entries to `i18n-en.js` (no source-data edits).
 On-map overlays (`#cat-legend`, `#heat-facets`) rebuild on language switch.
+
+### Responsive layout (index.html) — rules that bit us
+
+Narrow = `(max-width: 820px)` **or** a landscape phone `(max-width: 1180px) and (max-height: 500px) and (orientation: landscape)`
+(same expression in `app.js` `NARROW_MQ`, which moves the zoom control to the top-left). The right stats panel becomes a drawer at
+≤1180, the left filter panel at narrow; both are opened by the 🔍/📊 FABs (`position: fixed; bottom: 24px`).
+
+- **Cascade order matters**: the bottom-overlay rules for narrow screens (`.heat-facets` / `.region-legend` above the FABs, the
+  `.heat-legend` moved to the top centre, the `.toast` moved to the top, the 921–1180 `.map-credit` / `.heat-legend` lifted above the
+  📊 FAB, the landscape `.story-card` docked bottom-right) live in a block **at the end of `styles.css`** — an earlier attempt put
+  `bottom: 70px` inside the ≤1180 block *before* the base `.heat-legend` rule and was silently overridden (same specificity, later
+  wins), so the legends sat under the FABs. Keep overrides after the base rules they override.
+- **Detail card** (`.detail`, absolute inside `.map-wrap`): on narrow screens its `max-height` is `calc(100% - 76px - 96px)` —
+  percentages of the *map area*, not `dvh` of the viewport — so it clears the FAB row whatever the topbar height (a wrapped topbar
+  once pushed the card onto the FABs); on landscape phones it sits at `left: 118px; top: 12px` (right of the zoom control, clear of
+  the wider EN `🔍 Filters` FAB) and the credit pill hides while a card is open (`.detail.show ~ .map-credit`). In tour mode the card
+  gives up 290 px to the narration bar.
+- **Topbar at ≤820**: `.brand { flex: 1 1 0 }` (basis 0, not auto) so the title truncates instead of wrapping `EN` / `📊 数据`
+  onto a second row at 360 px.
+- **⋯ tools dock**: `.map-tools` is bounded by `max-height: calc(100% - 28px)` (minus the FAB row when open on narrow screens),
+  `.tools-dock` scrolls inside it (`min-height: 0; overflow-y: auto`), `.basemap-switch` is `flex: none` (its `overflow: hidden`
+  gives it an automatic minimum of 0, so it was squashed to a sliver on landscape phones) and wraps because `.map-tools` is
+  width-limited to `calc(100% - 372px)` (the four basemap buttons are ≈450 px in one row and slid under the detail card on a 1366
+  laptop; narrow screens use `calc(100% - 64px)` to clear the zoom control). At 921–1500 the `.story-card` narrows to
+  `calc(100% - 420px)` so the narration bar clears the dock column.
+- **Desktop**: `.heat-facets` / `.region-legend` start at `left: 56px` (the zoom control sits bottom-left), and `.map-hint` hides in
+  heat / choropleth / insight modes (it collided with the heat legend at 1440 px). `.country-panel` is `max-height: calc(100dvh - 56px)`
+  on narrow screens and its header wraps the 📍/⊕/◂▸ buttons to a second row at ≤560 px.
+- **Touch**: `@media (pointer: coarse) .mk::before` adds a 9-px transparent halo around every project dot (8–12 px dots were hard to
+  tap); pseudo-elements take part in hit testing, so Leaflet's marker click fires.
+
+`globe.css`: ≤820 the brand keeps `flex: none` (with `min-width: 0` it shrank to 0 and the KPIs slid under the logo), the credit
+pill moves top-right under the actions, ≤600 the KPIs hide and 🇦🇺 becomes an icon; on desktop the legend starts at
+`left: 284px` (right of the panel) instead of under it. `coach.css`: ≤860 the topbar is two rows (title + entries / level bar),
+`.side { display: contents }` turns the sidebar blocks into grid items so the mode tabs become a horizontal strip **above** the
+deck and the difficulty / AI blocks drop below it (the phone first screen used to be ten mode buttons), with
+`grid-template-columns: minmax(0, 1fr)` because the scrolling tab strip's min-content would otherwise widen the column to ~1000 px.
 
 ### Derived capacity & metrics
 
