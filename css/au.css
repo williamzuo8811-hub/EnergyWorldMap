@@ -119,7 +119,9 @@ button { font-family: inherit; }
 .leaflet-bar { border: 1px solid var(--border); box-shadow: var(--shadow); }
 .leaflet-control-attribution { background: rgba(10, 18, 36, 0.7) !important; color: var(--txt-faint) !important; font-size: 10px; }
 .leaflet-control-attribution a { color: var(--txt-dim) !important; }
-.leaflet-tooltip.au-tip { background: rgba(12, 20, 40, 0.94); color: var(--txt); border: 1px solid var(--border-strong); border-radius: 10px; box-shadow: var(--shadow); font-size: 12px; line-height: 1.45; padding: 8px 10px; max-width: 280px; white-space: normal; }
+/* 悬浮提示：Leaflet 的 tooltip 面板没有宽度，white-space:normal 时绝对定位的提示框会按 0 宽容器「收缩到最小内容」——
+   一个字一行、竖成一条（州面 / REZ 面提示曾 46px 宽 × 261px 高）。width:max-content 按内容撑开、再用 max-width 换行。 */
+.leaflet-tooltip.au-tip { background: rgba(12, 20, 40, 0.94); color: var(--txt); border: 1px solid var(--border-strong); border-radius: 10px; box-shadow: var(--shadow); font-size: 12px; line-height: 1.45; padding: 8px 10px; width: max-content; max-width: 300px; white-space: normal; }
 .leaflet-tooltip.au-tip::before { display: none; }
 .leaflet-interactive.au-line { cursor: pointer; }
 .au-building { animation: auflow 1.2s linear infinite; }

@@ -442,7 +442,8 @@
 
   /* ---------- 🌞 REZ 面 ---------- */
   const zoneVisible = z => state.layers.rez && (state.states.size === 0 || state.states.has(normState(z.state)));
-  const zoneLabel = z => (z.ispId ? z.ispId + ' · ' : '') + (en() ? (z.en || z.name) : z.name).replace(/\s*[（(].*?[)）]\s*/g, '').slice(0, 18);
+  // 地图上的 REZ 标签：去掉括号别名，超过 22 字在词边界截断加 …（原来硬切 18 字，"Pilbara" 会断成 "Pilbar"）
+  const zoneLabel = z => { const t = (z.ispId ? z.ispId + ' · ' : '') + (en() ? (z.en || z.name) : z.name).replace(/\s*[（(].*?[)）]\s*/g, '').trim(); if (t.length <= 22) return t; const cut = t.slice(0, 22), sp = cut.lastIndexOf(' '); return (sp > 10 && /[A-Za-z0-9]/.test(cut) ? cut.slice(0, sp) : cut).replace(/[\s·/–-]+$/, '') + '…'; };
   function renderRez() {
     const zoom = zoomNow();
     if (!memo('rez', [state.layers.rez, stSig(), state.lang, zoom >= 5 ? 1 : 0].join('|'))) return;
