@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="lib/leaflet.css">
   <link rel="stylesheet" href="lib/MarkerCluster.css">
   <link rel="stylesheet" href="lib/MarkerCluster.Default.css">
-  <link rel="stylesheet" href="css/au.css?v=8">
+  <link rel="stylesheet" href="css/au.css?v=9">
 </head>
 <body>
   <!-- 首屏加载态：底图瓦片到位（或超时）后淡出 -->
@@ -72,6 +72,8 @@
         <div class="block">
           <div class="block-title" id="t-states">州 / 领地 <span class="count" id="states-hint">点州看电网公司档案</span></div>
           <div class="state-list" id="state-list"></div>
+          <!-- 🔧 配网筛选胶囊：从配网卡片「只看该配网」进入，点击清除（au.js 填充） -->
+          <div class="chip-row" id="dnsp-row" style="margin-top:6px" hidden><button class="chip on owner-pill" id="dnsp-pill" aria-pressed="true" title="清除配网筛选"></button></div>
         </div>
         <div class="block">
           <div class="block-title" id="t-layers">图层</div>
@@ -84,6 +86,7 @@
             <button class="chip on" data-layer="fill" aria-pressed="true">🗺️ 州界着色</button>
             <button class="chip on" data-layer="pipe" aria-pressed="true">🧭 AEMO 管线</button>
             <button class="chip on" data-layer="rez" aria-pressed="true">🌞 REZ 区划</button>
+            <button class="chip" data-layer="dnsp" aria-pressed="false">🔧 配网公司</button>
             <button class="chip on" data-layer="changes" aria-pressed="true">📰 本季变化高亮</button>
           </div>
           <div class="kv-row" id="kv-chips" role="group" aria-label="电压等级"></div>
@@ -127,7 +130,7 @@
             <button class="chip" data-preset="future" aria-pressed="false">未来 2027+</button>
           </div>
         </div>
-        <div class="credit">数据：AEMO Generation Information（2026-07，季度差异见 📰 本季变化）+ KCI · AEMO ISP · TNSP/DNSP 规划报告 · 业主公告 · 自建项目库 · 州界 Natural Earth · 地名 Australian Postcodes（走廊为示意，非测绘线路；管线示意坐标按所在地 / 接入站放置）</div>
+        <div class="credit">数据：AEMO Generation Information（2026-07，季度差异见 📰 本季变化）+ KCI · AEMO ISP · TNSP/DNSP 规划报告 · 业主公告 · 自建项目库 · 州界 Natural Earth · 地名 Australian Postcodes · 配网范围按各 DNSP 公开网络图手描（走廊 / 配网边界为示意，非测绘线路；管线示意坐标按所在地 / 接入站放置）</div>
       </aside>
 
       <!-- 中：地图 -->
@@ -177,6 +180,10 @@
           <div class="line-list" id="zone-list"></div>
         </div>
         <div class="block">
+          <div class="block-title" id="t-dnsp">🔧 配网公司 DNSP <span class="count" id="dnsp-sum"></span></div>
+          <div class="line-list" id="dnsp-list"></div>
+        </div>
+        <div class="block">
           <div class="block-title" id="t-mix">📊 当前筛选 · 品类投资</div>
           <div class="bars" id="cat-bars"></div>
         </div>
@@ -209,8 +216,9 @@
   <script defer src="js/au-coal.js"></script>
   <script defer src="js/au-pipeline.js"></script>
   <script defer src="js/au-rez.js"></script>
+  <script defer src="js/au-dnsp.js"></script>
   <script defer src="js/au-changes.js"></script>
-  <script defer src="js/au.js?v=9"></script>
+  <script defer src="js/au.js?v=10"></script>
   <!-- PWA：注册 Service Worker（离线 + 重访秒开）。失败静默。 -->
   <script>
     if ('serviceWorker' in navigator) {

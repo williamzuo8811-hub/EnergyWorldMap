@@ -8,6 +8,7 @@
  *   · 燃煤退役倒计时（window.AU_COAL，含已关停机组做时间轴背景）
  *   · 项目标记（EPC 状态筛选：未招标 = BD 窗口期）
  *   · 🧭 AEMO 管线（window.AU_PIPELINE：承诺 / 预期 / 拟建，菱形标记，独立聚合）与 🌞 REZ 区划面（window.AU_REZ，示意边界）
+ *   · 🔧 配网公司 DNSP 服务范围面（window.AU_DNSP：scripts/build-au-dnsp.js 由手描边界 × 州面裁出的示意范围；项目 / 管线按坐标打上所属配网，可筛选、进线索榜 / CSV / 州简报）
  *   · 🎯 BD 线索榜（管线 × 产品匹配 × 采购窗口 × 状态/EPC 评分，Top 50 + CSV）· 🏢 业主 / EPC 账户视图 · 📰 本季变化（window.AU_CHANGES）
  * 项目的所属州由坐标对州面做射线法判定（离岸项目取最近州）。
  * 纯前端零构建；调试句柄 window.__AU__；兼容 scripts/test-au.js 的最小 DOM/Leaflet 桩。
@@ -30,6 +31,9 @@
   const PIPE_ASOF = (window.AU_PIPELINE && window.AU_PIPELINE.asOf) || '';
   const ZONES = ((window.AU_REZ && window.AU_REZ.zones) || []).filter(z => Array.isArray(z.polygon) && z.polygon.length >= 3);
   const CHANGES = window.AU_CHANGES || null;   // 📰 本季变化（scripts/import-aemo.js 生成；缺省时面板提示）
+  const DNSP_AREAS = ((window.AU_DNSP && window.AU_DNSP.areas) || []).filter(a => a.geometry && Array.isArray(a.geometry.coordinates) && a.geometry.coordinates.length);   // 🔧 配网面（scripts/build-au-dnsp.js 生成；缺省时图层 / 列表为空）
+  const DNSP_ASOF = (window.AU_DNSP && window.AU_DNSP.asOf) || '';
+  const DNSP_SOURCES = (window.AU_DNSP && window.AU_DNSP.sources) || [];
   const REDUCED_MOTION = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const NOW = new Date();
 
@@ -126,6 +130,21 @@
   const ZONE = {}; ZONES.forEach(z => { ZONE[z.key] = z; });
   // 坐标 → 所在 REZ（已划定 > 规划 > ISP 候选）
   function zoneOf(coord) { if (!coord) return null; for (const z of ZONES_SORTED) if (inRing(coord, z.polygon)) return z.key; return null; }
+  /* ---------- 🔧 配网公司 DNSP：坐标 → 所属配网 ----------
+   * 面带洞的射线法，按文件顺序判定（同州显式区在前、兜底区最后，相邻区无缝拼合所以顺序只影响重叠处）；
+   * 不在任何面内（离岸风电 / LNG 等）时取同州（stateOf 的最近州回退）里顶点最近的配网区（≤ ~3°）。 */
+  const DN = {}; DNSP_AREAS.forEach(a => { DN[a.key] = a; });
+  const inMulti = (pt, mp) => mp.some(poly => inRing(pt, poly[0]) && !poly.slice(1).some(h => inRing(pt, h)));
+  function dnspOf(coord) {
+    if (!coord || !DNSP_AREAS.length) return null;
+    for (const a of DNSP_AREAS) if (inMulti(coord, a.geometry.coordinates)) return a.key;
+    const st = stateOf(coord); if (!st) return null;
+    let best = null, bd = Infinity; const cx = Math.cos(coord[1] * Math.PI / 180);
+    DNSP_AREAS.filter(a => a.state === st).forEach(a => a.geometry.coordinates.forEach(poly => poly[0].forEach(v => { const dx = (v[0] - coord[0]) * cx, dy = v[1] - coord[1], d = dx * dx + dy * dy; if (d < bd) { bd = d; best = a.key; } })));
+    return bd <= 9 ? best : null;
+  }
+  // 州档案 dnsps[] 条目 ↔ 配网面：按 name 开头匹配（area.sheet），匹配不到的（RAES / IES / 矿区自备网）只保留文字
+  const dnspOfSheet = (st, x) => DNSP_AREAS.find(d => d.state === st && String(x.name || '').indexOf(d.sheet || d.name) === 0) || null;
   const normEn = s => String(s || '').toLowerCase().replace(/\(.*?\)/g, ' ').replace(/\b(the|project|stage|phase|bess|battery energy storage system|battery|wind farm|solar farm|power station|energy storage|farm|hybrid|ltd|pty)\b/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
   const PROJ_BY_EN = {}; PROJECTS.forEach(p => { const k = normEn(p.en); if (k && !PROJ_BY_EN[k]) PROJ_BY_EN[k] = p; });
   // TNSP 名称归一（与 scripts/import-aemo.js 的 normTnsp 同表）：老数据里 TransGrid / Transgrid、ElectraNet / Electranet 混用
@@ -137,16 +156,22 @@
     it.codYear = it.cod ? parseInt(String(it.cod).slice(0, 4), 10) : null;
     if (!it.state) it.state = stateOf(it.coord);
     it.zone = zoneOf(it.coord);
+    it.dnsp = dnspOf(it.coord);
     if (!it.projId) { const p = PROJ_BY_EN[normEn(it.en)]; if (p) it.projId = p.id; }
   });
   const PIPE_BY_ID = {}; PIPE.forEach(it => { PIPE_BY_ID[it.id] = it; });
   const PROJ_BY_ID = {}; PROJECTS.forEach(p => { PROJ_BY_ID[p.id] = p; });
-  PROJECTS.forEach(p => { p.zone = zoneOf(p.coord); });
+  PROJECTS.forEach(p => { p.zone = zoneOf(p.coord); p.dnsp = dnspOf(p.coord); });
   // 每个 REZ 内的管线 / 项目汇总（静态，一次算好）
   const ZONE_STAT = {};
   ZONES.forEach(z => { ZONE_STAT[z.key] = { committed: 0, anticipated: 0, proposed: 0, n: 0, projects: 0 }; });
   PIPE.forEach(it => { const st = it.zone && ZONE_STAT[it.zone]; if (st) { st[it.status] = (st[it.status] || 0) + (it.mw || 0); st.n++; } });
   PROJECTS.forEach(p => { const st = p.zone && ZONE_STAT[p.zone]; if (st) st.projects++; });
+  // 每家配网范围内的管线 / 项目汇总（静态）：管线 MW 按 AEMO 状态分档、项目数 / 投资（排除 client 口径）/ EPC 未招标数
+  const DNSP_STAT = {};
+  DNSP_AREAS.forEach(a => { DNSP_STAT[a.key] = { committed: 0, anticipated: 0, proposed: 0, n: 0, projects: 0, inv: 0, open: 0 }; });
+  PIPE.forEach(it => { const st = it.dnsp && DNSP_STAT[it.dnsp]; if (st) { st[it.status] = (st[it.status] || 0) + (it.mw || 0); st.n++; } });
+  PROJECTS.forEach(p => { const st = p.dnsp && DNSP_STAT[p.dnsp]; if (st) { st.projects++; if (p.cat !== 'client') st.inv += p.inv || 0; if (p.epcStatus === '未招标') st.open++; } });
   const EPC_STATES = ['未招标', '已授标', '未公开', '不适用'];
   const epcOf = p => p.epcStatus || '无数据';
   const years = PROJECTS.map(p => p.year).filter(y => typeof y === 'number');
@@ -173,10 +198,12 @@
   const bandOf = l => l.type === 'dc' ? DC : (KV_BANDS.find(b => (l.kv || 0) >= b.min) || KV_BANDS[KV_BANDS.length - 1]);
 
   /* ---------- 状态 ---------- */
+  // 图层默认值（hash 只记与默认不同的：loff = 默认开的被关掉，lon = 默认关的被打开；🔧 配网面默认关——全国铺满会压住州面点击与 REZ）
+  const LAYER_DEF = { grid: true, planned: true, nodes: true, coal: true, projects: true, fill: true, pipe: true, rez: true, changes: true, dnsp: false };
   const state = {
     states: new Set(), cats: new Set(CAT_KEYS), statuses: new Set(), epc: new Set(), epcOnly: false,
     minYear: MIN_YEAR, maxYear: MAX_YEAR, recentOnly: false, q: '',
-    layers: { grid: true, planned: true, nodes: true, coal: true, projects: true, fill: true, pipe: true, rez: true, changes: true },
+    layers: Object.assign({}, LAYER_DEF),
     plStatus: new Set(['committed', 'anticipated']), plFuelOff: new Set(),   // 🧭 管线：默认只显示承诺 + 预期（拟建按需打开）
     codMax: null, playYear: null,   // 🗓️ COD 时间轴：截止年（null = 关闭）/ ▶ 播放中的当前年
     plWin: false, plHot: false, plUp: false, plMine: false,   // 🧭 快捷筛选：⏰ 采购窗口进行中 / 🔥 线索分 ≥75 / ⬆️ 本季升级为承诺 / 📋 我的线索
@@ -184,6 +211,7 @@
     basemap: null,   // 底图 key（dark | osm | amap；null = 按时区默认）
     card: null,   // {kind:'project'|'coal'|'state'|'line', id}
     plOwner: null,   // 🏢 业主筛选（归并键，见 ownerGroup）
+    dnsp: null,      // 🔧 配网筛选（AU_DNSP area key，见 dnspOf；项目与管线同时生效）
     view: null,      // 打开的宽面板：leads | accounts | epc | changes
   };
 
@@ -245,6 +273,12 @@
     trkExp: ['⤓ 备份跟进 (JSON)', '⤓ Back up follow-ups'], trkImp: ['⤒ 恢复跟进', '⤒ Restore'], trkImpOk: ['已合并 {n} 条跟进记录', 'Merged {n} follow-ups'], trkImpBad: ['文件不是有效的跟进备份', 'Not a valid follow-up backup'], trkImpAsk: ['合并 {n} 条跟进记录到本机？（同一项目以较新记录为准）', 'Merge {n} follow-ups into this browser? (newer record wins per project)'],
     fresh: ['数据截至', 'Data as of'], freshStale: ['已 {n} 个月未更新，AEMO 每季度发布新表，请运行 scripts/import-aemo.js', '{n} months old — AEMO publishes quarterly; run scripts/import-aemo.js'],
     basemap: ['底图', 'Base map'], tileFail: ['底图瓦片加载失败：可在「图层 → 底图」切换 OSM / 高德', 'Base-map tiles failed to load — switch the base map under Layers'],
+    lgDnsp: ['🔧 配网公司', '🔧 DNSP areas'], dnspT: ['🔧 配网公司 DNSP', '🔧 Distribution networks (DNSP)'],
+    dnKind_dnsp: ['公用配网 DNSP', 'DNSP'], dnKind_regional: ['州属区域电力公司', 'Regional utility'], dnKind_private: ['矿企 / 私营网络', 'Private / mining network'],
+    dnArea: ['覆盖范围', 'Service area'], dnSheetArea: ['档案 · 范围描述', 'Sheet · service area'], dnHq: ['总部', 'HQ'], dnFilter: ['📍 只看该配网', '📍 Filter this DNSP'], dnPill: ['🔧 配网', '🔧 DNSP'], dnShow: ['🗺️ 显示配网图层', '🗺️ Show DNSP layer'],
+    dnPipe: ['🧭 区内管线', '🧭 Pipeline in area'], dnProj: ['📍 区内项目', '📍 Projects in area'], dnLeads: ['🎯 区内线索 Top 5', '🎯 Top 5 leads in area'], pDnsp: ['配网 DNSP', 'DNSP'],
+    lgDnspRow: ['配网公司范围（示意，点面看卡片）', 'DNSP service areas (approximate, click for card)'],
+    dnApprox: ['边界为示意范围：按各 DNSP 公开网络图 / 地名描述手描，再用州界裁出海岸（都会区内部边界精确到街道级，这里只到区 / 市镇级，±10–30 km）；接入前以 DNSP 官方地址查询为准', 'Boundary is approximate: traced from each DNSP\'s published network map / locality lists and clipped to the state border (metro boundaries run street by street; here only suburb level, ±10–30 km) — confirm with the DNSP address lookup before connecting'],
   };
   const L_ = k => (T[k] || [k, k])[state.lang === 'en' ? 1 : 0];
   const en = () => state.lang === 'en';
@@ -259,6 +293,9 @@
   const statusName = s => en() ? ((LABELS_EN && LABELS_EN.status && LABELS_EN.status[s]) || s) : s;
   const stName = a => { const s = ST[a]; return s ? (en() ? s.en : s.name) : (a || '—'); };
   const stShort = a => { const s = ST[a]; return s ? (en() ? s.abbr : s.short) : (a || '—'); };
+  const dnName = a => a ? (en() ? a.name : (a.zh || a.name)) : '';
+  // 配网地图标签：中文名 + 括号里的英文简称（「奥斯网（Ausgrid）」→「奥斯网 Ausgrid」），英文去掉括号注释，超过 20 字截断
+  const dnLabel = a => { let t = en() ? String(a.name || '') : String(a.zh || a.name || '').replace(/[（(]([^）)]*)[）)]/, ' $1'); t = t.replace(/\s*\(.*?\)\s*/g, ' ').replace(/\s+/g, ' ').trim(); return t.length > 20 ? t.slice(0, 19).replace(/[\s·/–-]+$/, '') + '…' : t; };
   const EPC_EN = { '未招标': 'Pre-tender', '已授标': 'Awarded', '未公开': 'Undisclosed', '不适用': 'N/A', '无数据': 'n/a' };
   const epcName = s => en() ? (EPC_EN[s] || s) : s;
   const gw = mw => mw >= 1000 ? (mw / 1000).toFixed(1) + ' GW' : Math.round(mw) + ' MW';
@@ -348,10 +385,12 @@
 
   // 图层容器（叠放次序：州面 < 走廊 < 节点 < 煤电 < 项目）
   const fillLayer = L.layerGroup().addTo(map);
+  const dnspLayer = L.layerGroup().addTo(map);    // 🔧 配网面：州面之上、REZ 之下（默认关）
   const rezLayer = L.layerGroup().addTo(map);     // 🌞 REZ 面：在走廊之下、州面之上
   const lineLayer = L.layerGroup().addTo(map);
   const nodeLayer = L.layerGroup().addTo(map);
   const coalLayer = L.layerGroup().addTo(map);
+  const dnHiLayer = L.layerGroup().addTo(map);    // 🔧 打开配网卡片时的范围高亮（图层关着也能看到这家管哪里）
   const cluster = L.markerClusterGroup({
     maxClusterRadius: 40, showCoverageOnHover: false, spiderfyOnMaxZoom: true, disableClusteringAtZoom: 9,
     iconCreateFunction: function (c) {
@@ -482,7 +521,31 @@
       if (zoom >= REZ_LABEL_ZOOM && z.center) L.marker(toLatLng(z.center), { icon: L.divIcon({ className: 'rez-lab', iconSize: [0, 0], html: '<span style="--c:' + col + '">' + esc(zoneLabel(z)) + '</span>' }), interactive: false }).addTo(rezLayer);
     });
   }
-  map.on('zoomend', () => { renderRez(); renderCoal(); });   // 两者都带签名记忆：只在标签 / 尺寸档位真变时重画
+  /* ---------- 🔧 配网公司面 ---------- */
+  const dnVisible = a => state.layers.dnsp && (state.states.size === 0 || state.states.has(a.state));
+  function renderDnsp() {
+    const zoom = zoomNow();
+    if (!memo('dnsp', [state.layers.dnsp, stSig(), state.lang, state.dnsp || '', Math.round(zoom * 2)].join('|'))) return;
+    dnspLayer.clearLayers();
+    if (!state.layers.dnsp) return;
+    DNSP_AREAS.slice().reverse().forEach(a => {   // 兜底区先画、显式区后画（在上层）
+      if (!dnVisible(a)) return;
+      const sel = state.dnsp === a.key, dim = !!state.dnsp && !sel;
+      const lyr = L.geoJSON(a.geometry, { style: { color: a.color, weight: sel ? 2.2 : 1.1, opacity: dim ? 0.35 : 0.9, fillColor: a.color, fillOpacity: dim ? 0.03 : sel ? 0.28 : 0.13, dashArray: a.kind === 'private' ? '4 4' : null, className: 'au-dnsp' } });
+      const st = DNSP_STAT[a.key] || {};
+      lyr.bindTooltip('<b>' + esc(dnName(a)) + '</b><br>' + esc(L_('dnKind_' + a.kind)) + ' · ' + esc(stShort(a.state)) + '<br><span style="color:#93a4c4">' + fmtNum(st.projects || 0) + ' ' + L_('cProjects') + ' · ' + L_('dnPipe') + ' ' + gw((st.committed || 0) + (st.anticipated || 0)) + ' + ' + gw(st.proposed || 0) + ' ' + esc(plStatusName('proposed')) + '</span>', { sticky: true, className: 'au-tip' });
+      lyr.on('click', e => { if (L.DomEvent && L.DomEvent.stopPropagation) L.DomEvent.stopPropagation(e); showDnsp(a.key, { noFly: true }); });
+      lyr.addTo(dnspLayer);
+      if (zoom >= (a.labelZoom || 5) && a.label) L.marker(toLatLng(a.label), { icon: L.divIcon({ className: 'dn-lab', iconSize: [0, 0], html: '<span style="--c:' + a.color + '">' + esc(dnLabel(a)) + '</span>' }), interactive: false }).addTo(dnspLayer);
+    });
+  }
+  // 打开配网卡片时把该区描边高亮；图层关着时再铺一层淡填充，让「这家管哪里」从州档案 / 右栏点进来就一眼可见
+  function renderDnHi() {
+    dnHiLayer.clearLayers();
+    const a = state.card && state.card.kind === 'dnsp' ? DN[state.card.id] : null; if (!a) return;
+    L.geoJSON(a.geometry, { style: { color: '#ffffff', weight: 2.4, opacity: 0.95, dashArray: '6 4', fillColor: a.color, fillOpacity: state.layers.dnsp ? 0.05 : 0.18, className: 'au-dnsp-hi' }, interactive: false }).addTo(dnHiLayer);
+  }
+  map.on('zoomend', () => { renderRez(); renderDnsp(); renderCoal(); });   // 都带签名记忆：只在标签 / 尺寸档位真变时重画
 
   /* ---------- 🧭 管线筛选 / 标记 ---------- */
   const plHay = it => (it._hay || (it._hay = [it.en, it.name, it.owner, it.locality, it.connNode, it.tnsp, it.kci, it.rez, it.tech].join(' ').toLowerCase()));
@@ -496,6 +559,7 @@
     return state.plStatus.has(it.status)
       && !state.plFuelOff.has(it.fuel)
       && (!state.plOwner || ownerKeyOf(it) === state.plOwner)
+      && (!state.dnsp || it.dnsp === state.dnsp)
       && (state.states.size === 0 || state.states.has(it.state))
       // 年份滑块两端为开区间：手柄在最左 / 最右时视为「及更早 / 及以后」，COD 在项目库年份范围之外的管线不会被「全部」误滤掉
       && (!it.codYear || ((it.codYear >= state.minYear || state.minYear <= MIN_YEAR) && (it.codYear <= state.maxYear || state.maxYear >= MAX_YEAR)))
@@ -562,6 +626,16 @@
     if (sum) sum.textContent = fmtNum(zs.filter(z => z.status === 'declared').length) + ' ' + zoneStatusName('declared') + ' · ' + fmtNum(zs.length) + (en() ? ' total' : ' 个');
     el.innerHTML = zs.map(z => { const st = ZONE_STAT[z.key] || {}; const near = (st.committed || 0) + (st.anticipated || 0); return '<div class="row" data-zone="' + esc(z.key) + '" role="button" tabindex="0"><div class="nm"><span style="color:' + ZONE_COLOR[z.status] + '">■</span> ' + (z.ispId ? '<small style="color:#7b8ca6">' + esc(z.ispId) + '</small> ' : '') + esc(en() ? (z.en || z.name) : z.name) + '</div><div class="cd ' + z.status + '">' + esc(zoneStatusName(z.status)) + '</div><div class="meta">' + esc(stShort(normState(z.state))) + ' · ' + esc(z.body || '') + (z.targetGw ? ' · ' + z.targetGw + ' GW' : '') + ' · ' + L_('zPipe') + ' ' + gw(near) + (st.proposed ? ' (+' + gw(st.proposed) + ' ' + plStatusName('proposed') + ')' : '') + '</div></div>'; }).join('') || '<div class="empty">' + L_('noData') + '</div>';
     el.querySelectorAll('.row').forEach(r => { r.addEventListener('click', () => showZone(r.dataset.zone)); r.addEventListener('keydown', e => { if (e.key === 'Enter') showZone(r.dataset.zone); }); });
+  }
+
+  // 右栏 🔧 配网公司列表：跟随州筛选；行 = 色块 + 名称 + 州 + 类型 · 项目数 · 区内承诺+预期管线（+拟建）· EPC 未招标数
+  function renderDnspList() {
+    const el = $('dnsp-list'), sum = $('dnsp-sum'); if (!el) return;
+    if (!memo('dnspList', [stSig(), state.lang, state.dnsp || ''].join('|'))) return;
+    const as = DNSP_AREAS.filter(a => state.states.size === 0 || state.states.has(a.state));
+    if (sum) sum.textContent = fmtNum(as.length) + (en() ? ' networks' : ' 家') + (DNSP_ASOF ? ' · ' + DNSP_ASOF : '');
+    el.innerHTML = as.map(a => { const st = DNSP_STAT[a.key] || {}; const near = (st.committed || 0) + (st.anticipated || 0); return '<div class="row dn' + (state.dnsp === a.key ? ' on' : '') + '" data-dnsp="' + esc(a.key) + '" role="button" tabindex="0"><div class="nm"><span class="dn-sw" style="--c:' + a.color + '"></span> ' + esc(dnName(a)) + '</div><div class="cd ' + (a.kind === 'dnsp' ? 'cool' : a.kind === 'regional' ? 'warm' : 'tbd') + '">' + esc(stShort(a.state)) + '</div><div class="meta">' + esc(L_('dnKind_' + a.kind)) + ' · ' + fmtNum(st.projects || 0) + ' ' + L_('cProjects') + ' · ' + L_('dnPipe') + ' ' + gw(near) + (st.proposed ? ' (+' + gw(st.proposed) + ')' : '') + (st.open ? ' · 🔧 ' + fmtNum(st.open) : '') + '</div></div>'; }).join('') || '<div class="empty">' + L_('noData') + '</div>';
+    el.querySelectorAll('.row').forEach(r => { r.addEventListener('click', () => showDnsp(r.dataset.dnsp)); r.addEventListener('keydown', e => { if (e.key === 'Enter') showDnsp(r.dataset.dnsp); }); });
   }
 
   /* ---------- 🎯 BD 线索评分（管线 → 本季度该去谈谁）----------
@@ -776,7 +850,7 @@
     const s = leadScore(it), f = fuelOf(it.fuel), pj = it.projId ? PROJ_BY_ID[it.projId] : null;
     const w = s.window ? ymFmt(s.window.from) + ' ~ ' + ymFmt(s.window.to) : '—';
     return '<tr class="clk" data-plid="' + esc(it.id) + '">' + td('#', String(i + 1), 'num rk') + td('', '<div class="nm"><span class="rk-in">' + (i + 1) + '. </span>' + esc(en() ? it.en : it.name) + '<small>' + esc(en() ? it.name : it.en) + (it.owner ? ' · ' + esc(it.owner) : '') + '</small></div>', 'full')
-      + td(L_('pCountry'), esc(stShort(it.state)), 'nw') + td(L_('pFuel'), '<span style="color:' + f.color + '">' + f.icon + '</span> ' + esc(en() ? f.en : f.zh), 'nw') + td(L_('pMw'), esc(mwFmt(it) || '—'), 'num') + td('COD', esc(it.cod || '—'), 'nw')
+      + td(L_('pCountry'), esc(stShort(it.state)) + (it.dnsp && DN[it.dnsp] ? '<div class="mini">' + esc(dnLabel(DN[it.dnsp])) + '</div>' : ''), 'nw') + td(L_('pFuel'), '<span style="color:' + f.color + '">' + f.icon + '</span> ' + esc(en() ? f.en : f.zh), 'nw') + td(L_('pMw'), esc(mwFmt(it) || '—'), 'num') + td('COD', esc(it.cod || '—'), 'nw')
       + td(L_('pAemo'), '<span class="tag ' + it.status + '">' + esc(plStatusName(it.status)) + '</span>') + td(L_('lEpc'), '<span class="tag' + (s.epc === '未招标' || s.epc === '未公开' ? ' open' : '') + '">' + esc(epcName(s.epc)) + '</span>') + td(L_('lWindow'), esc(w), 'num') + td(L_('lProduct'), esc(en() ? s.product.en : s.product.zh))
       + td(L_('lScore'), '<span class="sc ' + scoreCls(s.score) + '" title="' + esc((en() ? 'product ' : '产品 ') + s.prod + ' + ' + (en() ? 'window ' : '窗口 ') + s.win + '（' + (s.winWhy || '') + '）+ ' + (en() ? 'status/EPC ' : '状态/EPC ') + s.st + '（' + (s.stWhy || '') + '）') + '">' + s.score + '</span>', 'num')
       + td(L_('track'), trackCell(it))
@@ -802,8 +876,8 @@
     if (ti && tf) { ti.addEventListener('click', () => { if (tf.click) tf.click(); }); tf.addEventListener('change', () => { const f = tf.files && tf.files[0]; if (!f || typeof FileReader === 'undefined') return; const rd = new FileReader(); rd.onload = () => { importTrackText(String(rd.result || '')); showLeads(); }; rd.readAsText(f); }); }
   }
   function leadsCSV(items) {
-    const H = ['排名', '线索分', '产品分', '窗口分', '状态EPC分', '项目', '英文名', '州', '类型', 'MW', 'MWh', 'COD', 'AEMO 状态', 'EPC 状态', '采购窗口', '窗口进行中', '本季升级', '产品匹配', '业主', '接入点', 'TNSP', 'REZ', '经度', '纬度', '示意坐标', '链接', '备注', '跟进状态', '负责人', '下次动作', '跟进备注'];
-    const rows = items.map((it, i) => { const s = leadScore(it), tr = trackOf(it.id) || {}; return [i + 1, s.score, s.prod, s.win, s.st, it.name, it.en, it.state, fuelOf(it.fuel).zh, it.mw || '', it.mwh || '', it.cod || '', PL_ZH[it.status] || it.status, s.epc, s.window ? ymFmt(s.window.from) + '~' + ymFmt(s.window.to) : '', s.winOpen ? '是' : '', s.up ? '是' : '', s.product.zh, it.owner || '', it.connNode || '', it.tnsp || '', it.rez || '', it.coord[0], it.coord[1], it.approx ? '是' : '', pageUrl() + '#pipe=' + it.id, String(it.notes || '').slice(0, 300), tr.st ? (TRACK_ST.find(x => x[0] === tr.st) || [])[1] || tr.st : '', tr.who || '', tr.next || '', tr.note || '']; });
+    const H = ['排名', '线索分', '产品分', '窗口分', '状态EPC分', '项目', '英文名', '州', '类型', 'MW', 'MWh', 'COD', 'AEMO 状态', 'EPC 状态', '采购窗口', '窗口进行中', '本季升级', '产品匹配', '业主', '接入点', 'TNSP', '配网 DNSP', 'REZ', '经度', '纬度', '示意坐标', '链接', '备注', '跟进状态', '负责人', '下次动作', '跟进备注'];
+    const rows = items.map((it, i) => { const s = leadScore(it), tr = trackOf(it.id) || {}; return [i + 1, s.score, s.prod, s.win, s.st, it.name, it.en, it.state, fuelOf(it.fuel).zh, it.mw || '', it.mwh || '', it.cod || '', PL_ZH[it.status] || it.status, s.epc, s.window ? ymFmt(s.window.from) + '~' + ymFmt(s.window.to) : '', s.winOpen ? '是' : '', s.up ? '是' : '', s.product.zh, it.owner || '', it.connNode || '', it.tnsp || '', (it.dnsp && DN[it.dnsp] ? DN[it.dnsp].name : ''), it.rez || '', it.coord[0], it.coord[1], it.approx ? '是' : '', pageUrl() + '#pipe=' + it.id, String(it.notes || '').slice(0, 300), tr.st ? (TRACK_ST.find(x => x[0] === tr.st) || [])[1] || tr.st : '', tr.who || '', tr.next || '', tr.note || '']; });
     return '﻿' + [H].concat(rows).map(r => r.map(csvCell).join(',')).join('\r\n');
   }
   function exportLeadsCSV(items) { const csv = leadsCSV(items || leads().slice(0, 50)); if (download('au-leads-' + (PIPE_ASOF || 'now') + '.csv', csv, 'text/csv;charset=utf-8')) toast(en() ? 'CSV exported' : '已导出 CSV（可分单给同事）'); return csv; }
@@ -934,7 +1008,7 @@
     L.push('## 电网与政策', '');
     if (sh.grid) L.push('- 电网 / 市场：' + sh.grid + (sh.operator ? ' · ' + sh.operator : ''));
     if (sh.tnsp) L.push('- 输电商 TNSP：' + sh.tnsp.name + (sh.tnsp.owner ? '（' + sh.tnsp.owner + '）' : '') + (sh.tnsp.voltages ? ' · ' + sh.tnsp.voltages : '') + (sh.tnsp.notes ? ' — ' + cell(sh.tnsp.notes) : ''));
-    if (sh.dnsps && sh.dnsps.length) L.push('- 配电商 DNSP：' + sh.dnsps.map(x => x.name + (x.owner ? '（' + x.owner + '）' : '')).join('；'));
+    if (sh.dnsps && sh.dnsps.length) L.push('- 配电商 DNSP：' + sh.dnsps.map(x => { const ar = dnspOfSheet(a, x), st = ar && DNSP_STAT[ar.key]; return x.name + (x.owner ? '（' + x.owner + '）' : '') + (st ? '：范围内项目 ' + st.projects + ' 个 · 管线承诺+预期 ' + gw((st.committed || 0) + (st.anticipated || 0)) + ' / 拟建 ' + gw(st.proposed || 0) + (st.open ? ' · EPC 未招标 ' + st.open : '') : ''); }).join('；'));
     if (sh.policy) L.push('- 州政策：' + sh.policy);
     if (sh.coalExit) L.push('- 煤电退出：' + sh.coalExit);
     L.push('', '## 煤电退役时间表', '', tbl(['电厂', '业主', '在运', '关停', '倒计时 / 口径'], coalRows), '');
@@ -1047,6 +1121,7 @@
   function pass(p) {
     return state.cats.has(p.cat)
       && (state.states.size === 0 || state.states.has(p.auState))
+      && (!state.dnsp || p.dnsp === state.dnsp)
       && (state.statuses.size === 0 || state.statuses.has(p.status))
       && (state.epc.size === 0 || state.epc.has(epcOf(p)))
       && (!state.epcOnly || p.epcStatus === '未招标')
@@ -1166,6 +1241,7 @@
       + '<div class="lg-row"><i class="dia hollow" style="--c:#21c7ff"></i>' + esc(plStatusName('proposed')) + '</div>'
       + '<div class="lg-row"><i class="dia up" style="--c:#21c7ff"></i>' + L_('lgUp') + ' <i class="dia added" style="--c:#21c7ff;margin-left:8px"></i>' + L_('lgAdded') + '</div>'
       + '<div class="lg-row"><i class="zone" style="--c:#2ee6a6"></i>REZ ' + esc(zoneStatusName('declared')) + ' <i class="zone" style="--c:#ffb02e;margin-left:6px"></i>' + esc(zoneStatusName('planned')) + '</div>'
+      + (state.layers.dnsp ? '<div class="lg-row"><i class="dnsp"></i>' + L_('lgDnspRow') + '</div>' : '')
       + '<div class="lg-note">' + L_('legendNote') + '</div></div>';
     if (el) {
       el.innerHTML = html; if (el.classList) el.classList.toggle('collapsed', !legendOpen);
@@ -1207,8 +1283,9 @@
   function render() {
     const items = filtered();
     const pitems = filteredPipe();
-    restyleGeo(); renderRez(); renderGrid(); renderCoal(); renderProjects(items); renderPipe(pitems);
-    kpis(items, pitems); renderLeads(pitems); renderCoalList(); renderOpps(items); renderCatBars(items); renderLineList(); renderPipeStats(pitems); renderZoneList(); renderChangesBlock(); updateCounts(items);
+    restyleGeo(); renderDnsp(); renderRez(); renderGrid(); renderCoal(); renderProjects(items); renderPipe(pitems);
+    kpis(items, pitems); renderLeads(pitems); renderCoalList(); renderOpps(items); renderCatBars(items); renderLineList(); renderPipeStats(pitems); renderZoneList(); renderDnspList(); renderChangesBlock(); updateCounts(items);
+    if (memo('legend', [state.layers.dnsp ? 1 : 0, state.lang].join('|'))) renderLegend();   // 图例的配网行随图层开关出现
     writeHash();
     fitTopbar(false);   // KPI 数字变宽时只允许升档（去副标 / 换行），不降档，筛选时顶栏高度不来回跳
   }
@@ -1216,16 +1293,17 @@
   /* ---------- 卡片 ---------- */
   const cardEl = $('card'), appEl = $('app');
   const appFlag = (cls, on) => { if (appEl && appEl.classList) appEl.classList.toggle(cls, !!on); };   // .app.card-open / .drawer-open：窄屏隐藏浮钮
-  function hideCard() { if (cardEl && cardEl.classList) cardEl.classList.remove('show'); appFlag('card-open', false); state.card = null; writeHash(); }
+  function hideCard() { if (cardEl && cardEl.classList) cardEl.classList.remove('show'); appFlag('card-open', false); state.card = null; renderDnHi(); writeHash(); }
   function openCard(html, kind, id) {
     if (!cardEl) return;
     closeDrawers();   // 窄屏：底部抽屉会盖住底部卡片，开卡先收抽屉
     cardEl.innerHTML = html; if (cardEl.classList) cardEl.classList.add('show'); appFlag('card-open', true);
     try { cardEl.scrollTop = 0; } catch (e) { /* stub */ }
     state.card = { kind, id };
+    renderDnHi();
     const cl = $('c-close'); if (cl) cl.addEventListener('click', hideCard);
     const sh = $('c-share'); if (sh) sh.addEventListener('click', () => copyLink());
-    cardEl.querySelectorAll('[data-fly]').forEach(b => b.addEventListener('click', () => { const v = b.dataset.fly.split(':'); if (v[0] === 'st') flyToState(v[1]); else if (v[0] === 'll') flyTo([+v[2], +v[1]], +v[3] || 8); else if (v[0] === 'line') flyToLine(v[1]); else if (v[0] === 'zone') flyToZone(v[1]); }));
+    cardEl.querySelectorAll('[data-fly]').forEach(b => b.addEventListener('click', () => { const v = b.dataset.fly.split(':'); if (v[0] === 'st') flyToState(v[1]); else if (v[0] === 'll') flyTo([+v[2], +v[1]], +v[3] || 8); else if (v[0] === 'line') flyToLine(v[1]); else if (v[0] === 'zone') flyToZone(v[1]); else if (v[0] === 'dnsp') flyToDnsp(v[1]); }));
     cardEl.querySelectorAll('[data-st-filter]').forEach(b => b.addEventListener('click', () => { state.states = new Set([b.dataset.stFilter]); syncUI(); render(); flyToState(b.dataset.stFilter); }));
     cardEl.querySelectorAll('[data-st-open]').forEach(b => b.addEventListener('click', () => showState(b.dataset.stOpen)));
     cardEl.querySelectorAll('[data-pid]').forEach(b => b.addEventListener('click', () => showDetail(+b.dataset.pid)));
@@ -1233,6 +1311,9 @@
     cardEl.querySelectorAll('[data-line]').forEach(b => b.addEventListener('click', () => showLine(b.dataset.line)));
     cardEl.querySelectorAll('[data-plid]').forEach(b => b.addEventListener('click', () => showPipe(b.dataset.plid)));
     cardEl.querySelectorAll('[data-zone]').forEach(b => b.addEventListener('click', () => showZone(b.dataset.zone)));
+    cardEl.querySelectorAll('[data-dnsp]').forEach(b => b.addEventListener('click', () => showDnsp(b.dataset.dnsp)));
+    cardEl.querySelectorAll('[data-dn-filter]').forEach(b => b.addEventListener('click', () => filterDnsp(b.dataset.dnFilter)));
+    cardEl.querySelectorAll('[data-layer-on]').forEach(b => b.addEventListener('click', () => { state.layers[b.dataset.layerOn] = true; syncUI(); render(); renderDnHi(); if (b.remove) b.remove(); }));
     cardEl.querySelectorAll('[data-brief]').forEach(b => b.addEventListener('click', () => exportStateBrief(b.dataset.brief)));
     cardEl.querySelectorAll('[data-poster]').forEach(b => b.addEventListener('click', () => exportStatePoster(b.dataset.poster)));
     cardEl.querySelectorAll('[data-tr-save]').forEach(b => b.addEventListener('click', () => { const id = b.dataset.trSave; const v = k => { const e = $(k); return e ? e.value : ''; }; setTrack(id, { st: v('tr-st'), who: v('tr-who'), next: v('tr-next'), note: v('tr-note') }); toast(L_('trackSaved')); render(); showPipe(id, { noFly: true }); }));
@@ -1241,6 +1322,7 @@
     writeHash();
   }
   const cell = (k, v) => '<div class="d-cell"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
+  const dnCell = key => cell(L_('pDnsp'), key && DN[key] ? '<span class="d-link" data-dnsp="' + esc(key) + '">' + esc(dnName(DN[key])) + ' ▸</span>' : '—');
   const head = (color, tag, name, alt, extra) => '<div class="d-top"><button class="d-close" id="c-close" aria-label="' + L_('closeA') + '">×</button><button class="d-share" id="c-share" aria-label="' + L_('shareA') + '" title="' + L_('shareA') + '">🔗</button>'
     + '<span class="d-cat" style="background:' + hexA(color, 0.14) + ';color:' + color + '">' + tag + '</span>' + (extra || '') + '<div class="d-name">' + name + '</div>' + (alt ? '<div class="d-en">' + alt + '</div>' : '') + '</div>';
   const sec = (title, body) => body ? '<div class="d-sec"><h4>' + title + '</h4>' + body + '</div>' : '';
@@ -1267,7 +1349,7 @@
       + cell(L_('pCountry'), '<span class="d-link" data-st-open="' + (p.auState || '') + '">' + esc(stName(p.auState)) + ' ▸</span>')
       + cell(L_('pStatus'), '<span class="st-' + p.status + '">' + esc(statusName(p.status)) + '</span> · ' + p.year)
       + cell(L_('pCap'), esc(p.cap || '—')) + cell(L_('pInv'), usd(p) + (p.invText && !/美元|\$/.test(p.invText) ? ' <small style="color:#7b8ca6">(' + esc(p.invText) + ')</small>' : ''))
-      + cell(L_('pOwner'), esc(p.owner || '—')) + cell(L_('pUpd'), esc(p.updated || '—')) + '</div>'
+      + cell(L_('pOwner'), esc(p.owner || '—')) + cell(L_('pUpd'), esc(p.updated || '—')) + dnCell(p.dnsp) + '</div>'
       + '<div class="d-desc">' + paras(p.detail || p.desc) + '</div>'
       + '<div class="d-actions"><button data-fly="ll:' + p.coord[0] + ':' + p.coord[1] + ':9">' + L_('fly') + '</button>' + (p.auState ? '<button data-st-open="' + p.auState + '">' + (en() ? '📄 State sheet' : '📄 州档案') + '</button>' : '') + '</div>';
     openCard(html, 'project', p.id);
@@ -1301,7 +1383,7 @@
     const f = fuelOf(it.fuel), z = it.zone ? ZONE[it.zone] : null, pj = it.projId ? PROJ_BY_ID[it.projId] : null;
     const html = head(f.color, f.icon + ' ' + esc(en() ? f.en : f.zh) + ' · ' + esc(stShort(it.state)), esc(en() ? it.en : it.name), esc(en() ? it.name : it.en), '<span class="tag ' + it.status + '">' + esc(plStatusName(it.status)) + '</span>' + (UPGRADED.has(it.id) ? ' <span class="tag cool">' + L_('upTag') + '</span>' : '') + (windowOpen(it) ? ' <span class="tag warm">' + L_('quickWin') + '</span>' : ''))
       + '<div class="d-grid">' + cell(L_('pMw'), esc(mwFmt(it) || '—') + (it.siteMw ? ' · ' + L_('pSiteMw') + ' ' + fmtNum(it.siteMw) + ' MW' : '')) + cell(L_('pCod'), esc(it.cod || '—')) + cell(L_('pOwner'), esc(it.owner || '—')) + cell(L_('pAemo'), esc(plStatusName(it.status)) + (it.region ? ' · ' + esc(it.region) : '') + (it.kci ? ' · KCI ' + esc(it.kci) : ''))
-      + cell(L_('pConn'), esc([it.connNode, it.tnsp].filter(Boolean).join(' · ') || '—')) + cell(L_('pRez'), z ? '<span class="d-link" data-zone="' + esc(z.key) + '">' + esc(en() ? (z.en || z.name) : z.name) + ' ▸</span>' : esc(it.rez || '—')) + '</div>'
+      + cell(L_('pConn'), esc([it.connNode, it.tnsp].filter(Boolean).join(' · ') || '—')) + cell(L_('pRez'), z ? '<span class="d-link" data-zone="' + esc(z.key) + '">' + esc(en() ? (z.en || z.name) : z.name) + ' ▸</span>' : esc(it.rez || '—')) + dnCell(it.dnsp) + '</div>'
       + (function () { const s = leadScore(it); return '<div class="d-strip" style="border-color:rgba(46,230,166,0.4);background:rgba(46,230,166,0.07)"><span class="dp-tag" style="color:#bfe9d8">🎯 ' + L_('lScore') + ' ' + s.score + '</span>' + esc(en() ? s.product.en : s.product.zh) + ' · ' + L_('lWindow') + ' ' + (s.window ? ymFmt(s.window.from) + ' ~ ' + ymFmt(s.window.to) : '—') + ' · EPC ' + esc(epcName(s.epc)) + '</div>'; })()
       + (function () {   // 📋 本机跟进记录：状态 / 负责人 / 下次动作 / 备注
         const tr = trackOf(it.id);
@@ -1336,6 +1418,31 @@
     if (!(opts && opts.noFly)) flyToZone(z.key);
   }
   function flyToZone(key) { const z = ZONE[key]; if (!z) return; const lats = z.polygon.map(c => c[1]), lngs = z.polygon.map(c => c[0]); flyToBounds([[Math.min.apply(null, lats), Math.min.apply(null, lngs)], [Math.max.apply(null, lats), Math.max.apply(null, lngs)]], { padding: [50, 50], maxZoom: 8 }); }
+
+  /* ---------- 🔧 配网公司卡片：范围 + 州档案里的配网条目（股东 / 总部 / 电压 / 资本开支主题）+ 区内 KPI / 线索 Top 5 / 管线 / 项目 ---------- */
+  function showDnsp(key, opts) {
+    const a = DN[key]; if (!a) return;
+    const sh = SHEETS[a.state], ds = (sh && sh.dnsps ? sh.dnsps.find(x => String(x.name || '').indexOf(a.sheet || a.name) === 0) : null) || {}, st = DNSP_STAT[a.key] || {};
+    const inPipe = PIPE.filter(it => it.dnsp === a.key).sort((x, y) => (PL_STATUS.indexOf(x.status) - PL_STATUS.indexOf(y.status)) || (y.mw || 0) - (x.mw || 0));
+    const inProj = PROJECTS.filter(p => p.dnsp === a.key).sort((x, y) => (y.inv || 0) - (x.inv || 0)).slice(0, 8);
+    const top = leads(inPipe).slice(0, 5);
+    const pipeRow = it => { const f = fuelOf(it.fuel); return '<div class="co-row"><span><b class="d-link" data-plid="' + esc(it.id) + '">' + f.icon + ' ' + esc(en() ? it.en : it.name) + '</b><small>' + esc(mwFmt(it)) + (it.cod ? ' · COD ' + esc(it.cod) : '') + (it.owner ? ' · ' + esc(it.owner) : '') + '</small></span><span class="tag ' + it.status + '">' + esc(plStatusName(it.status)) + '</span></div>'; };
+    const html = head(a.color, '🔧 ' + esc(L_('dnKind_' + a.kind)) + ' · ' + esc(stShort(a.state)), esc(dnName(a)), esc(en() ? (a.zh || '') : a.name))
+      + '<div class="kv-pills"><div><b>' + fmtNum(st.projects || 0) + '</b><span>' + L_('cProjects') + '</span></div><div><b>$' + invMag(st.inv || 0) + '</b><span>' + L_('cInv') + '</span></div><div><b style="color:#bfe9d8">' + gw((st.committed || 0) + (st.anticipated || 0)) + '</b><span>' + esc(plStatusName('committed')) + ' + ' + esc(plStatusName('anticipated')) + '</span></div><div><b>' + gw(st.proposed || 0) + '</b><span>' + esc(plStatusName('proposed')) + '</span></div></div>'
+      + '<div class="d-actions"><button data-fly="dnsp:' + esc(a.key) + '">' + L_('fly') + '</button><button data-dn-filter="' + esc(a.key) + '">' + L_('dnFilter') + '</button>' + (state.layers.dnsp ? '' : '<button data-layer-on="dnsp">' + L_('dnShow') + '</button>') + '<button data-st-open="' + a.state + '">' + (en() ? '📄 State sheet' : '📄 州档案') + '</button></div>'
+      + '<div class="d-strip"><span class="dp-tag">' + L_('dnArea') + '</span>' + esc(en() ? (a.descEn || a.desc) : a.desc) + '</div>'
+      + '<div class="d-grid">' + cell(L_('kOwner'), esc(ds.owner || '—')) + cell(L_('dnHq'), esc(ds.hq || '—')) + cell(L_('kKv'), esc(ds.voltages || '—')) + cell(L_('dnSheetArea'), esc(ds.area || '—')) + '</div>'
+      + sec(L_('kNotes'), clampList(ds.notes, 3))
+      + (top.length ? sec(L_('dnLeads'), top.map((it, i) => { const s = leadScore(it), f = fuelOf(it.fuel); return '<div class="co-row"><span><b class="d-link" data-plid="' + esc(it.id) + '">' + (i + 1) + '. ' + f.icon + ' ' + esc(en() ? it.en : it.name) + '</b><small>' + esc(mwFmt(it)) + (it.cod ? ' · COD ' + esc(it.cod) : '') + ' · ' + esc(plStatusName(it.status)) + ' · EPC ' + esc(epcName(s.epc)) + '</small></span><span class="tag ' + (s.score >= 75 ? 'cool' : s.score >= 55 ? 'warm' : '') + '" title="' + L_('lScore') + '">' + s.score + '</span></div>'; }).join('')) : '')
+      + (inPipe.length ? sec(L_('dnPipe') + ' <small style="color:#7b8ca6;font-weight:500">' + fmtNum(inPipe.length) + '</small>', inPipe.slice(0, 10).map(pipeRow).join('') + (inPipe.length > 10 ? '<p style="color:#7b8ca6">… +' + (inPipe.length - 10) + '</p>' : '')) : '')
+      + (inProj.length ? sec(L_('dnProj') + ' <small style="color:#7b8ca6;font-weight:500">' + fmtNum(st.projects || 0) + '</small>', inProj.map(p => '<div class="co-row"><span><b class="d-link" data-pid="' + p.id + '">' + esc(nm(p)) + '</b><small>' + esc(catShort(p.cat)) + ' · ' + esc(statusName(p.status)) + ' ' + p.year + (p.epcStatus === '未招标' ? ' · 🔧 ' + esc(epcName('未招标')) : '') + '</small></span><span class="amt" style="color:#2ee6a6;font-weight:700;white-space:nowrap">' + usd(p) + '</span></div>').join('')) : '')
+      + sec(L_('kSources'), srcList(DNSP_SOURCES)) + '<div class="d-sec"><p style="color:#7b8ca6;font-size:11px">' + L_('dnApprox') + (DNSP_ASOF ? ' · ' + esc(DNSP_ASOF) : '') + '</p></div>';
+    openCard(html, 'dnsp', a.key);
+    if (!(opts && opts.noFly)) flyToDnsp(a.key);
+  }
+  function flyToDnsp(key) { const a = DN[key]; if (!a || !a.bbox) return; flyToBounds([[a.bbox[0][1], a.bbox[0][0]], [a.bbox[1][1], a.bbox[1][0]]], { padding: [40, 40], maxZoom: (a.labelZoom || 5) >= 7 ? 10 : 8 }); }
+  // 「只看该配网」：项目 + 管线同时筛到该配网范围（与州 / 状态 / 燃料等其余筛选叠加），左栏出现清除胶囊，hash dn=
+  function filterDnsp(key) { state.dnsp = key && DN[key] ? key : null; syncUI(); render(); if (state.dnsp) flyToDnsp(state.dnsp); }
   // 州卡片附加段：该州管线分档 + REZ 列表
   function stateExtra(a) {
     const ps = PIPE.filter(it => it.state === a); if (!ps.length && !ZONES.some(z => normState(z.state) === a)) return '';
@@ -1355,7 +1462,8 @@
     const top = d.ps.filter(p => p.epcStatus === '未招标').sort((x, y) => (y.inv || 0) - (x.inv || 0)).slice(0, 5);
     const coalRows = coalSorted.filter(p => p.state === a).map(p => { const cd = countdown(p); return '<div class="co-row"><span><b class="d-link" data-coal="' + COAL.indexOf(p) + '">' + esc(en() ? p.en : p.name) + '</b><small>' + esc(p.owner || '') + (p.mw ? ' · ' + fmtNum(p.mw) + ' MW' : '') + '</small></span><span class="tag ' + cd.cls + '">' + esc(cd.txt) + '</span></div>'; }).join('');
     const proj = sh && sh.keyProjects && sh.keyProjects.length ? sh.keyProjects.map(k => '<div class="co-row"><span><b>' + esc(en() ? (k.en || k.name) : k.name) + '</b>' + (k.kv ? ' <small style="display:inline">' + k.kv + 'kV</small>' : '') + '<small>' + esc(k.desc || '') + (k.owner ? ' — ' + esc(k.owner) : '') + '</small></span><span class="tag ' + (k.status === '在建' ? 'warm' : k.status === '投运' ? 'cool' : '') + '">' + esc(statusName(k.status)) + (k.year ? ' ' + k.year : '') + '</span></div>').join('') : '';
-    const dnsps = sh && sh.dnsps && sh.dnsps.length ? sh.dnsps.map(x => '<div class="co-row"><span><b>' + esc(x.name) + '</b>' + (x.owner ? ' <small style="display:inline">' + esc(x.owner) + '</small>' : '') + '<small>' + esc(x.area || '') + (x.voltages ? ' · ' + esc(x.voltages) : '') + '</small>' + (x.notes ? '<small>' + esc(x.notes) + '</small>' : '') + '</span></div>').join('') : '';
+    // 配网条目：有范围面的带色块、可点开配网卡片（看范围 / 区内线索）；RAES / IES / 矿区自备网等没有面的只保留文字
+    const dnsps = sh && sh.dnsps && sh.dnsps.length ? sh.dnsps.map(x => { const ar = dnspOfSheet(a, x); return '<div class="co-row"><span>' + (ar ? '<span class="dn-sw" style="--c:' + ar.color + '"></span> ' : '') + '<b' + (ar ? ' class="d-link" data-dnsp="' + esc(ar.key) + '"' : '') + '>' + esc(x.name) + (ar ? ' ▸' : '') + '</b>' + (x.owner ? ' <small style="display:inline">' + esc(x.owner) + '</small>' : '') + '<small>' + esc(x.area || '') + (x.voltages ? ' · ' + esc(x.voltages) : '') + '</small>' + (x.notes ? '<small>' + esc(x.notes) + '</small>' : '') + '</span></div>'; }).join('') : '';
     const html = head(s.color, '🗺️ ' + (en() ? 'State grid sheet' : '州电网档案'), esc(en() ? s.en : s.name) + ' <small style="color:#7b8ca6;font-weight:500">' + s.abbr + '</small>', esc(en() ? s.name : s.en))
       + '<div class="kv-pills"><div><b>' + fmtNum(d.n) + '</b><span>' + L_('cProjects') + '</span></div><div><b>$' + invMag(d.inv) + '</b><span>' + L_('cInv') + '</span></div><div><b style="color:#ffd48a">' + fmtNum(d.open) + '</b><span>' + L_('cOpen') + '</span></div><div><b style="color:#ff8fa3">' + gw(d.coal) + '</b><span>' + L_('cCoal') + '</span></div></div>'
       + '<div class="d-actions"><button data-fly="st:' + a + '">' + L_('fly') + '</button><button data-st-filter="' + a + '">' + L_('filterSt') + '</button><button data-brief="' + a + '" title="' + esc(en() ? 'One-page Markdown brief for HQ: KPIs, coal exit, top leads, pre-tender projects, owners, grid works, REZ, this quarter' : '一页 Markdown 简报（向总部汇报）：关键数字、煤电退役、线索 Top 10、EPC 未招标、重点业主、输电工程、REZ、本季变化') + '">' + L_('stBrief') + '</button><button data-poster="' + a + '" title="' + esc(en() ? 'One-page PNG infographic (1080×1620): KPIs, pipeline, coal countdown, top leads, REZ / grid / this quarter, actions' : '一页 PNG 信息图（1080×1620，可直接发微信）：关键数字、管线分档、煤电倒计时、线索 Top 8、REZ / 输电 / 本季变化、行动建议') + '">' + L_('stPoster') + '</button></div>'
@@ -1454,6 +1562,7 @@
     if (bc) bc.addEventListener('click', showChanges); if (bc2) bc2.addEventListener('click', showChanges);
     if (modalEl) modalEl.addEventListener('click', e => { if (e && e.target === modalEl) closeModal(); });
     const op = $('pl-owner-pill'); if (op) op.addEventListener('click', () => { state.plOwner = null; syncUI(); render(); });
+    const dp = $('dnsp-pill'); if (dp) dp.addEventListener('click', () => { state.dnsp = null; syncUI(); render(); });
     // 🗓️ COD 时间轴：拖动 = 手动截止年（拉到最右 = 关闭）；▶ / ⏸ 播放
     const cr = $('cod-range'), cp = $('cod-play'), crow = $('cod-row');
     if (crow) crow.title = L_('codTitle');
@@ -1481,8 +1590,8 @@
   function resetState() {
     state.states = new Set(); state.cats = new Set(CAT_KEYS); state.statuses = new Set(); state.epc = new Set(); state.epcOnly = false;
     state.minYear = MIN_YEAR; state.maxYear = MAX_YEAR; state.recentOnly = false; state.q = ''; state.kvOff = new Set();
-    state.layers = { grid: true, planned: true, nodes: true, coal: true, projects: true, fill: true, pipe: true, rez: true, changes: true };
-    state.plStatus = new Set(['committed', 'anticipated']); state.plFuelOff = new Set(); state.plOwner = null;
+    state.layers = Object.assign({}, LAYER_DEF);
+    state.plStatus = new Set(['committed', 'anticipated']); state.plFuelOff = new Set(); state.plOwner = null; state.dnsp = null;
     pausePlay(); state.codMax = null;
     state.plWin = false; state.plHot = false; state.plUp = false; state.plMine = false;
     const q = $('q'); if (q) q.value = '';
@@ -1508,6 +1617,9 @@
     const orow = $('pl-owner-row'), opill = $('pl-owner-pill');
     if (orow) { orow.hidden = !state.plOwner; if (state.plOwner && orow.removeAttribute) orow.removeAttribute('hidden'); else if (!state.plOwner && orow.setAttribute) orow.setAttribute('hidden', ''); }
     if (opill && state.plOwner) { const g = buildAccounts(PIPE.filter(it => ownerKeyOf(it) === state.plOwner))[0]; opill.textContent = L_('ownerPill') + ' ' + (g ? g.name : state.plOwner) + ' ✕'; }
+    const drow = $('dnsp-row'), dpill = $('dnsp-pill');
+    if (drow) { drow.hidden = !state.dnsp; if (state.dnsp && drow.removeAttribute) drow.removeAttribute('hidden'); else if (!state.dnsp && drow.setAttribute) drow.setAttribute('hidden', ''); }
+    if (dpill && state.dnsp) dpill.textContent = L_('dnPill') + ' ' + (DN[state.dnsp] ? dnName(DN[state.dnsp]) : state.dnsp) + ' ✕';
   }
   // 顶栏「数据截至」胶囊：AEMO 管线表季度版本 + 煤电关停表；管线落后 >4 个月变黄（AEMO 每季度发新表）
   const ageMonths = ym => { const m = String(ym || '').match(/^(\d{4})-(\d{2})$/); return m ? (NOW.getFullYear() - +m[1]) * 12 + (NOW.getMonth() + 1 - +m[2]) : null; };
@@ -1547,13 +1659,13 @@
     set('lab-pipe', L_('pipeKpi')); set('pipe-hint', L_('pipeHint'));
     set('btn-leads', L_('leadsBtn')); set('btn-accounts', L_('accBtn')); set('btn-changes', L_('chBtn')); set('btn-leads-more', L_('leadsMore')); set('btn-changes-more', L_('chMore'));
     const tt = (id, k, keep) => { const el = $(id); if (!el) return; const c = el.querySelector('.count'); el.textContent = L_(k) + ' '; if (keep && c) el.appendChild(c); };
-    tt('t-states', 'states', true); tt('t-epc', 'epc', true); tt('t-coal', 'coal', true); tt('t-opps', 'opps', true); tt('t-pipe', 'pipeT', true); tt('t-pipe-r', 'pipeR', true); tt('t-zones', 'zones', true); tt('t-leads', 'leads', true); tt('t-changes', 'chT2', true);
+    tt('t-states', 'states', true); tt('t-epc', 'epc', true); tt('t-coal', 'coal', true); tt('t-opps', 'opps', true); tt('t-pipe', 'pipeT', true); tt('t-pipe-r', 'pipeR', true); tt('t-zones', 'zones', true); tt('t-dnsp', 'dnspT', true); tt('t-leads', 'leads', true); tt('t-changes', 'chT2', true);
     const q = $('q'); if (q) q.placeholder = L_('search');
     const lg = $('btn-lang'); if (lg) lg.textContent = en() ? '中' : 'EN';
-    document.querySelectorAll('#layer-chips .chip').forEach(c => { c.textContent = L_({ grid: 'lgGrid', planned: 'lgPlanned', nodes: 'lgNodes', coal: 'lgCoal', projects: 'lgProj', fill: 'lgFill', pipe: 'lgPipe', rez: 'lgRez', changes: 'lgChanges' }[c.dataset.layer]); });
+    document.querySelectorAll('#layer-chips .chip').forEach(c => { c.textContent = L_({ grid: 'lgGrid', planned: 'lgPlanned', nodes: 'lgNodes', coal: 'lgCoal', projects: 'lgProj', fill: 'lgFill', pipe: 'lgPipe', rez: 'lgRez', changes: 'lgChanges', dnsp: 'lgDnsp' }[c.dataset.layer]); });
     document.querySelectorAll('#year-presets .chip').forEach(c => { c.textContent = L_({ all: 'all', recent: 'recent', future: 'future' }[c.dataset.preset]); });
     buildCats(); buildStatus(); buildEpc(); buildPipeChips(); buildBasemap(); renderStateList(); renderLegend(); syncUI(); render();
-    if (state.card) { const c = state.card; if (c.kind === 'project') showDetail(c.id, { noFly: true }); else if (c.kind === 'coal') showCoal(c.id, { noFly: true }); else if (c.kind === 'state') showState(c.id, { noFly: true }); else if (c.kind === 'line') showLine(c.id, { noFly: true }); else if (c.kind === 'pipe') showPipe(c.id, { noFly: true }); else if (c.kind === 'zone') showZone(c.id, { noFly: true }); }
+    if (state.card) { const c = state.card; if (c.kind === 'project') showDetail(c.id, { noFly: true }); else if (c.kind === 'coal') showCoal(c.id, { noFly: true }); else if (c.kind === 'state') showState(c.id, { noFly: true }); else if (c.kind === 'line') showLine(c.id, { noFly: true }); else if (c.kind === 'pipe') showPipe(c.id, { noFly: true }); else if (c.kind === 'zone') showZone(c.id, { noFly: true }); else if (c.kind === 'dnsp') showDnsp(c.id, { noFly: true }); }
     if (state.view) openView(state.view);
     fitTopbar(true);   // 标签宽度变了，从头量
   }
@@ -1569,7 +1681,8 @@
     if (state.minYear > MIN_YEAR || state.maxYear < MAX_YEAR) p.set('yr', state.minYear + '-' + state.maxYear);
     if (state.recentOnly) p.set('recent', '1');
     if (state.q) p.set('q', state.q);
-    const loff = Object.keys(state.layers).filter(k => !state.layers[k]); if (loff.length) p.set('loff', loff.join('~'));
+    const loff = Object.keys(state.layers).filter(k => !state.layers[k] && LAYER_DEF[k]); if (loff.length) p.set('loff', loff.join('~'));
+    const lon = Object.keys(state.layers).filter(k => state.layers[k] && !LAYER_DEF[k]); if (lon.length) p.set('lon', lon.join('~'));
     if (state.kvOff.size) p.set('kvoff', [...state.kvOff].join('~'));
     const plsDef = state.plStatus.size === 2 && state.plStatus.has('committed') && state.plStatus.has('anticipated');
     if (!plsDef) p.set('pls', [...state.plStatus].join('~') || '-');
@@ -1579,6 +1692,7 @@
     if (state.lang === 'en') p.set('lang', 'en');
     if (state.basemap && state.basemap !== BASE_DEFAULT) p.set('bm', state.basemap);
     if (state.plOwner) p.set('own', state.plOwner);
+    if (state.dnsp) p.set('dn', state.dnsp);
     if (state.view) p.set('view', state.view);
     if (state.card) p.set(state.card.kind, String(state.card.id));
     return p.toString();
@@ -1597,6 +1711,7 @@
     if (p.has('recent')) state.recentOnly = true;
     if (p.has('q')) { state.q = p.get('q'); const q = $('q'); if (q) q.value = state.q; }
     if (p.has('loff')) p.get('loff').split('~').forEach(k => { if (k in state.layers) state.layers[k] = false; });
+    if (p.has('lon')) p.get('lon').split('~').forEach(k => { if (k in state.layers) state.layers[k] = true; });
     if (p.has('kvoff')) state.kvOff = new Set(p.get('kvoff').split('~').filter(Boolean));
     if (p.has('pls')) state.plStatus = new Set(p.get('pls').split('~').filter(k => PL_STATUS.indexOf(k) >= 0));
     if (p.has('plf')) state.plFuelOff = new Set(p.get('plf').split('~').filter(Boolean));
@@ -1605,8 +1720,9 @@
     if (p.get('lang') === 'en') state.lang = 'en';
     if (p.has('bm') && BASES.some(b => b.key === p.get('bm'))) state.basemap = p.get('bm');
     if (p.has('own')) state.plOwner = p.get('own') || null;
+    if (p.has('dn') && DN[p.get('dn')]) state.dnsp = p.get('dn');
     if (p.has('view') && ['leads', 'accounts', 'epc', 'changes'].indexOf(p.get('view')) >= 0) state.view = p.get('view');
-    const card = ['project', 'coal', 'state', 'line', 'pipe', 'zone'].find(k => p.has(k));
+    const card = ['project', 'coal', 'state', 'line', 'pipe', 'zone', 'dnsp'].find(k => p.has(k));
     return card ? { kind: card, id: card === 'project' || card === 'coal' ? +p.get(card) : p.get(card) } : null;
   }
   function copyLink() {
@@ -1632,11 +1748,11 @@
   else if (!pendingCard) { try { map.invalidateSize(); } catch (e) { /* stub */ } fitAU(); }   // 顶栏换行后地图矮了 41px：按最终尺寸重新套住大陆
   if (pendingCard) {
     const c = pendingCard;
-    if (c.kind === 'project') showDetail(c.id); else if (c.kind === 'coal') showCoal(c.id); else if (c.kind === 'state') showState(c.id); else if (c.kind === 'line') showLine(c.id); else if (c.kind === 'pipe') showPipe(c.id); else if (c.kind === 'zone') showZone(c.id);
+    if (c.kind === 'project') showDetail(c.id); else if (c.kind === 'coal') showCoal(c.id); else if (c.kind === 'state') showState(c.id); else if (c.kind === 'line') showLine(c.id); else if (c.kind === 'pipe') showPipe(c.id); else if (c.kind === 'zone') showZone(c.id); else if (c.kind === 'dnsp') showDnsp(c.id);
   }
   if (state.view && state.lang !== 'en') openView(state.view);   // EN 时 applyLang() 已按 state.view 打开
 
-  window.__AU__ = { map, state, PROJECTS, LINES, NODE, COAL, STATES, PIPE, ZONES, ZONE_STAT, CHANGES, render, filtered, filteredPipe, stateOf, zoneOf, countdown, showDetail, showCoal, showState, showLine, showPipe, showZone, stateToHash, applyHash, applyLang, resetState, syncUI, kpis, stateStats,
+  window.__AU__ = { map, state, PROJECTS, LINES, NODE, COAL, STATES, PIPE, ZONES, ZONE_STAT, CHANGES, DNSP: DNSP_AREAS, DNSP_STAT, LAYER_DEF, dnspOf, showDnsp, filterDnsp, flyToDnsp, render, filtered, filteredPipe, stateOf, zoneOf, countdown, showDetail, showCoal, showState, showLine, showPipe, showZone, stateToHash, applyHash, applyLang, resetState, syncUI, kpis, stateStats,
     leadScore, leads, leadsCSV, exportLeadsCSV, epcHintOf, ownerGroup, buildAccounts, buildEpcAccounts, filterOwner, showLeads, showAccounts, showChanges, buildChangesBrief, exportBrief, buildStateBrief, exportStateBrief, openModal, closeModal, openView,
     windowOpen, UPGRADED, PL_QUICK, passPipeBase, normTnsp, renderFresh, applyBase, BASES, closeDrawers, toggleDrawer, clampList,
     TRACK, TRACK_ST, trackOf, setTrack, delTrack, trackCounts, trackActive, dueIn, exportTrack, importTrackText,

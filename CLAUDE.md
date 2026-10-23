@@ -84,7 +84,7 @@ verify in a browser — there is no build step.
   the ordering rule (committed · EPC undisclosed > committed · awarded > proposed), `leads()` sorted, `leadsCSV` (BOM + 50 rows),
   `epcHintOf` text inference, owner merging (`ownerGroup` / `buildAccounts`: Neoen ≥10 items across ≥2 states), `buildEpcAccounts`
   (GenusPlus / UGL present), the three wide panels + `view` hash round-trip, `filterOwner`, and the `AU_CHANGES` structure (every
-  added / status / mw id resolves in `AU_PIPELINE`, `gone` ids do not, counts match); the **P1–P6 upgrades**: lead-score calibration (未公开 > 无数据 > 示意坐标), `windowOpen`, the ⏰🔥⬆️📋 quick filters + hash, `normTnsp`, 📋 lead tracking (`setTrack`/`trackOf`/`delTrack`/`trackCounts`/`leadsCSV` columns/`importTrackText` merge rules), the COD timeline (`COD_MIN/COD_MAX`, `startPlay`/`pausePlay`), `ADDED`, the state poster (`buildStateSVG`, `exportStatePoster` SVG fallback) and the **slice drift guard** (loads `js/au-projects.js` in a sandbox and compares ids + key fields with the full-chain build).
+  added / status / mw id resolves in `AU_PIPELINE`, `gone` ids do not, counts match); the **P1–P6 upgrades**: lead-score calibration (未公开 > 无数据 > 示意坐标), `windowOpen`, the ⏰🔥⬆️📋 quick filters + hash, `normTnsp`, 📋 lead tracking (`setTrack`/`trackOf`/`delTrack`/`trackCounts`/`leadsCSV` columns/`importTrackText` merge rules), the COD timeline (`COD_MIN/COD_MAX`, `startPlay`/`pausePlay`), `ADDED`, the state poster (`buildStateSVG`, `exportStatePoster` SVG fallback) and the **slice drift guard** (loads `js/au-projects.js` in a sandbox and compares ids + key fields with the full-chain build); plus the **🔧 DNSP layer** (`js/au-dnsp.js` structure + every area resolves to a `js/au-states.js` `dnsps[]` entry, 37 known-town spot checks for `dnspOf` incl. the offshore nearest-area fallback, ≥98 % of projects / pipeline tagged, `DNSP_STAT` consistency, `filterDnsp` + the `dn=` / `lon=` hash round-trip, `showDnsp` for every area, the CSV `配网 DNSP` column and the state-brief DNSP line).
 - `node scripts/test-sw.js` — after editing `sw.js`. Stubs `self` / `caches` / `fetch` (Node's built-in `Request` /
   `Response`) and asserts navigation network-first + the deploy purge (ETag change, body change without ETag, no
   false positive on same-ETag injected bodies), offline fallback to cached HTML, asset stale-while-revalidate with the
@@ -144,6 +144,11 @@ verify in a browser — there is no build step.
   (`npm i --no-save pinyin-pro`); runtime and CI stay zero-dep. Re-run when `validate-data.js`
   5g warns about missing chars after a data batch.
 - `node scripts/build-og.js` — social card + PWA icons (see above).
+- `node scripts/build-au-dnsp.js` — regenerates `js/au-dnsp.js` (the 🔧 DNSP service-area polygons for `au.html`) from the hand-traced
+  source `scripts/data/au-dnsp-src.js` × the Natural-Earth state polygons in `lib/au-states.js`: each explicit area = hand polygon ∩ state −
+  earlier areas of that state, each state's `default:true` area = state − all explicit areas (so adjacent areas tile without gaps and the
+  coastline is exactly the state border). Needs `polygon-clipping` **at build time only** (`npm i --no-save polygon-clipping`); runtime and
+  CI stay zero-dep. `--check` compares the committed file with a fresh build. To fix a boundary, edit the source polygon and re-run.
 - `node scripts/build-au-slice.js` — regenerates `js/au-projects.js` (`window.AU_PROJECTS = {builtFrom, source, count,
   items[]}`): the ~260 Australian projects assembled by `util.buildProjects` (dedup / progress / `classifySub` /
   `parseCapacity`, `requireCoord:true`) from `index.html`'s real data chain, sorted by id with sorted keys and no
@@ -196,8 +201,8 @@ The library `lib/globe.gl.min.js` is a vendored standalone UMD bundle (globe.gl 
 
 A fourth standalone page, the **澳洲电网与能源动态地图** — linked from the 2D map's map-tools (`🇦🇺 澳洲地图`) and the
 globe's top bar (`🇦🇺 澳洲`). It is the TGOOD Australia-market BD cockpit: the same data layer **filtered to
-`country === '澳大利亚'`** (~260 projects) plus six Australia-only layers (state borders, transmission backbone, coal
-fleet, state fact sheets, AEMO pipeline, REZ zones). Fully independent of `app.js`; `au.html`
+`country === '澳大利亚'`** (~260 projects) plus seven Australia-only layers (state borders, transmission backbone, coal
+fleet, state fact sheets, AEMO pipeline, REZ zones, DNSP service areas). Fully independent of `app.js`; `au.html`
 loads `js/data.js` (META / CATEGORIES / STATUS) + the pre-built slice `js/au-projects.js` (see `build-au-slice.js`; not
 the 27-file global chain) + `pinyin-map.js` + `util.js`, then the AU layers, then `js/au.js`
 (one IIFE, debug handle `window.__AU__`, guarded for the `scripts/test-au.js` DOM/Leaflet stub, which loads the full chain
@@ -276,6 +281,31 @@ instead and lets `au.js` fall back to a live `util.buildProjects`).
   (ray-cast, declared > planned > candidate) tags every pipeline item and project with its zone at load, feeding
   `ZONE_STAT` (MW by status + project count per zone), the right-panel REZ list, the zone card (`showZone`: KPIs,
   timeline, transmission, access, pipeline + projects inside) and the state card's zone chips.
+- **`js/au-dnsp.js`** (`window.AU_DNSP = {asOf, source, sources, areas}`, **generated** by `scripts/build-au-dnsp.js` from
+  `scripts/data/au-dnsp-src.js` — do not hand-edit): **🔧 配网公司 DNSP service areas**, 17 areas keyed e.g. `nsw-ausgrid` /
+  `vic-powercor` / `wa-nwis` with `name / zh / state (ACT folds into NSW) / kind dnsp|regional|private / color / sheet / desc / descEn /
+  label + labelZoom / bbox / km2 / geometry` (GeoJSON MultiPolygon with holes, `[lng, lat]`). Boundaries are **hand-traced
+  approximations** (±10–30 km, suburb level inside the metro areas where the real boundaries run street by street) clipped to the
+  Natural-Earth state polygons, so coastlines match the state layer and the areas of one state tile without gaps; the card and legend say
+  示意范围. Whole-state networks (Essential / Powercor / Ergon / Horizon / SAPN / TasNetworks / PWC) are the state minus the explicit
+  areas (Ausgrid / Endeavour / Evoenergy / CitiPower / Jemena / United Energy / AusNet / Energex / Western Power SWIS / NWIS Pilbara).
+  `area.sheet` is a name prefix that joins each area to the editorial `dnsps[]` entry in `js/au-states.js` (`dnspOfSheet`), which stays
+  the single source for owner / HQ / voltages / capex notes — the geometry file carries no prose beyond the one-line coverage `desc`.
+  In `au.js`: `dnspOf(coord)` (even-odd point-in-multipolygon in file order — explicit areas before each state's default — with the
+  same nearest-vertex fallback as `stateOf` for offshore points, restricted to the areas of the point's state) tags every project
+  (`p.dnsp`) and pipeline item (`it.dnsp`) at load and feeds `DNSP_STAT` (pipeline MW by status, project count, investment with the
+  client exclusion, EPC 未招标 count). The **🔧 配网公司 layer chip is off by default** (`LAYER_DEF.dnsp=false` — the areas cover the whole
+  continent and would intercept every state click); when on, `renderDnsp` draws the areas under the REZ fills (bottom-to-top: defaults
+  first, explicit areas on top; `private` dashed; labels as `.dn-lab` pills at zoom ≥ `labelZoom`, 4 for whole-state areas, 7.5–8.5 for
+  the Melbourne metro trio) with a tooltip and click → `showDnsp`. `showDnsp(key)` opens the card (KPIs from `DNSP_STAT`, coverage
+  strip, the sheet's owner / HQ / voltages / area / notes, **🎯 区内线索 Top 5** via `leads`, 区内管线 / 项目 lists, sources, the
+  示意 note) and flies to `bbox`; while a DNSP card is open `renderDnHi` draws a white dashed outline (plus a light fill when the layer is
+  off, so "who covers this" is visible straight from the state sheet's DNSP rows, which are clickable `data-dnsp` links with a colour
+  swatch, or the right-panel **🔧 配网公司 DNSP** block `renderDnspList`). `📍 只看该配网` → `filterDnsp` sets `state.dnsp` — a filter
+  dimension applied to **both** `pass` and `passPipeBase` (so KPIs, lead board, right panel and markers follow), cleared by the
+  `#dnsp-pill` chip under the state list / reset, hash `dn=<key>`; layers that default off go into the hash as `lon=` (default-on ones
+  still use `loff=`, both derived from `LAYER_DEF`). Pipe and project cards get a 配网 DNSP cell, the leads table shows the DNSP under
+  the state, `leadsCSV` gains a `配网 DNSP` column and `buildStateBrief`'s DNSP line appends per-network project / pipeline counts.
 - **🎯 BD lead board** (`leadScore` / `leads` / `showLeads` / `leadsCSV` in `au.js`): turns the pipeline into "who to call this
   quarter". Score 0–100 = **product fit** ≤40 (`PRODUCT_FIT` by fuel: battery → 储能升压一体化舱 / E-house 32, solar & wind →
   预制舱变电站 + 集电线路开关设备 28, gas → 中压开关柜 24, … + log-size bonus ≤8, +2 hybrid `mix`) + **procurement window** ≤35
@@ -287,8 +317,8 @@ instead and lets `au.js` fall back to a live `util.buildProjects`).
   status / fuel / year / search / owner filters but not the layer toggle); the `🎯 线索榜` toolbar button opens a wide modal
   (`#modal`, `openModal` / `closeModal`, hash `view=leads`) with the **Top 50** table (rank · state · fuel · MW · COD · AEMO status ·
   EPC · 采购窗口 · product · score with a breakdown `title`), `📍 详情` → `showPipe`, `🎓 陪练` → `coach.html#project=<projId>`
-  (the coach's `applyDeepLink` starts a deal on that project) and `⤓ 导出 CSV` (`leadsCSV`: BOM-prefixed, 25 columns incl. the
-  score parts, window, product, coords and a deep link — for splitting leads among colleagues). The pipe card carries a 🎯 strip
+  (the coach's `applyDeepLink` starts a deal on that project) and `⤓ 导出 CSV` (`leadsCSV`: BOM-prefixed, 32 columns incl. the
+  score parts, window, product, TNSP + 配网 DNSP, coords and a deep link — for splitting leads among colleagues). The pipe card carries a 🎯 strip
   with the score / product / window / EPC.
 - **🏢 Account view** (`showAccounts('owner'|'epc')`, hash `view=accounts|epc`): **owner 作战地图** groups all pipeline items by
   `ownerGroup` (an `OWNER_ALIAS` regex table for the majors — Neoen / Akaysha / AGL / Origin / ACEN / EDPR / X-Elio / Iberdrola /
@@ -379,8 +409,8 @@ instead and lets `au.js` fall back to a live `util.buildProjects`).
   (`state.epcOnly`, same `epcStatus === '未招标'` rule as `app.js`); pre-tender markers pulse orange and the right-panel
   **EPC 未招标机会榜** ranks them by `inv`. Investment KPIs apply the `cat==='client'` exclusion rule.
 - State rows filter (`state.states`, fly-to-bounds from the polygons) and open the sheet; hash carries
-  `st/coff/stt/epc/epcw/yr/recent/q/loff/kvoff/pls/plf/plw/plh/plu/plm/cod/own/view/lang/bm` plus one open card (`project=<id>` / `coal=<idx>` / `state=<abbr>` /
-  `line=<id>` / `pipe=<id>` / `zone=<key>`); `applyUIFromState`-style sync lives in `syncUI`; EN toggle relabels UI (data prose stays Chinese).
+  `st/coff/stt/epc/epcw/yr/recent/q/loff/lon/kvoff/pls/plf/plw/plh/plu/plm/cod/own/dn/view/lang/bm` (`lon` = default-off layers turned on, `dn` = DNSP filter) plus one open card (`project=<id>` / `coal=<idx>` / `state=<abbr>` /
+  `line=<id>` / `pipe=<id>` / `zone=<key>` / `dnsp=<key>`); `applyUIFromState`-style sync lives in `syncUI`; EN toggle relabels UI (data prose stays Chinese).
 
 ### Sales-pitch sparring (`coach.html` + `js/coach.js` + `js/coach-content.js`)
 

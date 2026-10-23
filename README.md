@@ -88,8 +88,8 @@ powershell -ExecutionPolicy Bypass -File serve.ps1 -Port 4173
 │   ├── coach-content.js / coach.js   # 🎓 销售陪练内容库与引擎
 │   ├── util.js         # 纯函数工具层（子分类/容量解析/坐标纠偏/搜索匹配/国名映射，多页共享）
 │   ├── globe.js        # 🌐 3D 地球版逻辑
-│   ├── au.js           # 🇦🇺 澳洲电网与能源动态地图逻辑（输电骨架 / 州档案 / 燃煤退役倒计时 / EPC 窗口期）
-│   ├── au-grid.js / au-coal.js / au-states.js / au-pipeline.js / au-rez.js   # 澳洲专属层：输电骨架 · 燃煤机组 · 州档案 · AEMO 管线 · REZ
+│   ├── au.js           # 🇦🇺 澳洲电网与能源动态地图逻辑（输电骨架 / 州档案 / 燃煤退役倒计时 / EPC 窗口期 / AEMO 管线 / REZ / 配网公司范围）
+│   ├── au-grid.js / au-coal.js / au-states.js / au-pipeline.js / au-rez.js / au-dnsp.js   # 澳洲专属层：输电骨架 · 燃煤机组 · 州档案 · AEMO 管线 · REZ · 配网公司范围（scripts/build-au-dnsp.js 生成）
 │   ├── au-projects.js  # 澳洲项目切片（scripts/build-au-slice.js 从全球数据链生成；au.html 只加载它 + data.js，省 ≈4 MB）
 │   └── app.js          # 交互逻辑（地图、底图切换、筛选、统计、详情、染色、导览、收藏、趋势）
 ├── globe.html / coach.html / au.html  # 3D 地球版 / 销售陪练 / 澳洲电网地图（与 index.html 共享数据层）

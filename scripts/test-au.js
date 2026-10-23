@@ -76,6 +76,7 @@ try {
   require(J('js/au-coal.js'));
   require(J('js/au-pipeline.js'));
   require(J('js/au-rez.js'));
+  require(J('js/au-dnsp.js'));
   require(J('js/au-changes.js'));
   require(J('js/au.js'));
 } catch (e) {
@@ -261,6 +262,50 @@ if (CH) {
 try { AU.STATES.forEach(s => { const b = AU.buildStateBrief(s.abbr); ok(/^# .*能源市场机会简报/.test(b) && /## 关键数字/.test(b) && /## 本季度线索 Top 10/.test(b) && /## 煤电退役时间表/.test(b) && /## 行动建议/.test(b) && b.length > 1500, '州机会简报 ' + s.abbr + ' 结构 / 长度（' + b.length + '）'); }); const wa = AU.buildStateBrief('WA'); ok(/Parron|Marri|Narrogin/.test(wa) && /Collie/.test(wa) && /Western Power/.test(wa), 'WA 简报含承诺风电 / Collie / Western Power'); ok(AU.buildStateBrief('ACT').indexOf('新南威尔士州') === 0 || /新南威尔士州/.test(AU.buildStateBrief('ACT').slice(0, 40)), 'ACT 并入 NSW 简报'); } catch (e) { fails.push('buildStateBrief 抛错：' + (e && e.message)); }
 try { const b = AU.buildChangesBrief(); ok(/^# 澳洲 AEMO 管线季度变化简报/.test(b) && /升级为承诺/.test(b) && /线索 Top 10/.test(b) && b.length > 800, 'buildChangesBrief 生成简报'); } catch (e) { fails.push('buildChangesBrief 抛错：' + (e && e.message)); }
 
+/* ---------- 断言：🔧 配网公司 DNSP（js/au-dnsp.js 结构 + 坐标归属 + 筛选 / hash / 卡片 / CSV / 简报）---------- */
+const DNSP = (global.window.AU_DNSP && global.window.AU_DNSP.areas) || [];
+ok(DNSP.length >= 15, '配网区 ≥15 个（实际 ' + DNSP.length + '）');
+ok(/^\d{4}-\d{2}$/.test(String(global.window.AU_DNSP && global.window.AU_DNSP.asOf)), 'AU_DNSP.asOf 应为 YYYY-MM');
+const dkeys = new Set();
+DNSP.forEach(a => {
+  ok(a.key && !dkeys.has(a.key), '配网 key 缺失或重复：' + a.name); dkeys.add(a.key);
+  ok(['NSW', 'VIC', 'QLD', 'SA', 'WA', 'TAS', 'NT'].indexOf(a.state) >= 0, '配网州代码非法：' + a.key);
+  ok(['dnsp', 'regional', 'private'].indexOf(a.kind) >= 0, '配网 kind 非法：' + a.key);
+  ok(/^#[0-9a-f]{6}$/i.test(a.color || ''), '配网颜色非法：' + a.key);
+  ok(a.geometry && a.geometry.type === 'MultiPolygon' && a.geometry.coordinates.length >= 1 && a.geometry.coordinates.every(poly => poly.every(ring => ring.length >= 4 && ring.every(inAU))), '配网面不合法 / 越界：' + a.key);
+  ok(inAU(a.label) && Array.isArray(a.bbox) && a.bbox.length === 2, '配网标签 / 外接框缺失：' + a.key);
+  ok(SHEETS[a.state] && (SHEETS[a.state].dnsps || []).some(x => String(x.name || '').indexOf(a.sheet || a.name) === 0), '配网区在州档案 dnsps 里找不到对应条目：' + a.key + ' (' + a.sheet + ')');
+  ok(a.desc && a.descEn && a.zh, '配网缺中文名 / 覆盖范围描述：' + a.key);
+});
+try {
+  // 抽查：已知城镇 → 配网（都会区边界只到区级，抽查点都离边界 ≥10 km）
+  const spots = [[151.21, -33.87, 'nsw-ausgrid', '悉尼 CBD'], [151.52, -33.06, 'nsw-ausgrid', '伊拉灵'], [150.89, -32.26, 'nsw-ausgrid', 'Muswellbrook'], [151.00, -33.82, 'nsw-endeavour', 'Parramatta'], [150.89, -34.42, 'nsw-endeavour', 'Wollongong'], [150.60, -34.88, 'nsw-endeavour', 'Nowra'], [150.15, -33.48, 'nsw-endeavour', 'Lithgow'], [148.60, -32.25, 'nsw-essential', 'Dubbo'], [149.72, -34.75, 'nsw-essential', 'Goulburn'], [150.18, -35.71, 'nsw-essential', 'Batemans Bay'], [149.13, -35.28, 'act-evoenergy', '堪培拉'],
+    [144.96, -37.81, 'vic-citipower', '墨尔本 CBD'], [144.88, -37.67, 'vic-jemena', 'Tullamarine'], [144.73, -37.58, 'vic-jemena', 'Sunbury'], [145.12, -38.14, 'vic-united', 'Frankston'], [145.21, -37.99, 'vic-united', 'Dandenong'], [146.53, -38.19, 'vic-ausnet', 'Traralgon'], [146.88, -36.12, 'vic-ausnet', 'Wodonga'], [145.23, -38.49, 'vic-ausnet', 'Phillip Island'], [145.40, -36.38, 'vic-powercor', 'Shepparton'], [143.85, -37.56, 'vic-powercor', 'Ballarat'], [141.60, -38.35, 'vic-powercor', 'Portland'],
+    [153.03, -27.47, 'qld-energex', 'Brisbane'], [152.67, -26.19, 'qld-energex', 'Gympie'], [151.95, -27.56, 'qld-ergon', 'Toowoomba'], [152.03, -28.21, 'qld-ergon', 'Warwick'], [146.82, -19.26, 'qld-ergon', 'Townsville'],
+    [138.60, -34.93, 'sa-sapn', 'Adelaide'], [115.86, -31.95, 'wa-western-power', 'Perth'], [121.47, -30.75, 'wa-western-power', 'Kalgoorlie'], [116.85, -20.74, 'wa-nwis', 'Karratha'], [119.73, -23.36, 'wa-nwis', 'Newman'], [122.24, -17.96, 'wa-horizon', 'Broome'], [121.89, -33.86, 'wa-horizon', 'Esperance'], [147.33, -42.88, 'tas-tasnetworks', 'Hobart'], [130.84, -12.46, 'nt-pwc', 'Darwin'], [147.80, -38.70, 'vic-ausnet', '吉普斯兰外海（最近区回退）']];
+  spots.forEach(s => { const got = AU.dnspOf([s[0], s[1]]); ok(got === s[2], 'dnspOf ' + s[3] + ' 应为 ' + s[2] + '（实际 ' + got + '）'); });
+  ok(AU.dnspOf([0, 0]) === null, 'dnspOf 远离澳洲 → null');
+  const noDn = AU.PROJECTS.filter(p => !p.dnsp), noDnP = PIPE.filter(it => !it.dnsp);
+  ok(noDn.length <= Math.ceil(AU.PROJECTS.length * 0.02), '≥98% 的澳洲项目能归到配网（未归：' + noDn.map(p => p.id + ' ' + p.name).join('; ') + '）');
+  ok(noDnP.length <= Math.ceil(PIPE.length * 0.02), '≥98% 的管线能归到配网（未归：' + noDnP.map(it => it.en).slice(0, 10).join('; ') + '）');
+  const sumN = Object.keys(AU.DNSP_STAT).reduce((s, k) => s + AU.DNSP_STAT[k].n, 0);
+  ok(sumN === PIPE.length - noDnP.length, 'DNSP_STAT 管线计数与打标一致（' + sumN + '）');
+  ok(AU.DNSP_STAT['nsw-ausgrid'].projects > 0 && AU.DNSP_STAT['qld-ergon'].n > 50 && AU.DNSP_STAT['nsw-essential'].n > 100 && AU.DNSP_STAT['wa-nwis'].n > 0, '主要配网区有项目 / 管线');
+  DNSP.forEach(a => AU.showDnsp(a.key)); ok(AU.state.card && AU.state.card.kind === 'dnsp', 'showDnsp() 全部配网区不抛错并写 card');
+  AU.filterDnsp('nsw-ausgrid'); const fp = AU.filteredPipe(), fj = AU.filtered();
+  ok(fp.length > 0 && fp.every(it => it.dnsp === 'nsw-ausgrid') && fj.length > 0 && fj.every(p => p.dnsp === 'nsw-ausgrid'), '配网筛选只留该配网的管线 / 项目（' + fp.length + ' / ' + fj.length + '）');
+  ok(/dn=nsw-ausgrid/.test(AU.stateToHash()), '配网筛选进 hash（dn=）');
+  AU.state.layers.dnsp = true; AU.render(); ok(/lon=dnsp/.test(AU.stateToHash()) && !/loff=/.test(AU.stateToHash()), '默认关的配网图层打开时写 lon=dnsp（不写 loff）');
+  AU.state.layers.rez = false; ok(/loff=rez/.test(AU.stateToHash()), '默认开的图层关掉仍写 loff');
+  AU.resetState(); AU.syncUI(); AU.render(); ok(AU.state.dnsp === null && AU.state.layers.dnsp === false && AU.state.layers.rez === true, 'resetState 清除配网筛选并恢复图层默认');
+  global.location.hash = '#lon=dnsp&dn=vic-powercor&dnsp=vic-powercor'; const pcard = AU.applyHash(); global.location.hash = '';
+  ok(AU.state.layers.dnsp === true && AU.state.dnsp === 'vic-powercor' && pcard && pcard.kind === 'dnsp' && pcard.id === 'vic-powercor', 'applyHash 还原 lon / dn / dnsp 卡片');
+  AU.showDnsp(pcard.id); AU.render(); AU.resetState(); AU.syncUI(); AU.render();
+  const csv = AU.leadsCSV(AU.leads().slice(0, 5)); ok(/配网 DNSP/.test(csv) && /Ausgrid|Essential|Powercor|Ergon|Energex|AusNet|Western Power/.test(csv), 'leadsCSV 带配网列');
+  ok(/Ausgrid[^\n]*范围内项目 \d+ 个/.test(AU.buildStateBrief('NSW')), '州简报的 DNSP 行带范围内项目 / 管线数');
+  AU.state.lang = 'en'; AU.applyLang(); AU.showDnsp('vic-ausnet'); AU.showState('VIC'); AU.state.lang = 'zh'; AU.applyLang(); ok(true, 'EN 模式下配网卡片 / 列表不抛错');
+} catch (e) { fails.push('配网 DNSP 抛错：' + (e && e.message)); }
+
 /* ---------- 汇报 ---------- */
 if (fails.length) { console.error('✘ test-au 失败：\n - ' + fails.join('\n - ')); process.exit(1); }
-console.log('✔ test-au 通过：' + AU.PROJECTS.length + ' 个澳洲项目 · ' + (GRID.nodes || []).length + ' 节点 / ' + (GRID.lines || []).length + ' 走廊 · ' + COAL.length + ' 燃煤机组 · ' + Object.keys(SHEETS).length + ' 州档案 · ' + PIPE.length + ' 管线 · ' + ZONES.length + ' REZ · 线索榜 / 账户 / 本季变化（' + (CH ? CH.prevAsOf + '→' + CH.asOf : '无') + '）');
+console.log('✔ test-au 通过：' + AU.PROJECTS.length + ' 个澳洲项目 · ' + (GRID.nodes || []).length + ' 节点 / ' + (GRID.lines || []).length + ' 走廊 · ' + COAL.length + ' 燃煤机组 · ' + Object.keys(SHEETS).length + ' 州档案 · ' + PIPE.length + ' 管线 · ' + ZONES.length + ' REZ · ' + DNSP.length + ' 配网区 · 线索榜 / 账户 / 本季变化（' + (CH ? CH.prevAsOf + '→' + CH.asOf : '无') + '）');
