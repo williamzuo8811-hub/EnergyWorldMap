@@ -512,3 +512,13 @@ button { font-family: inherit; }
   .mtable .chips { justify-content: flex-end; }
   .mtable .nm { text-align: left; }
 }
+
+/* ---------- 🔧 配网公司 DNSP：面 / 地图标签 / 列表色块 / 图例 ----------
+ * 面默认关（全国铺满会压住州面点击），打开后显式区在上、兜底区在下；标签带边框胶囊（深底 + 配网色字，与 REZ 的实心标签区分）；
+ * 右栏 / 州档案 / 卡片里的 .dn-sw 色块对应面色；图例用三色渐变条表示「多色面」。 */
+.au-dnsp { cursor: pointer; }
+.dn-lab { background: transparent; border: none; pointer-events: none; }
+.dn-lab span { display: inline-block; padding: 2px 8px; border-radius: 7px; font-size: 10.5px; font-weight: 800; letter-spacing: .3px; color: var(--c); background: rgba(8,14,30,0.84); border: 1px solid var(--c); box-shadow: 0 1px 6px rgba(0,0,0,0.5); white-space: nowrap; transform: translate(-50%, -50%); }
+.dn-sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--c); vertical-align: -1px; margin-right: 2px; box-shadow: 0 0 0 1px rgba(255,255,255,0.28); flex: none; }
+.row.dn.on { background: rgba(33,199,255,0.10); border-color: rgba(33,199,255,0.45); }
+.map-legend .lg-row i.dnsp { width: 22px; height: 10px; border: none; border-radius: 3px; background: linear-gradient(90deg, #5fb3ff 0 34%, #ff8c5a 34% 67%, #6fe3a5 67%); opacity: .85; }
